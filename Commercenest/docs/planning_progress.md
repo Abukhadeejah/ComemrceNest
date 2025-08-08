@@ -97,6 +97,23 @@
      - Next dynamic APIs: order status page required awaiting `params` → updated signature to `params: Promise<{ id: string }>` and awaited.
      - Caching tags: `unstable_cache` complained about tag type in current Next version → reverted to SSR fetch; kept `revalidateTag(...)` hooks in admin for future ISR.
    - Result: Full test-mode checkout works end-to-end from site UI to webhook update; admin orders reflect `paid`. E2E tests green.
+
+- P1.3a Storefront polish (Brand shell + Hero) — Completed (2025-08-08)
+  - Brand shell: `BrandProvider` sets CSS var `--brand-accent` from `settings_company_profile.brand_accent_hex`.
+  - Header/Footer: `SiteHeader` (logo/name/accent) and `SiteFooter` wired in `app/layout.tsx`.
+  - Hero: two-column hero with brand utilities, CTAs to products/portfolio.
+  - Palette: Added Bluebell palette CSS vars (primary/mustard/white/crimson/brown) and utilities.
+
+- Repository structure (Tenants) — Completed (2025-08-08)
+  - Moved tenant docs to `Commercenest/tenants/bluebell/` to keep platform code tenant-agnostic.
+  - File: `Bluebell/docs/bluebell_spec.md` → `Commercenest/tenants/bluebell/docs/bluebell_spec.md`.
+  - Added `Bluebell` homepage spec under `Commercenest/tenants/bluebell/docs/bluebell_homepage_spec.md`.
+
+- P1.3b Storefront polish (PLP/PDP + Portfolio detail) — In progress (date)
+  - PLP: Search, sort (updated/name/price), direction, pagination (12/page) on `/`.
+  - PDP: `/products/[slug]` with hero image, price, description, CTA placeholder.
+  - Portfolio detail: `/portfolio/[slug]` with hero image and intro.
+  - Next: filters (categories/price), PDP gallery from `product_images`, portfolio content blocks.
 ## CommerceNest — Planning & Progress Document (Living)
 
 Last updated: (fill date)
