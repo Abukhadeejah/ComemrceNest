@@ -4,6 +4,12 @@
 
 :root {
   --brand-accent: #1f3a8a;
+  /* Bluebell palette */
+  --bluebell-primary: #01589D;
+  --bluebell-mustard: #FDCE59;
+  --bluebell-white: #FEFEFE;
+  --bluebell-crimson: #DC2A38;
+  --bluebell-brown: #4E302E;
 }
 
 .brand-bg {
@@ -18,6 +24,22 @@
   color: white;
 }
 .btn-brand:hover { filter: brightness(0.95); }
+
+/* Bluebell utilities */
+.text-primary { color: var(--bluebell-primary); }
+.bg-primary { background-color: var(--bluebell-primary); }
+.border-primary { border-color: var(--bluebell-primary); }
+.text-mustard { color: var(--bluebell-mustard); }
+.bg-mustard { background-color: var(--bluebell-mustard); }
+.text-crimson { color: var(--bluebell-crimson); }
+.bg-crimson { background-color: var(--bluebell-crimson); }
+.text-brown { color: var(--bluebell-brown); }
+.bg-brown { background-color: var(--bluebell-brown); }
+
+.btn-primary { background-color: var(--bluebell-primary); color: var(--bluebell-white); }
+.btn-primary:hover { filter: brightness(0.95); }
+.btn-outline-primary { border: 1px solid var(--bluebell-primary); color: var(--bluebell-primary); }
+.btn-outline-primary:hover { background-color: color-mix(in oklch, var(--bluebell-primary) 12%, white); }
 @tailwind utilities;
 
 :root {
