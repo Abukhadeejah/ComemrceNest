@@ -12,7 +12,7 @@ export default async function AdminPortfolio() {
         .select('id, title, slug, status, featured')
         .eq('tenant_id', tenantId)
         .order('created_at', { ascending: false })
-    : { data: [] as any[] }
+    : { data: [] as Array<{ id: string; title: string; slug: string; status: string; featured: boolean }>} 
 
   return (
     <main className="p-6 space-y-4">
@@ -76,13 +76,14 @@ async function uploadProjectImage(formData: FormData) {
   const projectId = String(formData.get('project_id') || '')
   const file = formData.get('file') as unknown as File | null
   if (!file) return
-  const keySafeName = (file as any).name?.toString?.() || 'image'
+  const fileAny = file as unknown as { name?: string; type?: string }
+  const keySafeName = fileAny.name?.toString?.() || 'image'
   const objectPath = `${tenantId}/${projectId}/${Date.now()}_${keySafeName}`
-  const upload = await supabaseAdmin.storage.from('portfolio-images').upload(objectPath, file as any, { upsert: true, contentType: (file as any).type || 'image/jpeg' })
+  const upload = await supabaseAdmin.storage.from('portfolio-images').upload(objectPath, file as File, { upsert: true, contentType: fileAny.type || 'image/jpeg' })
   if (upload.error) return
   const { data } = supabaseAdmin.storage.from('portfolio-images').getPublicUrl(objectPath)
   const url = data.publicUrl
-  await supabaseAdmin.from('portfolio_images').insert({ tenant_id: tenantId as any, project_id: projectId as any, url, alt: keySafeName, sort_order: 0 })
+  await supabaseAdmin.from('portfolio_images').insert({ tenant_id: tenantId as unknown as string, project_id: projectId as unknown as string, url, alt: keySafeName, sort_order: 0 })
   await supabaseAdmin.from('portfolio_projects').update({ hero_image_url: url }).eq('id', projectId).eq('tenant_id', tenantId).is('hero_image_url', null)
   revalidateTag(tenantPortfolioTag(tenantId))
 }

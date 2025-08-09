@@ -4,8 +4,8 @@ import { fetchCompanyProfileByTenantId } from '@/server/settings'
 
 export default async function SiteHeader() {
   const tenantId = await resolveTenantIdFromRequest()
-  const { data: company } = tenantId ? await fetchCompanyProfileByTenantId(tenantId) : { data: null as any }
-  const accent = company?.brand_accent_hex ?? 'var(--color-primary)'
+  const { data: company } = tenantId ? await fetchCompanyProfileByTenantId(tenantId) : { data: null as unknown as { name: string; logo_url?: string; brand_accent_hex?: string } }
+  const accent: string = company?.brand_accent_hex ?? 'var(--color-primary)'
   const name = company?.name ?? 'Store'
   return (
     <header className="flex items-center gap-3 border-b px-6 py-4">
@@ -14,7 +14,7 @@ export default async function SiteHeader() {
           <Image src={company.logo_url} alt={name} fill sizes="32px" className="object-contain" />
         </div>
       ) : null}
-      <div className="text-lg font-semibold" style={{ color: accent }}>{name}</div>
+      <div className="text-lg font-semibold" style={{ color: String(accent) }}>{name}</div>
     </header>
   )
 }

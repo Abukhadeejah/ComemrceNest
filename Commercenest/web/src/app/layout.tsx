@@ -31,9 +31,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {/* tenant shell */}
-        {/* @ts-expect-error Server Component */}
         <TenantProvider>
-          {/* @ts-expect-error Server Component */}
           <SiteHeader />
           {children}
           <SiteFooter />

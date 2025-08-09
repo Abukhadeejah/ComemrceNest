@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
 import { fetchPublishedProductsPaged } from '@/server/modules/products/service'
 import { ProductCard } from '@/modules/products/components/ProductCard'
@@ -12,13 +13,13 @@ export default async function ProductTeaser() {
     <section className="mx-auto max-w-6xl px-6 py-12">
       <div className="flex items-end justify-between">
         <h2 className="text-2xl font-semibold text-primary">Featured Products</h2>
-        <a className="text-sm underline" href="/">View all</a>
+        <Link className="text-sm underline" href="/">View all</Link>
       </div>
       <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {items.map((p) => (
-          <a key={p.id} href={`/products/${p.slug}`} className="block">
+          <Link key={p.id} href={`/products/${p.slug}`} className="block">
             <ProductCard name={p.name} priceCents={p.price_cents} currency={p.currency} imageUrl={p.hero_image_url} />
-          </a>
+          </Link>
         ))}
       </div>
     </section>

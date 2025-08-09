@@ -12,7 +12,7 @@ export default async function AdminProducts() {
         .select('id, name, slug, status, price_cents, currency, stock')
         .eq('tenant_id', tenantId)
         .order('updated_at', { ascending: false })
-    : { data: [] as any[] }
+    : { data: [] as Array<{ id: string; name: string; slug: string; status: string; price_cents: number; currency: string; stock: number }>} 
 
   return (
     <main className="p-6 space-y-4">
@@ -78,13 +78,14 @@ async function uploadProductImage(formData: FormData) {
   const productId = String(formData.get('product_id') || '')
   const file = formData.get('file') as unknown as File | null
   if (!file) return
-  const keySafeName = (file as any).name?.toString?.() || 'image'
+  const fileAny = file as unknown as { name?: string; type?: string }
+  const keySafeName = fileAny.name?.toString?.() || 'image'
   const objectPath = `${tenantId}/${productId}/${Date.now()}_${keySafeName}`
-  const upload = await supabaseAdmin.storage.from('product-images').upload(objectPath, file as any, { upsert: true, contentType: (file as any).type || 'image/jpeg' })
+  const upload = await supabaseAdmin.storage.from('product-images').upload(objectPath, file as File, { upsert: true, contentType: fileAny.type || 'image/jpeg' })
   if (upload.error) return
   const { data } = supabaseAdmin.storage.from('product-images').getPublicUrl(objectPath)
   const url = data.publicUrl
-  await supabaseAdmin.from('product_images').insert({ tenant_id: tenantId as any, product_id: productId as any, url, alt: keySafeName, sort_order: 0 })
+  await supabaseAdmin.from('product_images').insert({ tenant_id: tenantId as unknown as string, product_id: productId as unknown as string, url, alt: keySafeName, sort_order: 0 })
   // Set hero image if not present
   await supabaseAdmin.from('products').update({ hero_image_url: url }).eq('id', productId).eq('tenant_id', tenantId).is('hero_image_url', null)
   revalidateTag(tenantProductsTag(tenantId))

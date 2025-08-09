@@ -121,6 +121,25 @@
   - Tokens: Unified CSS to generic `--color-*` tokens in `globals.css`; removed tenant-named variables and deprecated `BrandProvider`.
   - Sections: Added `src/components/sections.ts` registry; homepage now renders sections strictly from tenant config (`config.homepage.sections`).
   - Cleanup: Removed duplicated inline PLP block from home; ProductTeaser handles curated items. Dedicated PLP can live on `/products` later.
+
+- P1.3c Bluebell Homepage UI parity (Hero/Portfolio/Products/Testimonials/CTA/Footer) — Completed (2025-08-09)
+  - Architecture updates
+    - Introduced `src/tenants/bluebell/BluebellHome.tsx` as a client component composing all public sections (keeps within RSC-safe boundaries while avoiding the Next.js clientReferenceManifest invariant). Sections still use tenant tokens via `TenantProvider`.
+    - Added `src/tenants/bluebell/BluebellNav.tsx` sticky nav with blur/elevation on scroll.
+    - Replaced generic footer with tenant-aware premium footer `src/components/SiteFooter.tsx` (gradient, pattern, quick links, contact, newsletter, social) fetching company name via server.
+  - Visual & motion
+    - Hero: layered gradient, fabric photo overlay (`/public/bluebell-hero.jpg`), soft vignette, pulse logo, staged fade/slide for title/subcopy/CTA.
+    - Section dividers: white wavy SVGs between sections to create smooth transitions.
+    - Portfolio/Product cards: staggered fade-up on load; subtle hover lift; brand-colored accents; Indian Rupee symbols and metre units.
+    - Testimonials: simple auto-advancing carousel with dots; Indian names and copy; per-card fade/slide.
+    - CTA band: matched inspirational UI with glowing primary CTA, translucent secondary CTA, and contact info tiles.
+  - CSS utilities (kept CSP-safe and Tailwind v4-friendly)
+    - Added minimal animation classes and textures using only CSS (no inline scripts).
+  - Issues & fixes
+    - Prevented hero artifact from placeholder overlay; switched to real image layer and tuned gradient to remove haze.
+    - Removed unintended black divider above footer by eliminating extra top margin on footer container.
+    - Linting: replaced `any` fallback in `SiteFooter.tsx` with a typed `CompanyProfile` union to satisfy `@typescript-eslint/no-explicit-any`.
+  - Result: Bluebell homepage now closely matches the provided HTML/UI inspiration while staying tenant-themed, CSP-safe, and modular.
 ## CommerceNest — Planning & Progress Document (Living)
 
 Last updated: (fill date)

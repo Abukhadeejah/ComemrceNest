@@ -13,9 +13,9 @@ export type TenantConfig = {
   }
   homepage: {
     sections: string[]
-    copy?: Record<string, any>
+    copy?: Record<string, unknown>
   }
-  overrides?: Record<string, React.ComponentType<any>>
+  overrides?: Record<string, React.ComponentType<unknown>>
   enabledModules?: string[]
 }
 

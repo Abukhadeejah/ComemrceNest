@@ -1,2 +1,6 @@
-export { default } from './(site)/page'
-export { generateMetadata, generateViewport } from './(site)/page'
+"use client"
+import BluebellHome from '@/tenants/bluebell/BluebellHome'
+
+export default function RootHome() {
+  return <BluebellHome />
+}

@@ -20,12 +20,12 @@ export default async function TenantProvider({ children }: { children: React.Rea
 
   return (
     <div style={{
-      ['--color-accent' as any]: brandAccent,
-      ['--color-primary' as any]: colors.primary,
-      ['--color-mustard' as any]: colors.mustard,
-      ['--color-white' as any]: colors.white,
-      ['--color-crimson' as any]: colors.crimson,
-      ['--color-brown' as any]: colors.brown,
+      ['--color-accent' as string]: brandAccent,
+      ['--color-primary' as string]: colors.primary,
+      ['--color-mustard' as string]: colors.mustard || '',
+      ['--color-white' as string]: colors.white || '',
+      ['--color-crimson' as string]: colors.crimson || '',
+      ['--color-brown' as string]: colors.brown || '',
     }}>
       {children}
     </div>

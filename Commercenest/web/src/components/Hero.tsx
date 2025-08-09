@@ -1,9 +1,10 @@
+import Link from 'next/link'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
 import { fetchCompanyProfileByTenantId } from '@/server/settings'
 
 export default async function Hero() {
   const tenantId = await resolveTenantIdFromRequest()
-  const { data: company } = tenantId ? await fetchCompanyProfileByTenantId(tenantId) : { data: null as any }
+  const { data: company } = tenantId ? await fetchCompanyProfileByTenantId(tenantId) : { data: null as unknown as { name: string } }
   const name = company?.name ?? 'Your Brand'
   return (
     <section className="brand-bg">
@@ -16,8 +17,8 @@ export default async function Hero() {
             Interior design, furnishings, and bespoke décor crafted to your style. Explore our latest collections and portfolio.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <a href="/" className="btn-brand rounded px-5 py-2 text-sm">Explore Products</a>
-            <a href="/portfolio" className="rounded border border-brand px-5 py-2 text-sm">View Portfolio</a>
+            <Link href="/" className="btn-brand rounded px-5 py-2 text-sm">Explore Products</Link>
+            <Link href="/portfolio" className="rounded border border-brand px-5 py-2 text-sm">View Portfolio</Link>
           </div>
         </div>
         <div className="mt-10 md:mt-0 md:w-1/2">

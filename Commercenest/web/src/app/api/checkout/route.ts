@@ -3,18 +3,20 @@ import Razorpay from 'razorpay'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
 
-function decodeSecret(val: any): string {
+function decodeSecret(val: unknown): string {
   if (!val) return ''
   if (typeof val === 'string') {
     // Supabase/PostgREST returns bytea as hex string prefixed with "\\x"
     if (val.startsWith('\\x')) return Buffer.from(val.slice(2), 'hex').toString('utf8')
     return val
   }
-  try {
+  if (val instanceof Uint8Array) {
     return Buffer.from(val).toString('utf8')
-  } catch {
-    return String(val)
   }
+  if (typeof ArrayBuffer !== 'undefined' && val instanceof ArrayBuffer) {
+    return Buffer.from(new Uint8Array(val)).toString('utf8')
+  }
+  return String(val)
 }
 
 export async function POST(request: Request) {
@@ -34,7 +36,7 @@ export async function POST(request: Request) {
   }
 
   const client = new Razorpay({ key_id: pay.razorpay_key_id, key_secret: decodeSecret(pay.razorpay_key_secret) })
-  const body = await request.json().catch(() => ({}))
+  const body = (await request.json().catch(() => ({}))) as { amountPaise?: number }
   const amountPaise = typeof body.amountPaise === 'number' ? body.amountPaise : 100 // minimal default
 
   // Razorpay requires receipt length <= 40
