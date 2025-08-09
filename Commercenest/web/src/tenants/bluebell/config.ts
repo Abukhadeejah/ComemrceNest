@@ -1,5 +1,4 @@
 import type { TenantConfig } from '../types'
-import Hero from '@/components/Hero'
 
 export const bluebellConfig: TenantConfig = {
   key: 'bluebell',
@@ -16,7 +15,7 @@ export const bluebellConfig: TenantConfig = {
     },
   },
   overrides: {
-    Hero,
+    // No shared Hero override; Bluebell uses `BluebellHome` via `app/page.tsx`
   },
   enabledModules: ['products','portfolio'],
 }

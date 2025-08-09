@@ -10,6 +10,15 @@ export async function fetchPublishedProducts(tenantId: string) {
     .order('updated_at', { ascending: false })
 }
 
+export type ProductListItem = {
+  id: string
+  name: string
+  slug: string
+  price_cents: number
+  currency: string
+  hero_image_url: string | null
+}
+
 export type ProductListParams = {
   sort?: 'updated_at' | 'price_cents' | 'name'
   dir?: 'asc' | 'desc'
@@ -22,15 +31,23 @@ export type ProductListParams = {
 
 export async function fetchPublishedProductsPaged(
   tenantId: string,
-  { sort = 'updated_at', dir = 'desc', page = 1, pageSize = 12, q, minPriceCents, maxPriceCents }: ProductListParams
+  params: ProductListParams & { categoryId?: string }
 ) {
+  const { sort = 'updated_at', dir = 'desc', page = 1, pageSize = 12, q, minPriceCents, maxPriceCents, categoryId } = params
   const from = (page - 1) * pageSize
   const to = from + pageSize - 1
+  let selectCols = 'id, name, slug, price_cents, currency, hero_image_url'
+  if (categoryId) {
+    selectCols += ', product_categories!inner(category_id)'
+  }
   let query = supabaseAdmin
     .from('products')
-    .select('id, name, slug, price_cents, currency, hero_image_url', { count: 'exact' })
+    .select(selectCols, { count: 'exact' })
     .eq('tenant_id', tenantId)
     .eq('status', 'published')
+  if (categoryId) {
+    query = query.eq('product_categories.category_id', categoryId)
+  }
   if (q && q.trim()) {
     query = query.ilike('name', `%${q.trim()}%`)
   }

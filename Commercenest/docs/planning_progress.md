@@ -140,6 +140,55 @@
     - Removed unintended black divider above footer by eliminating extra top margin on footer container.
     - Linting: replaced `any` fallback in `SiteFooter.tsx` with a typed `CompanyProfile` union to satisfy `@typescript-eslint/no-explicit-any`.
   - Result: Bluebell homepage now closely matches the provided HTML/UI inspiration while staying tenant-themed, CSP-safe, and modular.
+
+### Tenant UI Architecture — Proposal & Adoption Plan (Approved)
+
+Goal: prevent duplication and enable bespoke per-tenant UI while keeping a clean shared core.
+
+Target Architecture
+- Core vs Tenant Overlay:
+  - Shared, brand-agnostic components live in `src/core/components/**`.
+  - Per-tenant overrides live in `src/tenants/{tenant}/components/**`.
+  - A small resolver chooses a tenant override if present; otherwise falls back to shared default. Resolver uses static imports (RSC-safe).
+- Module boundaries:
+  - `src/modules/products/**`, `src/modules/portfolio/**` own server services and module UI.
+  - Routes are thin wrappers that compose modules + tenant UI.
+- Theming:
+  - CSS variables `--color-*` set by `TenantProvider`; each tenant provides palette/fonts via `tenants/{tenant}/config.ts`.
+- Tenant override points:
+  - Shell: `SiteHeader`, `Breadcrumb`, `SiteFooter`, `HomePage`.
+  - Module skins: optional `ProductCard`, `PortfolioCard`, badges/texture utilities.
+- Data & RLS: unchanged (Supabase RLS with `tenant_id`).
+
+Directory Layout (proposed)
+- `src/core/components/*`: shared `SiteHeader`, `Breadcrumb`, `SiteFooter`, `ProductCard`, `Filters`, `Pagination`.
+- `src/core/layout/*`: shared shells if needed.
+- `src/modules/{products,portfolio}/**`: `service.ts`, `components/**`.
+- `src/tenants/{tenant}/components/*`: UI overrides per tenant.
+- `src/tenants/{tenant}/config.ts`, `src/tenants/index.ts`: registry + resolver mapping.
+
+Resolver Pattern
+- `getTenantComponent(tenantKey, name)` returns `tenants/{tenant}/components/name` if it exists; else `core/components/name`.
+- Implement with predeclared static imports for known tenants to avoid Next.js dynamic import issues.
+
+Action Plan (incremental, P1.3b compatible)
+1) Introduce `core` vs `tenant` split:
+   - Move brand-agnostic UI to `src/core/components/`.
+   - Create `src/tenants/bluebell/components/` for Bluebell-specific `SiteHeader`, `Breadcrumb`, `HomePage`.
+   - Add `TenantComponentResolver` (static imports).
+2) Normalize pages to use resolver:
+   - `app/layout.tsx` resolves `SiteHeader`/`SiteFooter`.
+   - `app/(site)/page.tsx` resolves tenant `HomePage` (Bluebell) else default.
+   - `/products` may resolve tenant `ProductCard` skin.
+3) Remove duplication/dead files; ensure data access stays in `src/modules/**/service.ts`.
+4) Styling & responsiveness:
+   - Keep token system; extract PLP textures/badge hovers into small utilities.
+5) Testing gates:
+   - Lint/build/E2E; add E2E for `/products` & `/portfolio` rendering/filters.
+
+Why this works
+- Default UI for most tenants; true overlays for bespoke sites without code sprawl.
+- RSC-safe selection; clear module ownership; easier testing.
 ## CommerceNest — Planning & Progress Document (Living)
 
 Last updated: (fill date)

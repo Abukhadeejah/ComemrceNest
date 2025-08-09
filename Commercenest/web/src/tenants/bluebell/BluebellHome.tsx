@@ -1,7 +1,6 @@
 "use client"
 import { useEffect, useState } from 'react'
 import { Playfair_Display } from 'next/font/google'
-import BluebellNav from './BluebellNav'
 
 const playfair = Playfair_Display({ subsets: ['latin'], weight: ['700','800','900'] })
 
@@ -16,7 +15,7 @@ export default function BluebellHome() {
 
   return (
     <main className="p-0">
-      <BluebellNav />
+      {/* Header is provided by layout; remove local navbar duplication */}
       {/* Hero Section */}
       <section id="home" className="hero-gradient min-h-[90vh] flex items-center justify-center relative overflow-hidden">
         {/* Hero photo (ensure file exists at /public/bluebell-hero.jpg) */}
