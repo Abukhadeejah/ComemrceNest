@@ -114,6 +114,13 @@
   - PDP: `/products/[slug]` with hero image, price, description, CTA placeholder.
   - Portfolio detail: `/portfolio/[slug]` with hero image and intro.
   - Next: filters (categories/price), PDP gallery from `product_images`, portfolio content blocks.
+
+- P1.3b Frontend tenant scaffold + Home composition — Completed (2025-08-08)
+  - Config: Added `src/tenants/types.ts`, `src/tenants/index.ts`, `src/tenants/bluebell/config.ts` with theme tokens, section order, and overrides.
+  - Provider: Introduced `src/components/TenantProvider.tsx` to resolve tenant, load DB brand accent, and set generic CSS variables.
+  - Tokens: Unified CSS to generic `--color-*` tokens in `globals.css`; removed tenant-named variables and deprecated `BrandProvider`.
+  - Sections: Added `src/components/sections.ts` registry; homepage now renders sections strictly from tenant config (`config.homepage.sections`).
+  - Cleanup: Removed duplicated inline PLP block from home; ProductTeaser handles curated items. Dedicated PLP can live on `/products` later.
 ## CommerceNest — Planning & Progress Document (Living)
 
 Last updated: (fill date)

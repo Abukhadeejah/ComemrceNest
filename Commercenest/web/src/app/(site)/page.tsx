@@ -1,13 +1,11 @@
 import type { Metadata, Viewport } from 'next'
 import { fetchCompanyProfileByTenantId } from '@/server/settings'
-import { revalidateTag } from 'next/cache'
-import { tenantProductsTag } from '@/server/cacheTags'
 import { resolveTenantIdFromRequest, getPrimaryHostnameForTenant, getRequestHostname } from '@/server/tenant'
-import { fetchPublishedProductsPaged } from '@/server/modules/products/service'
-import { ProductCard } from '@/modules/products/components/ProductCard'
-import Hero from '@/components/Hero'
+import { getTenantConfig } from '@/tenants'
+import { supabaseAdmin } from '@/server/supabaseAdmin'
+import { defaultSections } from '@/components/sections'
 
-export default async function HomePage({ searchParams }: { searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
+export default async function HomePage() {
   const tenantId = await resolveTenantIdFromRequest()
   if (!tenantId) {
     return (
@@ -17,49 +15,23 @@ export default async function HomePage({ searchParams }: { searchParams?: Promis
       </main>
     )
   }
-  const sp = (await searchParams) || {}
-  const sort = (sp.sort as any) || 'updated_at'
-  const dir = (sp.dir as any) || 'desc'
-  const page = Number(sp.page || 1)
-  const q = typeof sp.q === 'string' ? sp.q : undefined
-  const { data: products, count } = await fetchPublishedProductsPaged(tenantId, { sort, dir, page, pageSize: 12, q })
   return (
     <main className="p-0 space-y-6">
-      {/* @ts-expect-error Server Component */}
-      <Hero />
-      <div className="p-6">
-      <h1 className="text-xl font-semibold">Products</h1>
-      <form className="mt-3 flex flex-wrap items-center gap-2">
-        <input className="w-56 rounded border px-3 py-2" type="search" name="q" defaultValue={q} placeholder="Search products" />
-        <select className="rounded border px-2 py-2" name="sort" defaultValue={sort}>
-          <option value="updated_at">Recently updated</option>
-          <option value="price_cents">Price</option>
-          <option value="name">Name</option>
-        </select>
-        <select className="rounded border px-2 py-2" name="dir" defaultValue={dir}>
-          <option value="desc">Desc</option>
-          <option value="asc">Asc</option>
-        </select>
-        <button className="btn-brand rounded px-3 py-2">Apply</button>
-      </form>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
-        {(products ?? []).map((p) => (
-          <a key={p.id} href={`/products/${p.slug}`} className="block">
-            <ProductCard name={p.name} priceCents={p.price_cents} currency={p.currency} imageUrl={p.hero_image_url} />
-          </a>
-        ))}
-      </div>
-      {(count ?? 0) > 12 ? (
-        <nav className="mt-4 flex items-center gap-2">
-          {Array.from({ length: Math.ceil((count ?? 0) / 12) }).map((_, i) => {
-            const p = i + 1
-            const is = p === page
-            const qs = new URLSearchParams({ ...(q ? { q } : {} as any), sort, dir, page: String(p) }).toString()
-            return <a key={p} href={`/?${qs}`} className={`rounded border px-3 py-1 text-sm ${is ? 'bg-brand text-white border-brand' : ''}`}>{p}</a>
-          })}
-        </nav>
-      ) : null}
-      </div>
+      {/* Sections per tenant config */}
+      {await (async () => {
+        const { data: domain } = await supabaseAdmin
+          .from('tenant_domains').select('hostname').eq('tenant_id', tenantId).eq('is_primary', true).maybeSingle()
+        const tenantKey = domain?.hostname?.split('.')[0] || 'default'
+        const cfg = getTenantConfig(tenantKey)
+        const comps = await Promise.all(cfg.homepage.sections.map(async (key) => {
+          const C = defaultSections[key]
+          if (!C) return null
+          // Render server component
+          // @ts-expect-error Server Component
+          return <C key={key} />
+        }))
+        return comps
+      })()}
     </main>
   )
 }

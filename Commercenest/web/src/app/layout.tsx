@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import BrandProvider from '@/components/BrandProvider'
+import TenantProvider from '@/components/TenantProvider'
 import SiteHeader from '@/components/SiteHeader'
 import SiteFooter from '@/components/SiteFooter'
 
@@ -32,12 +32,12 @@ export default function RootLayout({
       >
         {/* tenant shell */}
         {/* @ts-expect-error Server Component */}
-        <BrandProvider>
+        <TenantProvider>
           {/* @ts-expect-error Server Component */}
           <SiteHeader />
           {children}
           <SiteFooter />
-        </BrandProvider>
+        </TenantProvider>
       </body>
     </html>
   );

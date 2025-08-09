@@ -5,7 +5,7 @@ import { fetchCompanyProfileByTenantId } from '@/server/settings'
 export default async function SiteHeader() {
   const tenantId = await resolveTenantIdFromRequest()
   const { data: company } = tenantId ? await fetchCompanyProfileByTenantId(tenantId) : { data: null as any }
-  const accent = company?.brand_accent_hex ?? '#1f3a8a'
+  const accent = company?.brand_accent_hex ?? 'var(--color-primary)'
   const name = company?.name ?? 'Store'
   return (
     <header className="flex items-center gap-3 border-b px-6 py-4">
