@@ -3,21 +3,42 @@
 @plugin "@tailwindcss/forms";
 
 :root {
-  --brand-accent: #1f3a8a;
+  /* Generic brand tokens set by TenantProvider */
+  --color-primary: #1f3a8a;
+  --color-accent: #1f3a8a;
+  --color-mustard: #FDCE59;
+  --color-white: #FEFEFE;
+  --color-crimson: #DC2A38;
+  --color-brown: #4E302E;
 }
 
 .brand-bg {
-  background: linear-gradient(180deg, color-mix(in oklch, var(--brand-accent) 30%, white) 0%, white 100%);
+  background: linear-gradient(180deg, color-mix(in oklch, var(--color-accent) 30%, white) 0%, white 100%);
 }
 
-.text-brand { color: var(--brand-accent); }
-.bg-brand { background-color: var(--brand-accent); }
-.border-brand { border-color: var(--brand-accent); }
+.text-brand { color: var(--color-accent); }
+.bg-brand { background-color: var(--color-accent); }
+.border-brand { border-color: var(--color-accent); }
 .btn-brand {
-  background-color: var(--brand-accent);
+  background-color: var(--color-accent);
   color: white;
 }
 .btn-brand:hover { filter: brightness(0.95); }
+
+.text-primary { color: var(--color-primary); }
+.bg-primary { background-color: var(--color-primary); }
+.border-primary { border-color: var(--color-primary); }
+.text-mustard { color: var(--color-mustard); }
+.bg-mustard { background-color: var(--color-mustard); }
+.text-crimson { color: var(--color-crimson); }
+.bg-crimson { background-color: var(--color-crimson); }
+.text-brown { color: var(--color-brown); }
+.bg-brown { background-color: var(--color-brown); }
+
+.btn-primary { background-color: var(--color-primary); color: var(--color-white); }
+.btn-primary:hover { filter: brightness(0.95); }
+.btn-outline-primary { border: 1px solid var(--color-primary); color: var(--color-primary); }
+.btn-outline-primary:hover { background-color: color-mix(in oklch, var(--color-primary) 12%, white); }
 @tailwind utilities;
 
 :root {

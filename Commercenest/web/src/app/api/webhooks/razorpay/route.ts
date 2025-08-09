@@ -2,13 +2,19 @@ import { NextResponse } from 'next/server'
 import crypto from 'node:crypto'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
 
-function decodeSecret(val: any): string {
+function decodeSecret(val: unknown): string {
   if (!val) return ''
   if (typeof val === 'string') {
     if (val.startsWith('\\x')) return Buffer.from(val.slice(2), 'hex').toString('utf8')
     return val
   }
-  try { return Buffer.from(val).toString('utf8') } catch { return String(val) }
+  if (val instanceof Uint8Array) {
+    return Buffer.from(val).toString('utf8')
+  }
+  if (typeof ArrayBuffer !== 'undefined' && val instanceof ArrayBuffer) {
+    return Buffer.from(new Uint8Array(val)).toString('utf8')
+  }
+  return String(val)
 }
 
 function verifySignature(body: string, signature: string, secret: string) {
@@ -28,7 +34,7 @@ export async function POST(request: Request) {
   const signature = request.headers.get('x-razorpay-signature') || ''
 
   // Parse event JSON
-  let evt: any
+  let evt: Record<string, unknown>
   try {
     const maybeBOM = bodyText.charCodeAt(0) === 0xFEFF ? bodyText.slice(1) : bodyText
     evt = JSON.parse(maybeBOM)
@@ -37,11 +43,21 @@ export async function POST(request: Request) {
     console.error('webhook invalid_json len=', buf.length)
     return NextResponse.json({ error: 'invalid_json' }, { status: 400 })
   }
+  type RazorpayEntity = { id?: string }
+  type RazorpayEvent = {
+    id?: string
+    event?: string
+    payload?: {
+      order?: { entity?: RazorpayEntity }
+      payment?: { entity?: RazorpayEntity }
+    }
+  }
   const provider = 'razorpay'
-  const eventId = evt?.payload?.payment?.entity?.id || evt?.payload?.order?.entity?.id || evt?.id
+  const e0 = evt as RazorpayEvent
+  const eventId = e0?.payload?.payment?.entity?.id || e0?.payload?.order?.entity?.id || e0?.id
 
   // Lookup order, determine tenant and webhook secret
-  const orderId = evt?.payload?.order?.entity?.id
+  const orderId = e0?.payload?.order?.entity?.id
   if (!orderId) return NextResponse.json({ error: 'missing_order' }, { status: 400 })
   const { data: order } = await supabaseAdmin.from('orders').select('tenant_id, razorpay_order_id').eq('razorpay_order_id', orderId).maybeSingle()
   if (!order?.tenant_id) return NextResponse.json({ error: 'order_not_found' }, { status: 404 })
@@ -68,7 +84,7 @@ export async function POST(request: Request) {
   }
 
   // Update order status (example for payment.captured)
-  const status = evt?.event === 'payment.captured' ? 'paid' : undefined
+  const status = e0?.event === 'payment.captured' ? 'paid' : undefined
   if (status) {
     await supabaseAdmin
       .from('orders')

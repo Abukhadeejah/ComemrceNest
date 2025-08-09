@@ -15,8 +15,9 @@ export default function CheckoutTestPage() {
       if (!res.ok) throw new Error(json?.error || 'checkout_failed')
       setOrderId(json.order?.id || null)
       setMessage('Order created. You can now simulate payment.')
-    } catch (e: any) {
-      setMessage(e.message || 'Failed to create order')
+    } catch (e) {
+      const err = e as Error
+      setMessage(err.message || 'Failed to create order')
     } finally {
       setBusy(false)
     }
@@ -31,8 +32,9 @@ export default function CheckoutTestPage() {
       const json = await res.json()
       if (!res.ok) throw new Error(json?.error || 'simulation_failed')
       setMessage('Payment simulated; order should be marked paid. View status page for this order.')
-    } catch (e: any) {
-      setMessage(e.message || 'Failed to simulate payment')
+    } catch (e) {
+      const err = e as Error
+      setMessage(err.message || 'Failed to simulate payment')
     } finally {
       setBusy(false)
     }

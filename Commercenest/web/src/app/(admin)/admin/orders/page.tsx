@@ -9,7 +9,7 @@ export default async function AdminOrders() {
         .select('id, order_number, status, total_cents, currency, created_at')
         .eq('tenant_id', tenantId)
         .order('created_at', { ascending: false })
-    : { data: [] as any[] }
+    : { data: [] as Array<{ id: string; order_number: string; status: string; total_cents: number; currency: string; created_at: string }>} 
   return (
     <main className="p-6 space-y-4">
       <h1 className="text-xl font-semibold">Orders</h1>

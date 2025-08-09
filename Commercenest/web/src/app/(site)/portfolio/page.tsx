@@ -3,8 +3,7 @@ import type { Metadata, Viewport } from 'next'
 import { fetchCompanyProfileByTenantId } from '@/server/settings'
 import { resolveTenantIdFromRequest, getPrimaryHostnameForTenant, getRequestHostname } from '@/server/tenant'
 import { BLUR_DATA_URL } from '@/lib/blurPlaceholder'
-import { revalidateTag } from 'next/cache'
-import { tenantPortfolioTag } from '@/server/cacheTags'
+//
 import { fetchPublishedProjects } from '@/server/modules/portfolio/service'
 
 export default async function PortfolioPage() {

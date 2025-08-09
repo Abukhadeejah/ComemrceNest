@@ -10,8 +10,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const tenantId = await resolveTenantIdFromRequest()
   if (!tenantId) redirect('/login')
 
-  const cookieStore = await cookies()
-  const supabase = createServerComponentClient({ cookies: () => cookieStore })
+  const supabase = createServerComponentClient({ cookies })
   const { data: { user }, error } = await supabase.auth.getUser()
   if (error) {
     redirect('/login')

@@ -207,3 +207,15 @@ npm run test:e2e
 - Enforce PR template and CI gates; no merges without green checks and completed checklist.
 
 
+
+### 14) Frontend Tenant Architecture (RSC-safe composition)
+- Context: Next.js App Router (15.4.x) may throw an invariant (clientReferenceManifest) when composing server components dynamically (e.g., rendering components returned from async registries or maps).
+- Decision: Avoid dynamic component registries for now. Use static variant selection with explicit imports per section.
+  - Each section has default and per-tenant variants under `src/ui/sections/*` and `src/tenants/<key>/sections/*`.
+  - Pages/layouts select variants via a `switch (tenantKey)` with static imports (safe for RSC and build manifests).
+  - Branding differences come from CSS variables set by `TenantProvider`; runtime content remains DB-driven.
+- Client vs Server:
+  - Interactive-only or placeholder sections can be client components to stabilize builds.
+  - When converting a section to server, use a server wrapper that statically imports tenant variants and renders the selected one.
+- Module gating: Gate visibility with `config.enabledModules` + DB `tenant_modules` checks.
+- Future: When Next.js fixes the invariant, we can restore dynamic composition (registry) without changing tenant variant files.
