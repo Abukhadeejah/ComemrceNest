@@ -8,14 +8,14 @@ type Accent = 'primary' | 'mustard'
 type Props = {
   name: string
   priceCents: number
-  currency: string
+  currency?: string
   imageUrl?: string | null
   badgeText?: string
   accent?: Accent
   description?: string
 }
 
-export function ProductCard({ name, priceCents, currency, imageUrl, badgeText = 'Premium', accent = 'primary', description }: Props) {
+export function ProductCard({ name, priceCents, imageUrl, badgeText = 'Premium', accent = 'primary', description }: Props) {
   const price = (priceCents / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })
   const accentColor = accent === 'mustard' ? 'var(--color-mustard)' : 'var(--color-primary)'
   return (

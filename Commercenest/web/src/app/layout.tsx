@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import TenantProvider from '@/components/TenantProvider'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
-import { supabaseAdmin } from '@/server/supabaseAdmin'
+import { supabaseAdmin, hasSupabaseEnv } from '@/server/supabaseAdmin'
 import { getHeaderComponent, getFooterComponent } from '@/tenants'
 
 const geistSans = Geist({
@@ -28,7 +28,7 @@ export default async function RootLayout({
 }>) {
   const tenantId = await resolveTenantIdFromRequest()
   let tenantKey = 'default'
-  if (tenantId) {
+  if (tenantId && hasSupabaseEnv && supabaseAdmin) {
     const { data: domain } = await supabaseAdmin
       .from('tenant_domains').select('hostname').eq('tenant_id', tenantId).eq('is_primary', true).maybeSingle()
     tenantKey = domain?.hostname?.split('.')[0] || 'default'

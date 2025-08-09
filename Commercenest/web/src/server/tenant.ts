@@ -1,11 +1,12 @@
 import { headers } from 'next/headers'
-import { supabaseAdmin } from '@/server/supabaseAdmin'
+import { supabaseAdmin, hasSupabaseEnv } from '@/server/supabaseAdmin'
 
 export async function resolveTenantIdFromRequest(): Promise<string | null> {
   const h = await headers()
   const rawHost = h.get('x-tenant-host') || h.get('host') || ''
   const host = rawHost.split(':')[0]
   if (!host) return null
+  if (!hasSupabaseEnv || !supabaseAdmin) return null
   const { data } = await supabaseAdmin
     .from('tenant_domains')
     .select('tenant_id, hostname')
@@ -15,6 +16,7 @@ export async function resolveTenantIdFromRequest(): Promise<string | null> {
 }
 
 export async function getPrimaryHostnameForTenant(tenantId: string): Promise<string | null> {
+  if (!hasSupabaseEnv || !supabaseAdmin) return null
   const { data } = await supabaseAdmin
     .from('tenant_domains')
     .select('hostname')
