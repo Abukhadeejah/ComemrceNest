@@ -3,24 +3,20 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 
-type Item = { href: string; label: string }
+type Item = { href: string; label: string; external?: boolean }
 
-const ITEMS: Item[] = [
-  { href: '/', label: 'Home' },
-  { href: '/products', label: 'Products' },
-  { href: '/portfolio', label: 'Portfolio' },
-  { href: '/about', label: 'About' },
-  { href: '/contact', label: 'Contact' },
-]
+interface NavLinksClientProps {
+  items: Item[]
+}
 
-export default function NavLinksClient() {
+export default function NavLinksClient({ items }: NavLinksClientProps) {
   const pathname = usePathname() || '/'
   const [open, setOpen] = useState(false)
 
   return (
     <>
       <nav className="hidden md:flex items-center gap-8">
-        {ITEMS.map((it) => {
+        {items.map((it) => {
           const active = pathname === it.href || (it.href !== '/' && pathname.startsWith(it.href))
           return (
             <Link
@@ -49,7 +45,7 @@ export default function NavLinksClient() {
       </button>
       {open ? (
         <div className="md:hidden mt-3 rounded-xl border bg-white p-3 shadow-sm">
-          {ITEMS.map((it) => {
+          {items.map((it) => {
             const active = pathname === it.href || (it.href !== '/' && pathname.startsWith(it.href))
             return (
               <Link

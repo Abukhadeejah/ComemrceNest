@@ -6,15 +6,54 @@ const storageHostname = process.env.NEXT_PUBLIC_SUPABASE_URL
 
 const nextConfig: NextConfig = {
   images: {
-    remotePatterns: storageHostname
-      ? [
+    remotePatterns: [
+      ...(storageHostname
+        ? [
+            {
+              protocol: "https" as const,
+              hostname: storageHostname,
+              pathname: "/storage/v1/object/public/**",
+            },
+          ]
+        : []),
+      {
+        protocol: "https" as const,
+        hostname: "images.unsplash.com",
+        pathname: "/**",
+      },
+    ],
+  },
+  // Production optimizations
+  experimental: {
+    optimizePackageImports: ['lucide-react', 'framer-motion'],
+  },
+  // Security headers
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
           {
-            protocol: "https",
-            hostname: storageHostname,
-            pathname: "/storage/v1/object/public/**",
+            key: 'X-DNS-Prefetch-Control',
+            value: 'on'
           },
-        ]
-      : [],
+          {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=63072000; includeSubDomains; preload'
+          }
+        ],
+      },
+    ]
+  },
+  // Redirects for multi-tenant domains
+  async redirects() {
+    return [
+      {
+        source: '/admin',
+        destination: '/admin/dashboard',
+        permanent: false,
+      },
+    ]
   },
 };
 

@@ -1,21 +1,22 @@
+'use client'
+
 import Image from 'next/image'
 import Link from 'next/link'
-import { resolveTenantIdFromRequest } from '@/server/tenant'
-import { fetchCompanyProfileByTenantId } from '@/server/settings'
+import { useTenant } from '@/hooks/useTenant'
 import NavLinksClient from './NavLinksClient'
 
-export default async function SiteHeader() {
-  const tenantId = await resolveTenantIdFromRequest()
-  const { data: company } = tenantId ? await fetchCompanyProfileByTenantId(tenantId) : { data: null as unknown as { name: string; logo_url?: string; brand_accent_hex?: string } }
-  const accent: string = company?.brand_accent_hex ?? 'var(--color-primary)'
-  const name = company?.name ?? 'Bluebell'
+export default function SiteHeader() {
+  const tenant = useTenant()
+  const name = tenant.brand.name
+  const menuItems = tenant.navigation.mainMenu
+  const accent = tenant.theme.colors.accent || tenant.theme.colors.primary
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-[#f7fafc] shadow-sm px-6 py-3">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-6">
         <Link href="/" className="flex items-center gap-2 transition-transform hover:scale-[1.02]">
-          {company?.logo_url ? (
+          {tenant.brand.logo ? (
             <div className="relative h-8 w-8 overflow-hidden rounded">
-              <Image src={company.logo_url} alt={name} fill sizes="32px" className="object-contain" />
+              <Image src={tenant.brand.logo} alt={name} fill sizes="32px" className="object-contain" />
             </div>
           ) : (
             <svg width="34" height="34" viewBox="0 0 220 140" className="drop-shadow">
@@ -37,7 +38,7 @@ export default async function SiteHeader() {
             <div className="-mt-1 text-xs tracking-[0.35em] text-[color:var(--color-brown)]">FABRICS</div>
           </div>
         </Link>
-        <NavLinksClient />
+        <NavLinksClient items={menuItems} />
       </div>
     </header>
   )

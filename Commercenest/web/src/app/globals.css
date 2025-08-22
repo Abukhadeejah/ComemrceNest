@@ -91,3 +91,11 @@ body {
   from { width: 0; height: 0; opacity: 0.5; }
   to { width: 240px; height: 240px; opacity: 0; }
 }
+
+/* Simple fade-in for image switches */
+@keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+.animate-fadeIn { animation: fadeIn 250ms ease-in-out }
+
+/* Hide scrollbar for horizontal thumbnail strip */
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+.scrollbar-hide::-webkit-scrollbar { display: none; }

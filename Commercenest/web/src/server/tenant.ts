@@ -1,12 +1,11 @@
 import { headers } from 'next/headers'
-import { supabaseAdmin, hasSupabaseEnv } from '@/server/supabaseAdmin'
+import { supabaseAdmin } from '@/server/supabaseAdmin'
 
 export async function resolveTenantIdFromRequest(): Promise<string | null> {
   const h = await headers()
   const rawHost = h.get('x-tenant-host') || h.get('host') || ''
   const host = rawHost.split(':')[0]
   if (!host) return null
-  if (!hasSupabaseEnv || !supabaseAdmin) return null
   const { data } = await supabaseAdmin
     .from('tenant_domains')
     .select('tenant_id, hostname')
@@ -16,7 +15,6 @@ export async function resolveTenantIdFromRequest(): Promise<string | null> {
 }
 
 export async function getPrimaryHostnameForTenant(tenantId: string): Promise<string | null> {
-  if (!hasSupabaseEnv || !supabaseAdmin) return null
   const { data } = await supabaseAdmin
     .from('tenant_domains')
     .select('hostname')
@@ -31,6 +29,24 @@ export async function getRequestHostname(): Promise<string | null> {
   const rawHost = h.get('x-tenant-host') || h.get('host') || ''
   const host = rawHost.split(':')[0]
   return host || null
+}
+
+export async function resolveTenantKeyFromId(tenantId: string): Promise<string | null> {
+  const { data } = await supabaseAdmin
+    .from('tenants')
+    .select('name')
+    .eq('id', tenantId)
+    .maybeSingle()
+  
+  if (!data?.name) return null
+  
+  // Map tenant names to keys (this could be a separate column in the future)
+  const nameToKey: Record<string, string> = {
+    'Bluebell Interiors': 'bluebell',
+    'Senlysh Fashion': 'senlysh',
+  }
+  
+  return nameToKey[data.name] || null
 }
 
 

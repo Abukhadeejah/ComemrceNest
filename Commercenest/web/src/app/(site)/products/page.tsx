@@ -200,7 +200,6 @@ export default async function ProductsPage({ searchParams }: { searchParams?: Pr
                   <ProductCard
                     name={p.name}
                     priceCents={p.price_cents}
-                    currency={p.currency}
                     imageUrl={p.hero_image_url ?? undefined}
                     badgeText={idx % 3 === 1 ? 'Luxury' : idx % 3 === 2 ? 'Elegant' : 'Premium'}
                     accent={idx % 2 === 0 ? 'primary' : 'mustard'}

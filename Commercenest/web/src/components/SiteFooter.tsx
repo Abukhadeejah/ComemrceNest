@@ -1,15 +1,14 @@
-import { resolveTenantIdFromRequest } from '@/server/tenant'
-import { fetchCompanyProfileByTenantId } from '@/server/settings'
+'use client'
 
-type CompanyProfile = { name?: string }
+import Link from 'next/link'
+import { useTenant } from '@/hooks/useTenant'
 
-export default async function SiteFooter() {
-  const tenantId = await resolveTenantIdFromRequest()
-  const { data: company } = tenantId
-    ? await fetchCompanyProfileByTenantId(tenantId)
-    : ({ data: null } as { data: CompanyProfile | null })
-  const name = company?.name ?? 'Bluebell Fabrics'
+export default function SiteFooter() {
+  const tenant = useTenant()
+  const name = tenant.brand.name
   const year = new Date().getFullYear()
+  const quickLinks = tenant.navigation.footerLinks?.quickLinks || []
+  const contact = tenant.content.contact
 
   return (
     <footer className="relative overflow-hidden text-white bg-gradient-to-br from-[color:var(--color-primary)] via-blue-800 to-[color:var(--color-primary)] pt-16 pb-8">
@@ -42,12 +41,14 @@ export default async function SiteFooter() {
                 </g>
               </svg>
               <div>
-                <div className="text-lg font-bold leading-none">Bluebell</div>
-                <div className="text-xs tracking-[0.35em] text-white/85 leading-none mt-1">FABRICS</div>
+                <div className="text-lg font-bold leading-none">{name}</div>
+                {tenant.brand.tagline && (
+                  <div className="text-xs text-white/85 leading-none mt-1">{tenant.brand.tagline.toUpperCase()}</div>
+                )}
               </div>
             </div>
             <p className="text-white/80 max-w-md leading-relaxed mb-6">
-              Creating beautiful interiors with premium fabrics since 1985. Your trusted partner for exceptional design solutions that transform spaces into extraordinary experiences.
+              {tenant.brand.tagline || 'Your trusted e-commerce partner'}
             </p>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-[color:var(--color-mustard)] flex items-center justify-center">
@@ -64,17 +65,12 @@ export default async function SiteFooter() {
           <div>
             <h3 className="font-bold text-lg mb-4 text-[color:var(--color-mustard)]">Quick Links</h3>
             <ul className="space-y-3 text-white/85">
-              {[
-                { href: '#home', label: 'Home' },
-                { href: '#portfolio', label: 'Portfolio' },
-                { href: '#products', label: 'Products' },
-                { href: '#contact', label: 'Contact' },
-              ].map((l) => (
+              {quickLinks.map((l) => (
                 <li key={l.href}>
-                  <a href={l.href} className="group inline-flex items-center gap-2 hover:text-[color:var(--color-mustard)] transition-colors">
+                  <Link href={l.href} className="group inline-flex items-center gap-2 hover:text-[color:var(--color-mustard)] transition-colors">
                     <span className="w-1.5 h-1.5 rounded-full bg-[color:var(--color-crimson)] group-hover:bg-[color:var(--color-mustard)]"/>
                     {l.label}
-                  </a>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -84,12 +80,13 @@ export default async function SiteFooter() {
           <div>
             <h3 className="font-bold text-lg mb-4 text-[color:var(--color-mustard)]">Get In Touch</h3>
             <div className="space-y-4 text-white/85">
-              <div>
-                <p>123 Design Street</p>
-                <p>New Delhi, 110001</p>
-              </div>
-              <p>(+91) 98765-43210</p>
-              <p>hello@bluebellFabrics.com</p>
+              {contact?.address && (
+                <div>
+                  <p>{contact.address}</p>
+                </div>
+              )}
+              {contact?.phone && <p>{contact.phone}</p>}
+              {contact?.email && <p>{contact.email}</p>}
             </div>
           </div>
         </div>

@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import TenantProvider from '@/components/TenantProvider'
-import { resolveTenantIdFromRequest } from '@/server/tenant'
-import { supabaseAdmin, hasSupabaseEnv } from '@/server/supabaseAdmin'
+import { resolveTenantIdFromRequest, resolveTenantKeyFromId } from '@/server/tenant'
 import { getHeaderComponent, getFooterComponent } from '@/tenants'
 
 const geistSans = Geist({
@@ -27,14 +26,9 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const tenantId = await resolveTenantIdFromRequest()
-  let tenantKey = 'default'
-  if (tenantId && hasSupabaseEnv && supabaseAdmin) {
-    const { data: domain } = await supabaseAdmin
-      .from('tenant_domains').select('hostname').eq('tenant_id', tenantId).eq('is_primary', true).maybeSingle()
-    tenantKey = domain?.hostname?.split('.')[0] || 'default'
-  }
-  const Header = getHeaderComponent(tenantKey)
-  const Footer = getFooterComponent(tenantKey)
+  const tenantKey = tenantId ? await resolveTenantKeyFromId(tenantId) : 'default'
+  const Header = getHeaderComponent(tenantKey || 'default')
+  const Footer = getFooterComponent(tenantKey || 'default')
   return (
     <html lang="en">
       <body
