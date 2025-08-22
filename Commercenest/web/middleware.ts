@@ -1,16 +1,25 @@
-import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
-import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
+import type { NextRequest } from 'next/server'
 
-export async function middleware(request: NextRequest) {
-  const host = request.headers.get('host') || ''
-  const response = NextResponse.next()
-  // Refresh Supabase session cookies for SSR routes
-  const supabase = createMiddlewareClient({ req: request, res: response })
-  await supabase.auth.getSession()
-  // Non-authoritative hint for server handlers
-  response.headers.set('x-tenant-host', host)
-  return response
+export function middleware(request: NextRequest) {
+  const { pathname, host } = request.nextUrl
+  
+  // Add tenant host info to headers for server components
+  const requestHeaders = new Headers(request.headers)
+  requestHeaders.set('x-tenant-host', host)
+  requestHeaders.set('x-pathname', pathname)
+  
+  return NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  })
+}
+
+export const config = {
+  matcher: [
+    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+  ],
 }
 
 

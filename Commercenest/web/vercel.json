@@ -36,6 +36,10 @@
     {
       "source": "/robots.txt",
       "destination": "/api/robots"
+    },
+    {
+      "source": "/bluebell/:path*",
+      "destination": "/bluebell/:path*"
     }
   ],
   "redirects": [

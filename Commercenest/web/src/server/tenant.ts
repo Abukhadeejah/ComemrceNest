@@ -5,13 +5,36 @@ export async function resolveTenantIdFromRequest(): Promise<string | null> {
   const h = await headers()
   const rawHost = h.get('x-tenant-host') || h.get('host') || ''
   const host = rawHost.split(':')[0]
+  const pathname = h.get('x-pathname') || '/'
+  
   if (!host) return null
-  const { data } = await supabaseAdmin
+  
+  // Special handling for localhost development
+  if (host === 'localhost') {
+    if (pathname.startsWith('/bluebell')) {
+      return '11111111-1111-4111-8111-11111111bb01' // Bluebell tenant ID
+    }
+    return '1e4c9aa7-e7af-4fe7-999b-c9c46219fa3c' // Senlysh tenant ID (default)
+  }
+  
+  // Check host-based routing for specific tenant domains
+  const { data: hostData } = await supabaseAdmin
     .from('tenant_domains')
     .select('tenant_id, hostname')
     .eq('hostname', host)
     .maybeSingle()
-  return data?.tenant_id ?? null
+    
+  if (hostData?.tenant_id) return hostData.tenant_id
+  
+  // Fallback to path-based routing for Vercel staging
+  if (host === 'comemrce-nest-cmuwl1o0x-appopoleis1.vercel.app') {
+    if (pathname.startsWith('/bluebell')) {
+      return '11111111-1111-4111-8111-11111111bb01' // Bluebell tenant ID
+    }
+    return '1e4c9aa7-e7af-4fe7-999b-c9c46219fa3c' // Senlysh tenant ID (default)
+  }
+  
+  return null
 }
 
 export async function getPrimaryHostnameForTenant(tenantId: string): Promise<string | null> {
