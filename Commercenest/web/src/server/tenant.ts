@@ -27,7 +27,7 @@ export async function resolveTenantIdFromRequest(): Promise<string | null> {
   if (hostData?.tenant_id) return hostData.tenant_id
   
   // Fallback to path-based routing for Vercel staging
-  if (host === 'comemrce-nest-cmuwl1o0x-appopoleis1.vercel.app') {
+  if (host === 'comemrce-nest-8qhd9tlwk-appopoleis1.vercel.app' || host.includes('vercel.app')) {
     if (pathname.startsWith('/bluebell')) {
       return '11111111-1111-4111-8111-11111111bb01' // Bluebell tenant ID
     }

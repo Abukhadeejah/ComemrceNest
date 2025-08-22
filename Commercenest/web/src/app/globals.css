@@ -98,4 +98,14 @@ body {
 
 /* Hide scrollbar for horizontal thumbnail strip */
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Marquee animation for running banner */
+@keyframes marquee {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
+
+.animate-marquee {
+  animation: marquee linear infinite;
+}
 .scrollbar-hide::-webkit-scrollbar { display: none; }

@@ -2,14 +2,19 @@ import SiteHeaderCore from '@/components/SiteHeader'
 import SiteFooterCore from '@/components/SiteFooter'
 import BreadcrumbCore from '@/components/Breadcrumb'
 import SenlyshFooter from './senlysh/SenlyshFooter'
+import SenlyshHeader from './senlysh/SenlyshHeader'
 
 // For now, Bluebell uses shared components. This file becomes the single place
 // to switch to tenant-specific overrides later without touching pages.
 
-export function getHeaderComponent(_tenantKey: string) {
-  // All tenants use the same shared header component
-  // Tenant-specific theming is handled via CSS variables and config
-  return SiteHeaderCore
+export function getHeaderComponent(tenantKey: string) {
+  // Senlysh uses custom header, others use shared header component
+  switch (tenantKey) {
+    case 'senlysh':
+      return SenlyshHeader
+    default:
+      return SiteHeaderCore
+  }
 }
 
 export function getFooterComponent(tenantKey: string) {
