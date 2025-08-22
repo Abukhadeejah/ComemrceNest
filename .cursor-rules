@@ -1,0 +1,7 @@
+# Cursor Project Rules
+
+- Always use a data-driven, DB-first development approach.
+- Always read documentation in `Commercenest/docs/**` and existing rules before developing or suggesting anything.
+- Always review Supabase database state (tables, relationships, RLS policies, functions, triggers, migrations) before developing or suggesting changes.
+
+

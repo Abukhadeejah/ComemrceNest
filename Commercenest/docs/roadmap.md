@@ -33,3 +33,40 @@ Source of truth also includes: `Commercenest/docs/planning_progress.md` and `Com
 - New cross-cutting capabilities become phases. Tight, low-risk improvements are sub-phases under the active phase.
 
 
+### New Tenant: Senlysh.com (Fashion E‑commerce)
+
+Phases and Sub‑phases (DB‑first, Docs‑first, RLS‑aware):
+
+1) P0 — Tenant Enablement (Infra & Data)
+   - Map `senlysh.com` in `tenant_domains` (primary=true)
+   - Seed `settings_company_profile` (brand name, accent color, socials)
+   - Verify RLS across tenant‑scoped tables
+   - Confirm storage convention `products/senlysh/<product_id>/...`
+
+2) P1 — Storefront Foundations
+   - `tenants/senlysh/config.ts` with palette/fonts/homepage sections
+   - Add resolver case in `src/tenants/index.ts`
+   - `tenants/senlysh/SenlyshHome.tsx` (hero, categories, trending, brand strip)
+   - SEO defaults: `generateMetadata` canonical by host
+
+3) P2 — Catalog (PLP/PDP) for Fashion
+   - PLP facets (size, color, brand) via `products.attributes` JSONB or normalized tables
+   - PDP variant picker (size/color), wishlist, delivery/pincode check (UI)
+   - Shared service uses tenant‑aware filters and pagination
+
+4) P3 — Cart & Checkout (Test Mode)
+   - Cart state (client) and server totals validation
+   - Razorpay test‑mode order creation and webhook handling per tenant
+   - Order confirmation pages and admin orders list
+
+5) P4 — Admin UX
+   - Product import/upload flow adapted to fashion attributes
+   - Category management for fashion collections
+   - Image uploads to Supabase Storage with public URLs in `product_images`
+
+6) P5 — Polish & Growth
+   - Performance passes (index advisors on FK columns)
+   - E2E tests (PLP facets, PDP variants, checkout)
+   - SEO coverage for collections/brands
+
+
