@@ -44,7 +44,7 @@ const SenlyshHome: React.FC = () => {
     <div className="min-h-screen bg-white overflow-x-auto">
       <div className="min-w-[1200px] w-full">
         {/* Hero Section */}
-        <HeroSection />
+        <HeroSection autoPlay={true} autoPlayInterval={8000} />
 
         {/* Categories Section */}
         <CategoriesSection />

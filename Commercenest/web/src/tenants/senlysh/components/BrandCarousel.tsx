@@ -1,10 +1,12 @@
-import React from 'react';
+'use client'
+
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 
 interface Brand {
   name: string;
-  image: string;
+  logo: string;
+  url?: string;
 }
 
 interface BrandCarouselProps {
@@ -12,61 +14,174 @@ interface BrandCarouselProps {
   brands?: Brand[];
   seeAllUrl?: string;
   bgColor?: string;
+  autoPlayInterval?: number;
 }
 
 const defaultBrands: Brand[] = [
-  { name: 'Nike', image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=200&h=200&fit=crop' },
-  { name: 'Adidas', image: 'https://images.unsplash.com/photo-1543508282-6319a3e2621f?w=200&h=200&fit=crop' },
-  { name: 'Puma', image: 'https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=200&h=200&fit=crop' },
-  { name: 'Reebok', image: 'https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=200&h=200&fit=crop' },
-  { name: 'Under Armour', image: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=200&h=200&fit=crop' },
-  { name: 'New Balance', image: 'https://images.unsplash.com/photo-1552346154-21d32810aba3?w=200&h=200&fit=crop' }
+  { 
+    name: 'Nike', 
+    logo: '/images/brands/nike-logo.svg',
+    url: '/brand/nike'
+  },
+  { 
+    name: 'Adidas', 
+    logo: '/images/brands/adidas-logo.svg',
+    url: '/brand/adidas'
+  },
+  { 
+    name: 'Puma', 
+    logo: '/images/brands/puma-logo.svg',
+    url: '/brand/puma'
+  },
+  { 
+    name: 'Reebok', 
+    logo: '/images/brands/reebok-logo.svg',
+    url: '/brand/reebok'
+  },
+  { 
+    name: 'Under Armour', 
+    logo: '/images/brands/under-armour-logo.svg',
+    url: '/brand/under-armour'
+  },
+  { 
+    name: 'New Balance', 
+    logo: '/images/brands/new-balance-logo.svg',
+    url: '/brand/new-balance'
+  },
+  { 
+    name: 'Converse', 
+    logo: '/images/brands/converse-logo.svg',
+    url: '/brand/converse'
+  },
+  { 
+    name: 'Vans', 
+    logo: '/images/brands/vans-logo.svg',
+    url: '/brand/vans'
+  }
 ];
 
 const BrandCarousel: React.FC<BrandCarouselProps> = ({
   title = "Shop by Brands",
   brands = defaultBrands,
   seeAllUrl = "/shop",
-  bgColor = "bg-white"
+  bgColor = "bg-white",
+  autoPlayInterval = 3000
 }) => {
+  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  const carouselRef = useRef<HTMLDivElement>(null);
+  const autoPlayRef = useRef<NodeJS.Timeout>();
+
+  // Auto-play functionality with smooth scrolling
+  useEffect(() => {
+    if (isAutoPlaying && carouselRef.current) {
+      autoPlayRef.current = setInterval(() => {
+        if (carouselRef.current) {
+          const scrollAmount = 3; // Faster scroll speed
+          carouselRef.current.scrollLeft += scrollAmount;
+          
+          // Reset to beginning when reaching the end (seamless loop)
+          if (carouselRef.current.scrollLeft >= carouselRef.current.scrollWidth / 2) {
+            carouselRef.current.scrollLeft = 0;
+          }
+        }
+      }, 16); // 60fps for smooth motion
+    }
+
+    return () => {
+      if (autoPlayRef.current) {
+        clearInterval(autoPlayRef.current);
+      }
+    };
+  }, [isAutoPlaying, autoPlayInterval]);
+
+  // Pause auto-play on hover
+  const handleMouseEnter = () => setIsAutoPlaying(false);
+  const handleMouseLeave = () => setIsAutoPlaying(true);
+
+  const scrollToPrevious = () => {
+    if (carouselRef.current) {
+      carouselRef.current.scrollBy({ left: -200, behavior: 'smooth' });
+    }
+  };
+
+  const scrollToNext = () => {
+    if (carouselRef.current) {
+      carouselRef.current.scrollBy({ left: 200, behavior: 'smooth' });
+    }
+  };
+
   return (
     <section className={`py-16 ${bgColor}`}>
-      <div className="container mx-auto px-4">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <h2 className="text-3xl font-bold text-gray-800 text-center mb-12">{title}</h2>
-        <div className="relative">
-          <div className="grid grid-cols-6 gap-8">
-            {brands.map((brand) => (
-              <div key={brand.name} className="text-center">
-                <div className="bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300">
-                  <Image
-                    src={brand.image}
-                    alt={brand.name}
-                    width={200}
-                    height={200}
-                    className="w-full h-32 object-cover rounded mb-2"
-                  />
-                  <p className="text-sm font-medium text-gray-800">{brand.name}</p>
-                </div>
+        
+        {/* Carousel Container */}
+        <div 
+          className="relative max-w-6xl mx-auto"
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+        >
+          {/* Navigation Buttons */}
+          <button
+            onClick={scrollToPrevious}
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white text-gray-800 p-2 rounded-full shadow-lg transition-all duration-300 hover:scale-110"
+            aria-label="Previous brands"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+
+          <button
+            onClick={scrollToNext}
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white text-gray-800 p-2 rounded-full shadow-lg transition-all duration-300 hover:scale-110"
+            aria-label="Next brands"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+
+          {/* Brands Horizontal Scroll */}
+          <div 
+            ref={carouselRef}
+            className="flex gap-8 overflow-x-auto scrollbar-hide"
+            style={{ 
+              scrollBehavior: 'smooth',
+              scrollSnapType: 'x mandatory'
+            }}
+          >
+            {/* Duplicate brands for seamless infinite loop */}
+            {[...brands, ...brands].map((brand, index) => (
+              <div key={`${brand.name}-${index}`} className="group text-center flex-shrink-0 w-32 sm:w-40">
+                <Link 
+                  href={brand.url || '#'} 
+                  className="block transition-all duration-300 transform hover:scale-105"
+                >
+                  <div className="flex items-center justify-center mb-3">
+                    <div className="w-20 h-20 sm:w-24 sm:h-24 relative">
+                      <img
+                        src={brand.logo}
+                        alt={brand.name}
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-sm font-medium text-gray-800 group-hover:text-purple-600 transition-colors">
+                    {brand.name}
+                  </p>
+                </Link>
               </div>
             ))}
           </div>
-          <div className="absolute top-1/2 left-4 transform -translate-y-1/2">
-            <button className="bg-white p-2 rounded-full shadow-lg hover:bg-gray-100">
-              <svg className="h-6 w-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-          </div>
-          <div className="absolute top-1/2 right-4 transform -translate-y-1/2">
-            <button className="bg-white p-2 rounded-full shadow-lg hover:bg-gray-100">
-              <svg className="h-6 w-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          </div>
         </div>
+        
+        {/* See All Link */}
         <div className="text-center mt-8">
-          <Link href={seeAllUrl} className="inline-flex items-center text-purple-600 hover:text-purple-700 font-medium">
+          <Link 
+            href={seeAllUrl} 
+            className="inline-flex items-center text-purple-600 hover:text-purple-700 font-medium transition-colors duration-300"
+          >
             <span>See All</span>
             <svg className="ml-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />

@@ -159,77 +159,111 @@ const CategoriesSection: React.FC<CategoriesSectionProps> = ({
                 <div className="w-24 h-1 bg-gradient-to-r from-purple-500 to-pink-500 mx-auto rounded-full"></div>
               </div>
 
-              {/* Categories Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-6">
-                {row.categories.map((category) => (
-                  <Link key={category.name} href={category.url} className="group">
-                    <div className="relative overflow-hidden rounded-xl shadow-lg transition-all duration-300 group-hover:scale-105 group-hover:shadow-xl">
-                      {/* Category Image */}
-                      <div className="relative h-32 sm:h-40 md:h-48">
-                        <Image
-                          src={category.image}
-                          alt={category.name}
-                          fill
-                          className="object-cover transition-transform duration-300 group-hover:scale-110"
-                        />
-                        {/* Overlay */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
-                      </div>
-                      
-                      {/* Badges */}
-                      <div className="absolute top-2 left-2 flex flex-col gap-1">
-                        {category.isTrending && (
-                          <span className="bg-orange-500 text-white text-xs px-2 py-1 rounded-full font-semibold animate-pulse">
-                            🔥 Trending
-                          </span>
-                        )}
-                        {category.isNew && (
-                          <span className="bg-green-500 text-white text-xs px-2 py-1 rounded-full font-semibold">
-                            ✨ New
-                          </span>
-                        )}
-                        {category.hasSale && (
-                          <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-semibold">
-                            {category.salePercentage}% OFF
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Category Info */}
-                      <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4">
-                        <h4 className="text-white text-sm sm:text-base font-semibold mb-1">
-                          {category.name}
-                        </h4>
-                        {category.count && (
-                          <p className="text-white/80 text-xs sm:text-sm">
-                            {category.count}
-                          </p>
-                        )}
-                        {/* Price Info for Sale Items */}
-                        {category.hasSale && category.salePercentage && (
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-yellow-300 text-xs font-semibold">
-                              Up to {category.salePercentage}% off
+              {/* Categories Grid - Horizontal Scrollable */}
+              <div className="relative">
+                <div className="flex gap-4 sm:gap-6 overflow-x-auto scrollbar-hide pb-4 sm:pb-6
+                  scroll-smooth snap-x snap-mandatory
+                  [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                  {row.categories.map((category, index) => (
+                    <Link key={category.name} href={category.url} className="group flex-shrink-0 w-48 sm:w-56 md:w-64 snap-start">
+                      <div className="relative overflow-hidden rounded-xl shadow-lg 
+                        transition-transform duration-300 ease-out will-change-transform
+                        group-hover:scale-105 group-hover:shadow-xl
+                        group-hover:-translate-y-1 motion-reduce:transition-none">
+                        {/* Category Image */}
+                        <div className="relative h-32 sm:h-40 md:h-48">
+                          <Image
+                            src={category.image}
+                            alt={category.name}
+                            fill
+                            loading="lazy"
+                            className="object-cover 
+                              transition-transform duration-300 ease-out will-change-transform
+                              group-hover:scale-110 motion-reduce:transition-none"
+                          />
+                          {/* Optimized Base Overlay */}
+                          <div className="absolute inset-0 
+                            bg-gradient-to-t from-black/60 via-black/20 to-transparent
+                            group-hover:from-black/50 group-hover:via-black/15
+                            transition-all duration-300 motion-reduce:transition-none"></div>
+                        </div>
+                        
+                        {/* Optimized Badges */}
+                        <div className="absolute top-2 left-2 flex flex-col gap-1">
+                          {category.isTrending && (
+                            <span className="bg-orange-500 text-white text-xs px-2 py-1 rounded-full font-semibold 
+                              animate-pulse motion-reduce:animate-none">
+                              🔥 Trending
                             </span>
-                          </div>
-                        )}
-                      </div>
+                          )}
+                          {category.isNew && (
+                            <span className="bg-green-500 text-white text-xs px-2 py-1 rounded-full font-semibold">
+                              ✨ New
+                            </span>
+                          )}
+                          {category.hasSale && (
+                            <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-semibold">
+                              {category.salePercentage}% OFF
+                            </span>
+                          )}
+                        </div>
 
-                      {/* Hover Effect */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-purple-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    </div>
-                  </Link>
-                ))}
+                        {/* Optimized Category Info */}
+                        <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4">
+                          <h4 className="text-white text-sm sm:text-base font-semibold mb-1
+                            transition-colors duration-300 motion-reduce:transition-none
+                            group-hover:text-yellow-200">
+                            {category.name}
+                          </h4>
+                          {category.count && (
+                            <p className="text-white/80 text-xs sm:text-sm
+                              transition-colors duration-300 motion-reduce:transition-none
+                              group-hover:text-white">
+                              {category.count}
+                            </p>
+                          )}
+                          {/* Optimized Price Info for Sale Items */}
+                          {category.hasSale && category.salePercentage && (
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-yellow-300 text-xs font-semibold
+                                transition-colors duration-300 motion-reduce:transition-none
+                                group-hover:text-yellow-200">
+                                Up to {category.salePercentage}% off
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Optimized Hover Effect */}
+                        <div className="absolute inset-0 
+                          bg-gradient-to-t from-purple-500/20 to-transparent 
+                          opacity-0 group-hover:opacity-100 
+                          transition-opacity duration-300 motion-reduce:transition-none"></div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+
+                {/* Scroll Indicators */}
+                <div className="flex justify-center mt-4 space-x-2">
+                  <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
+                  <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
+                  <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
+                </div>
               </div>
 
-              {/* View All Button for each row */}
+              {/* Optimized View All Button for each row */}
               <div className="text-center">
                 <Link 
                   href={rowIndex === 0 ? '/shop/men' : '/shop/women'}
-                  className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-3 rounded-full font-semibold hover:from-purple-700 hover:to-pink-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+                  className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-3 rounded-full font-semibold 
+                    transition-all duration-300 shadow-lg hover:shadow-xl 
+                    transform hover:scale-105 hover:-translate-y-1
+                    hover:from-purple-700 hover:to-pink-700
+                    will-change-transform motion-reduce:transition-none"
                 >
                   View All {rowIndex === 0 ? "Men's" : "Women's"} Fashion
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1 motion-reduce:transition-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                   </svg>
                 </Link>
@@ -238,35 +272,41 @@ const CategoriesSection: React.FC<CategoriesSectionProps> = ({
           ))}
         </div>
 
-        {/* Additional Value Section */}
+        {/* Optimized Additional Value Section */}
         <div className="mt-16 sm:mt-20 bg-white rounded-2xl shadow-xl p-8 sm:p-12">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="text-center group">
+              <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4
+                transition-transform duration-300 group-hover:scale-110 group-hover:shadow-lg
+                will-change-transform motion-reduce:transition-none">
+                <svg className="w-8 h-8 text-white transition-transform duration-300 group-hover:rotate-12 motion-reduce:transition-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                 </svg>
               </div>
-              <h4 className="text-xl font-bold text-gray-800 mb-2">Free Shipping</h4>
-              <p className="text-gray-600">On orders above ₹999</p>
+              <h4 className="text-xl font-bold text-gray-800 mb-2 transition-colors duration-300 group-hover:text-purple-600 motion-reduce:transition-none">Free Shipping</h4>
+              <p className="text-gray-600 transition-colors duration-300 group-hover:text-gray-700 motion-reduce:transition-none">On orders above ₹999</p>
             </div>
-            <div className="text-center">
-              <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="text-center group">
+              <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-4
+                transition-transform duration-300 group-hover:scale-110 group-hover:shadow-lg
+                will-change-transform motion-reduce:transition-none">
+                <svg className="w-8 h-8 text-white transition-transform duration-300 group-hover:rotate-12 motion-reduce:transition-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <h4 className="text-xl font-bold text-gray-800 mb-2">Easy Returns</h4>
-              <p className="text-gray-600">30-day money back guarantee</p>
+              <h4 className="text-xl font-bold text-gray-800 mb-2 transition-colors duration-300 group-hover:text-green-600 motion-reduce:transition-none">Easy Returns</h4>
+              <p className="text-gray-600 transition-colors duration-300 group-hover:text-gray-700 motion-reduce:transition-none">30-day money back guarantee</p>
             </div>
-            <div className="text-center">
-              <div className="w-16 h-16 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="text-center group">
+              <div className="w-16 h-16 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center mx-auto mb-4
+                transition-transform duration-300 group-hover:scale-110 group-hover:shadow-lg
+                will-change-transform motion-reduce:transition-none">
+                <svg className="w-8 h-8 text-white transition-transform duration-300 group-hover:rotate-12 motion-reduce:transition-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
                 </svg>
               </div>
-              <h4 className="text-xl font-bold text-gray-800 mb-2">Secure Payment</h4>
-              <p className="text-gray-600">100% secure checkout</p>
+              <h4 className="text-xl font-bold text-gray-800 mb-2 transition-colors duration-300 group-hover:text-orange-600 motion-reduce:transition-none">Secure Payment</h4>
+              <p className="text-gray-600 transition-colors duration-300 group-hover:text-gray-700 motion-reduce:transition-none">100% secure checkout</p>
             </div>
           </div>
         </div>
