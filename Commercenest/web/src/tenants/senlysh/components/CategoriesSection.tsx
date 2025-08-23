@@ -30,8 +30,8 @@ interface CategoriesSectionProps {
 
 const defaultCategoryRows: CategoryRow[] = [
   {
-    title: "Men&apos;s Fashion",
-    description: "Discover the latest trends in men&apos;s clothing and accessories",
+    title: "Men's Fashion",
+    description: "Discover the latest trends in men's clothing and accessories",
     categories: [
       { 
         name: 'T-Shirts', 
@@ -56,17 +56,17 @@ const defaultCategoryRows: CategoryRow[] = [
         salePercentage: 30
       },
       { 
-        name: 'Sweaters', 
+        name: 'Jackets', 
         image: 'https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400&h=400&fit=crop', 
-        url: '/shop/men/sweaters',
+        url: '/shop/men/jackets',
         count: '30+ Items',
         hasSale: true,
         salePercentage: 25
       },
       { 
-        name: 'Jackets', 
-        image: 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=400&h=400&fit=crop', 
-        url: '/shop/men/jackets',
+        name: 'Sweaters', 
+        image: 'https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400&h=400&fit=crop', 
+        url: '/shop/men/sweaters',
         count: '25+ Items'
       },
       { 
@@ -79,8 +79,8 @@ const defaultCategoryRows: CategoryRow[] = [
     ]
   },
   {
-    title: "Women&apos;s Fashion",
-    description: "Explore stunning women&apos;s clothing, accessories, and footwear",
+    title: "Women's Fashion",
+    description: "Explore stunning women's clothing, accessories, and footwear",
     categories: [
       { 
         name: 'Dresses', 
@@ -131,7 +131,7 @@ const defaultCategoryRows: CategoryRow[] = [
 
 const CategoriesSection: React.FC<CategoriesSectionProps> = ({
   title = "Shop by Category",
-  subtitle = "Discover the latest trends in men&apos;s and women&apos;s fashion",
+  subtitle = "Discover the latest trends in men's and women's fashion",
   categoryRows = defaultCategoryRows,
   bgColor = "bg-gray-50"
 }) => {
@@ -228,7 +228,7 @@ const CategoriesSection: React.FC<CategoriesSectionProps> = ({
                   href={rowIndex === 0 ? '/shop/men' : '/shop/women'}
                   className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-3 rounded-full font-semibold hover:from-purple-700 hover:to-pink-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
                 >
-                  View All {rowIndex === 0 ? "Men&apos;s" : "Women&apos;s"} Fashion
+                  View All {rowIndex === 0 ? "Men's" : "Women's"} Fashion
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                   </svg>

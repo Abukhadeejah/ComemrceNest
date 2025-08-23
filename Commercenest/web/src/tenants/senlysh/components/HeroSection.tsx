@@ -39,7 +39,7 @@ const defaultSlides: HeroSlide[] = [
     subtitle: 'COLLECTION',
     description: 'Discover the latest trends in fashion',
     badge: 'TRENDING',
-    image: '/images/hero-run-fest.jpg',
+    image: '/images/senlysh/dress-hero.jpg',
     ctaText: 'Shop Now',
     ctaLink: '/new-arrivals',
     bgColor: 'bg-gradient-to-r from-gray-900 via-purple-900 to-gray-900',
@@ -59,7 +59,7 @@ const defaultSlides: HeroSlide[] = [
     description: 'Stay warm and stylish this season',
     saleText: 'UP TO 50% OFF',
     badge: 'SALE',
-    image: '/images/hero-sweater.jpg',
+    image: '/images/senlysh/subscription-img.png',
     ctaText: 'SHOP SALE',
     ctaLink: '/sale',
     bgColor: 'bg-gradient-to-r from-amber-50 via-orange-100 to-red-50',
@@ -74,10 +74,10 @@ const defaultSlides: HeroSlide[] = [
     subtitle: 'ACCESSORIES',
     description: 'Complete your look with our premium collection',
     badge: 'PREMIUM',
-    image: '/images/hero-collection.jpg',
+    image: '/images/senlysh/hero-collection.jpg',
     ctaText: 'Explore Now',
     ctaLink: '/accessories',
-    bgColor: 'bg-gradient-to-r from-blue-50 via-indigo-100 to-purple-50',
+    bgColor: 'bg-gradient-to-r from-gray-900/40 via-purple-900/30 to-pink-900/40',
     socialProof: {
       customers: '5,000+',
       rating: '4.9',
@@ -90,7 +90,7 @@ const defaultSlides: HeroSlide[] = [
 const HeroSection: React.FC<HeroSectionProps> = ({
   slides = defaultSlides,
   autoPlay = true,
-  autoPlayInterval = 5000
+  autoPlayInterval = 8000
 }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number; seconds: number }>({
@@ -135,6 +135,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({
   }, [currentSlide, slides]);
 
   const goToSlide = (index: number) => {
+    console.log(`Switching to slide ${index}:`, slides[index]);
     setCurrentSlide(index);
   };
 
@@ -158,17 +159,21 @@ const HeroSection: React.FC<HeroSectionProps> = ({
                 backgroundPosition: 'center'
               }}
               onError={() => {
+                console.error(`Failed to load image: ${slide.image}`);
                 // Fallback to gradient background if image fails
                 const element = document.querySelector(`[data-slide="${slide.id}"]`) as HTMLElement;
                 if (element) {
                   element.style.backgroundImage = 'none';
                 }
               }}
+              onLoad={() => {
+                console.log(`Successfully loaded image: ${slide.image}`);
+              }}
               data-slide={slide.id}
             />
             
             {/* Overlay */}
-            <div className={`absolute inset-0 ${slide.bgColor} bg-opacity-60`}></div>
+            <div className={`absolute inset-0 ${slide.bgColor}`}></div>
             
             {/* Content */}
             <div className="absolute inset-0 flex items-center">
