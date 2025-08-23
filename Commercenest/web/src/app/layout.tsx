@@ -4,6 +4,9 @@ import "./globals.css";
 import TenantProvider from '@/components/TenantProvider'
 import { resolveTenantIdFromRequest, resolveTenantKeyFromId } from '@/server/tenant'
 import { getHeaderComponent, getFooterComponent } from '@/tenants'
+import { headers } from 'next/headers'
+import { AdminWrapper } from '@/components/AdminWrapper'
+
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -25,21 +28,28 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // For regular routes, render with tenant context
   const tenantId = await resolveTenantIdFromRequest()
   const tenantKey = tenantId ? await resolveTenantKeyFromId(tenantId) : 'default'
   const Header = getHeaderComponent(tenantKey || 'default')
   const Footer = getFooterComponent(tenantKey || 'default')
+  
   return (
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {/* tenant shell */}
-        <TenantProvider>
-          <Header />
+        <AdminWrapper
+          tenantContent={
+            <TenantProvider>
+              <Header />
+              {children}
+              <Footer />
+            </TenantProvider>
+          }
+        >
           {children}
-          <Footer />
-        </TenantProvider>
+        </AdminWrapper>
       </body>
     </html>
   );

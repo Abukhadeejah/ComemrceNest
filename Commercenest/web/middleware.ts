@@ -9,6 +9,13 @@ export function middleware(request: NextRequest) {
   requestHeaders.set('x-tenant-host', host)
   requestHeaders.set('x-pathname', pathname)
   
+  // Add admin route flag
+  const isAdminRoute = pathname.startsWith('/admin')
+  requestHeaders.set('x-is-admin-route', isAdminRoute ? 'true' : 'false')
+  
+  // Debug logging
+  console.log('Middleware - pathname:', pathname, 'isAdminRoute:', isAdminRoute)
+  
   return NextResponse.next({
     request: {
       headers: requestHeaders,

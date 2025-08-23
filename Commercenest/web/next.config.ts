@@ -45,16 +45,6 @@ const nextConfig: NextConfig = {
       },
     ]
   },
-  // Redirects for multi-tenant domains
-  async redirects() {
-    return [
-      {
-        source: '/admin',
-        destination: '/admin/dashboard',
-        permanent: false,
-      },
-    ]
-  },
 };
 
 export default nextConfig;

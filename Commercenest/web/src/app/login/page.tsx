@@ -31,15 +31,36 @@ export default function LoginPage() {
       <form onSubmit={onSubmit} className="space-y-4">
         <div>
           <label className="mb-1 block text-sm">Email</label>
-          <input className="w-full rounded border p-2" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <input 
+            className="w-full rounded border p-2" 
+            type="email" 
+            value={email} 
+            onChange={(e) => setEmail(e.target.value)} 
+            required 
+          />
         </div>
         <div>
           <label className="mb-1 block text-sm">Password</label>
-          <input className="w-full rounded border p-2" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          <input 
+            className="w-full rounded border p-2" 
+            type="password" 
+            value={password} 
+            onChange={(e) => setPassword(e.target.value)} 
+            required 
+          />
         </div>
         {error ? <p className="text-sm text-red-600">{error}</p> : null}
-        <button disabled={loading} className="rounded bg-black px-4 py-2 text-white disabled:opacity-60">{loading ? 'Signing in…' : 'Sign in'}</button>
+        <button 
+          disabled={loading} 
+          className="w-full rounded bg-black px-4 py-2 text-white disabled:opacity-60 hover:bg-gray-800"
+        >
+          {loading ? 'Signing in…' : 'Sign in'}
+        </button>
       </form>
+      
+      <div className="mt-4 text-center text-sm text-gray-600">
+        <p>Contact your super admin for account access</p>
+      </div>
     </main>
   )
 }
