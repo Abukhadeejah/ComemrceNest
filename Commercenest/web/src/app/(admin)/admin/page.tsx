@@ -1,12 +1,8 @@
+import Link from 'next/link'
+import { CubeIcon, ShoppingCartIcon, CurrencyRupeeIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
 import { AdminLayout } from '@/components/admin/layout/AdminLayout'
-import { 
-  CubeIcon, 
-  ShoppingCartIcon, 
-  CurrencyRupeeIcon, 
-  ExclamationTriangleIcon 
-} from '@heroicons/react/24/outline'
 
 export default async function AdminHome() {
   const tenantId = await resolveTenantIdFromRequest()
@@ -86,9 +82,9 @@ export default async function AdminHome() {
                 <div className="mt-2 text-sm text-yellow-700">
                   <p>
                     You have {lowStockProducts} products with low stock levels. 
-                    <a href="/admin/products" className="font-medium underline hover:text-yellow-600 ml-1">
+                    <Link href="/admin/products" className="font-medium underline hover:text-yellow-600 ml-1">
                       Review inventory
-                    </a>
+                    </Link>
                   </p>
                 </div>
               </div>
@@ -145,7 +141,7 @@ export default async function AdminHome() {
       <div className="mt-8">
         <h3 className="text-base font-semibold leading-6 text-gray-900">Quick Actions</h3>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <a
+          <Link
             href="/admin/products/new"
             className="relative rounded-lg border border-gray-300 bg-white px-6 py-5 shadow-sm flex items-center space-x-3 hover:border-gray-400 focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2"
           >
@@ -157,9 +153,9 @@ export default async function AdminHome() {
               <p className="text-sm font-medium text-gray-900">Add Product</p>
               <p className="text-sm text-gray-500">Create a new product</p>
             </div>
-          </a>
+          </Link>
 
-          <a
+          <Link
             href="/admin/categories/new"
             className="relative rounded-lg border border-gray-300 bg-white px-6 py-5 shadow-sm flex items-center space-x-3 hover:border-gray-400 focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2"
           >
@@ -171,9 +167,9 @@ export default async function AdminHome() {
               <p className="text-sm font-medium text-gray-900">Add Category</p>
               <p className="text-sm text-gray-500">Create a new category</p>
             </div>
-          </a>
+          </Link>
 
-          <a
+          <Link
             href="/admin/orders"
             className="relative rounded-lg border border-gray-300 bg-white px-6 py-5 shadow-sm flex items-center space-x-3 hover:border-gray-400 focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2"
           >
@@ -185,7 +181,7 @@ export default async function AdminHome() {
               <p className="text-sm font-medium text-gray-900">View Orders</p>
               <p className="text-sm text-gray-500">Manage customer orders</p>
             </div>
-          </a>
+          </Link>
         </div>
       </div>
     </AdminLayout>

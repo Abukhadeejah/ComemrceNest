@@ -4,7 +4,7 @@ import { supabaseAdmin } from '@/server/supabaseAdmin'
 export async function fetchPublishedProducts(tenantId: string) {
   return supabaseAdmin
     .from('products')
-    .select('id, name, slug, price_cents, currency, hero_image_url')
+    .select('id, name, slug, price_cents, compare_at_price_cents, currency, hero_image_url, stock')
     .eq('tenant_id', tenantId)
     .eq('status', 'published')
     .order('updated_at', { ascending: false })
@@ -15,8 +15,10 @@ export type ProductListItem = {
   name: string
   slug: string
   price_cents: number
+  compare_at_price_cents?: number
   currency: string
   hero_image_url: string | null
+  stock: number
 }
 
 export type ProductListParams = {
@@ -36,7 +38,7 @@ export async function fetchPublishedProductsPaged(
   const { sort = 'updated_at', dir = 'desc', page = 1, pageSize = 12, q, minPriceCents, maxPriceCents, categoryId } = params
   const from = (page - 1) * pageSize
   const to = from + pageSize - 1
-  let selectCols = 'id, name, slug, price_cents, currency, hero_image_url'
+  let selectCols = 'id, name, slug, price_cents, compare_at_price_cents, currency, hero_image_url, stock'
   if (categoryId) {
     selectCols += ', product_categories!inner(category_id)'
   }

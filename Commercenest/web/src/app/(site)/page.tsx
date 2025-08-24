@@ -57,3 +57,5 @@ export async function generateViewport(): Promise<Viewport> {
   const { data } = await fetchCompanyProfileByTenantId(tenantId)
   return { themeColor: data?.brand_accent_hex ?? '#C9A227' }
 }
+
+

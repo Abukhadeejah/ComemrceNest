@@ -5,10 +5,9 @@ import { ReactNode } from 'react'
 
 interface AdminWrapperProps {
   children: ReactNode
-  tenantContent: ReactNode
 }
 
-export function AdminWrapper({ children, tenantContent }: AdminWrapperProps) {
+export function AdminWrapper({ children }: AdminWrapperProps) {
   const pathname = usePathname()
   const isAdminRoute = pathname?.startsWith('/admin')
 
@@ -16,5 +15,6 @@ export function AdminWrapper({ children, tenantContent }: AdminWrapperProps) {
     return <>{children}</>
   }
 
-  return <>{tenantContent}</>
+  return <>{children}</>
 }
+

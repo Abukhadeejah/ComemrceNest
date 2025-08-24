@@ -1,16 +1,35 @@
+import { notFound } from 'next/navigation'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
 import { fetchProductBySlug, fetchProductImages } from '@/server/modules/products/service'
-import PdpClient from './PdpClient'
+import { ProductDetail } from '@/components/tenant/products/ProductDetail'
 
-export default async function ProductDetail({ params }: { params: Promise<{ slug: string }> }) {
-  const tenantId = await resolveTenantIdFromRequest()
-  if (!tenantId) return <main className="p-6">Unknown tenant</main>
+interface ProductPageProps {
+  params: Promise<{ slug: string }>
+}
+
+export default async function ProductPage({ params }: ProductPageProps) {
   const { slug } = await params
-  const { data: product } = await fetchProductBySlug(tenantId, slug)
-  if (!product) return <main className="p-6">Product not found</main>
+  const tenantId = await resolveTenantIdFromRequest()
+  
+  if (!tenantId) {
+    return <div>Tenant not found</div>
+  }
+
+  const { data: product, error } = await fetchProductBySlug(tenantId, slug)
+  
+  if (error || !product) {
+    notFound()
+  }
+
   const { data: images } = await fetchProductImages(tenantId, product.id)
 
-  return <PdpClient name={product.name} description={product.description} hero_image_url={product.hero_image_url ?? undefined} images={(images ?? []).map(i => ({ id: i.id, url: i.url, alt: i.alt }))} price_cents={product.price_cents} />
+  return (
+    <div className="bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <ProductDetail product={product} images={images || []} />
+      </div>
+    </div>
+  )
 }
 
 

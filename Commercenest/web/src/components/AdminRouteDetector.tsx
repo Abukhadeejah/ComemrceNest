@@ -18,3 +18,7 @@ export function AdminRouteDetector({ children, adminContent }: AdminRouteDetecto
 
   return <>{children}</>
 }
+
+
+
+

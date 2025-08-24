@@ -1,32 +1,27 @@
 import { resolveTenantIdFromRequest } from '@/server/tenant'
-import { assertTenantAdmin } from '@/server/auth'
-import { AdminLayout } from '@/components/admin/layout/AdminLayout'
-import TenantContextProvider from '@/components/TenantContextProvider'
-import { getTenantConfig } from '@/tenants'
+import { redirect } from 'next/navigation'
+import { AdminSidebar } from '@/components/admin/layout/AdminSidebar'
 
-export default async function AdminLayoutWrapper({
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
   const tenantId = await resolveTenantIdFromRequest()
-  if (!tenantId) {
-    throw new Error('Tenant not found')
-  }
   
-  // Temporarily commented out for testing
-  // await assertTenantAdmin(tenantId)
-
-  // Get tenant config directly without TenantProvider
-  const tenantKey = tenantId ? 'senlysh' : 'default'
-  const cfg = getTenantConfig(tenantKey)
+  if (!tenantId) {
+    redirect('/login')
+  }
 
   return (
-    <TenantContextProvider config={cfg}>
-      <AdminLayout>
-        {children}
-      </AdminLayout>
-    </TenantContextProvider>
+    <div className="min-h-screen bg-gray-50">
+      <AdminSidebar />
+      <div className="lg:pl-64">
+        <main className="py-6">
+          {children}
+        </main>
+      </div>
+    </div>
   )
 }
 

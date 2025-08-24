@@ -41,7 +41,7 @@ const SenlyshHome: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-white overflow-x-auto">
+    <div className="bg-white overflow-x-auto">
       <div className="min-w-[1200px] w-full">
         {/* Hero Section */}
         <HeroSection autoPlay={true} autoPlayInterval={8000} />
@@ -69,8 +69,8 @@ const SenlyshHome: React.FC = () => {
 
         {/* Customer Reviews Section */}
         <CustomerReviews />
-                </div>
-              </div>
+      </div>
+    </div>
   );
 };
 

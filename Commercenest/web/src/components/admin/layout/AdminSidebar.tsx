@@ -1,77 +1,117 @@
 'use client'
 
-import { Fragment } from 'react'
-import { Dialog, Transition } from '@headlessui/react'
-import { XMarkIcon } from '@heroicons/react/24/outline'
-import { AdminNavigation } from './AdminNavigation'
-import { useTenant } from '@/hooks/useTenant'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { 
+  Bars3Icon,
+  HomeIcon,
+  CubeIcon,
+  TagIcon,
+  ShoppingCartIcon,
+  UsersIcon,
+  ChartBarIcon,
+  Cog6ToothIcon
+} from '@heroicons/react/24/outline'
+
+const navigation = [
+  { name: 'Dashboard', href: '/admin', icon: HomeIcon },
+  { name: 'Products', href: '/admin/products', icon: CubeIcon },
+  { name: 'Categories', href: '/admin/categories', icon: TagIcon },
+  { name: 'Orders', href: '/admin/orders', icon: ShoppingCartIcon },
+  { name: 'Customers', href: '/admin/customers', icon: UsersIcon },
+  { name: 'Analytics', href: '/admin/analytics', icon: ChartBarIcon },
+  { name: 'Settings', href: '/admin/settings', icon: Cog6ToothIcon },
+]
 
 interface AdminSidebarProps {
-  open: boolean
-  setOpen: (open: boolean) => void
+  open?: boolean
+  setOpen?: (open: boolean) => void
 }
 
-export function AdminSidebar({ open, setOpen }: AdminSidebarProps) {
-  const tenantConfig = useTenant()
+export function AdminSidebar({ open = false, setOpen }: AdminSidebarProps) {
+  const pathname = usePathname()
 
   return (
     <>
       {/* Mobile sidebar */}
-      <Transition.Root show={open} as={Fragment}>
-        <Dialog as="div" className="relative z-50 lg:hidden" onClose={setOpen}>
-          <Transition.Child
-            as={Fragment}
-            enter="transition-opacity ease-linear duration-300"
-            enterFrom="opacity-0"
-            enterTo="opacity-100"
-            leave="transition-opacity ease-linear duration-300"
-            leaveFrom="opacity-100"
-            leaveTo="opacity-0"
-          >
-            <div className="fixed inset-0 bg-gray-900/80" />
-          </Transition.Child>
-
-          <div className="fixed inset-0 flex">
-            <Transition.Child
-              as={Fragment}
-              enter="transition ease-in-out duration-300 transform"
-              enterFrom="-translate-x-full"
-              enterTo="translate-x-0"
-              leave="transition ease-in-out duration-300 transform"
-              leaveFrom="translate-x-0"
-              leaveTo="-translate-x-full"
-            >
-              <Dialog.Panel className="relative mr-16 flex w-full max-w-xs flex-1">
-                <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white px-6 pb-4">
-                  <div className="flex h-16 shrink-0 items-center">
-                    <img
-                      className="h-8 w-auto"
-                      src={tenantConfig?.brand?.logo || '/images/senlysh/logo.png'}
-                      alt={tenantConfig?.brand?.name || 'Admin'}
-                    />
-                  </div>
-                  <AdminNavigation />
-                </div>
-              </Dialog.Panel>
-            </Transition.Child>
-          </div>
-        </Dialog>
-      </Transition.Root>
-
-      {/* Desktop sidebar */}
-      <div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-72 lg:flex-col">
-        <div className="flex grow flex-col gap-y-5 overflow-y-auto border-r border-gray-200 bg-white px-6 pb-4">
-          <div className="flex h-16 shrink-0 items-center">
+      <div className={`fixed inset-0 z-50 lg:hidden ${open ? 'block' : 'hidden'}`}>
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={() => setOpen?.(false)} />
+        <div className="fixed inset-y-0 left-0 flex w-64 flex-col bg-white">
+          <div className="flex h-16 items-center justify-between px-4">
             <img
               className="h-8 w-auto"
-              src={tenantConfig?.brand?.logo || '/images/senlysh/logo.png'}
-              alt={tenantConfig?.brand?.name || 'Admin'}
+              src="/images/senlysh/logo.png"
+              alt="Logo"
             />
-            <span className="ml-2 text-lg font-semibold text-gray-900">
-              {tenantConfig?.brand?.name || 'Admin'}
-            </span>
+            <button
+              type="button"
+              className="text-gray-400 hover:text-gray-600"
+              onClick={() => setOpen?.(false)}
+            >
+              <span className="sr-only">Close sidebar</span>
+              <Bars3Icon className="h-6 w-6" />
+            </button>
           </div>
-          <AdminNavigation />
+          <nav className="flex-1 space-y-1 px-2 py-4">
+            {navigation.map((item) => {
+              const isActive = pathname === item.href
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
+                    isActive
+                      ? 'bg-indigo-100 text-indigo-900'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  }`}
+                  onClick={() => setOpen?.(false)}
+                >
+                  <item.icon
+                    className={`mr-3 h-5 w-5 ${
+                      isActive ? 'text-indigo-500' : 'text-gray-400 group-hover:text-gray-500'
+                    }`}
+                  />
+                  {item.name}
+                </Link>
+              )
+            })}
+          </nav>
+        </div>
+      </div>
+
+      {/* Desktop sidebar */}
+      <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
+        <div className="flex flex-col flex-grow bg-white border-r border-gray-200">
+          <div className="flex h-16 items-center px-4">
+            <img
+              className="h-8 w-auto"
+              src="/images/senlysh/logo.png"
+              alt="Logo"
+            />
+          </div>
+          <nav className="flex-1 space-y-1 px-2 py-4">
+            {navigation.map((item) => {
+              const isActive = pathname === item.href
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
+                    isActive
+                      ? 'bg-indigo-100 text-indigo-900'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  }`}
+                >
+                  <item.icon
+                    className={`mr-3 h-5 w-5 ${
+                      isActive ? 'text-indigo-500' : 'text-gray-400 group-hover:text-gray-500'
+                    }`}
+                  />
+                  {item.name}
+                </Link>
+              )
+            })}
+          </nav>
         </div>
       </div>
     </>
