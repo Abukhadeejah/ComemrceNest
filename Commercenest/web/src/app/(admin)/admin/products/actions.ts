@@ -47,6 +47,26 @@ interface ProductData {
   images?: string[]
 }
 
+export async function checkSlugExists(slug: string, tenantId: string, excludeId?: string) {
+  const query = supabaseAdmin
+    .from('products')
+    .select('id, slug')
+    .eq('tenant_id', tenantId)
+    .eq('slug', slug)
+  
+  if (excludeId) {
+    query.neq('id', excludeId)
+  }
+  
+  const { data, error } = await query.single()
+  
+  if (error && error.code !== 'PGRST116') { // PGRST116 is "not found"
+    throw error
+  }
+  
+  return !!data
+}
+
 export async function createProduct(formData: FormData) {
   const tenantId = await resolveTenantIdFromRequest()
   if (!tenantId) { throw new Error('Tenant not found') }
@@ -143,7 +163,11 @@ export async function createProduct(formData: FormData) {
     .single()
 
   if (error) {
-    throw new Error(`Failed to create product: ${error.message}`)
+    if (error.message.includes('duplicate key value violates unique constraint "products_tenant_id_slug_key"')) {
+      throw new Error(`A product with the slug "${productData.slug}" already exists. Please choose a different slug.`)
+    } else {
+      throw new Error(`Failed to create product: ${error.message}`)
+    }
   }
 
   // Handle category assignment

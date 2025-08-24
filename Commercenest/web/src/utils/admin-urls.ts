@@ -16,12 +16,16 @@ export function getAdminUrl(path: string, tenant?: string): string {
 
 // Common admin URL patterns
 export const ADMIN_URLS = {
+  dashboard: (tenant?: string) => getAdminUrl('', tenant),
   products: (tenant?: string) => getAdminUrl('/products', tenant),
   productsNew: (tenant?: string) => getAdminUrl('/products/new', tenant),
   productDetail: (id: string, tenant?: string) => getAdminUrl(`/products/${id}`, tenant),
   productEdit: (id: string, tenant?: string) => getAdminUrl(`/products/${id}/edit`, tenant),
+  categories: (tenant?: string) => getAdminUrl('/categories', tenant),
   orders: (tenant?: string) => getAdminUrl('/orders', tenant),
   customers: (tenant?: string) => getAdminUrl('/customers', tenant),
+  analytics: (tenant?: string) => getAdminUrl('/analytics', tenant),
   settings: (tenant?: string) => getAdminUrl('/settings', tenant),
 }
+
 

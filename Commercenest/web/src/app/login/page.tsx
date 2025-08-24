@@ -21,7 +21,8 @@ export default function LoginPage() {
       setError(error.message)
       return
     }
-    router.push('/admin')
+    // 🔧 FIX: Redirect to the correct tenant admin route
+    router.push('/senlysh/admin')
     router.refresh()
   }
 

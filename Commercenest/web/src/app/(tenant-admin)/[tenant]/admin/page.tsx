@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { AdminLayout } from '@/components/admin/layout/AdminLayout'
 import { CubeIcon, ShoppingCartIcon, CurrencyRupeeIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
+import { assertTenantAdmin } from '@/server/auth'
 
 interface TenantAdminPageProps {
   params: Promise<{
@@ -17,6 +18,13 @@ export default async function TenantAdminPage({ params }: TenantAdminPageProps) 
   const tenantId = await resolveTenantIdFromRequest()
   
   if (!tenantId) {
+    redirect('/login')
+  }
+
+  // 🔒 SECURITY: Add authentication check
+  try {
+    await assertTenantAdmin(tenantId)
+  } catch {
     redirect('/login')
   }
 
@@ -172,4 +180,5 @@ async function getTenantKeyFromId(tenantId: string): Promise<string | null> {
   
   return nameToKey[data.name] || null
 }
+
 

@@ -1,6 +1,6 @@
 'use client'
 
-
+import { useState } from 'react'
 import { ProductFormData } from '@/types/product'
 
 interface BasicInformationSectionProps {
@@ -10,6 +10,40 @@ interface BasicInformationSectionProps {
 }
 
 export function BasicInformationSection({ formData, errors, onInputChange }: BasicInformationSectionProps) {
+  const [isGeneratingSlug, setIsGeneratingSlug] = useState(false)
+
+  // Generate slug from name
+  const generateSlug = (name: string) => {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '')
+  }
+
+  // Generate unique slug by appending timestamp
+  const generateUniqueSlug = (baseSlug: string) => {
+    const timestamp = Date.now().toString().slice(-6) // Last 6 digits of timestamp
+    return `${baseSlug}-${timestamp}`
+  }
+
+  const handleGenerateSlug = async () => {
+    if (!formData.name?.trim()) {
+      alert('Please enter a product name first')
+      return
+    }
+
+    setIsGeneratingSlug(true)
+    
+    try {
+      const baseSlug = generateSlug(formData.name)
+      const uniqueSlug = generateUniqueSlug(baseSlug)
+      onInputChange('slug', uniqueSlug)
+    } catch (error) {
+      console.error('Error generating slug:', error)
+    } finally {
+      setIsGeneratingSlug(false)
+    }
+  }
 
   return (
     <div>
@@ -35,16 +69,29 @@ export function BasicInformationSection({ formData, errors, onInputChange }: Bas
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Slug
           </label>
-          <input
-            type="text"
-            value={String(formData.slug || '')}
-            onChange={(e) => onInputChange('slug', e.target.value)}
-            placeholder="product-slug"
-            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-          />
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={String(formData.slug || '')}
+              onChange={(e) => onInputChange('slug', e.target.value)}
+              placeholder="product-slug"
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            />
+            <button
+              type="button"
+              onClick={handleGenerateSlug}
+              disabled={isGeneratingSlug || !formData.name?.trim()}
+              className="px-3 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+            >
+              {isGeneratingSlug ? 'Generating...' : 'Generate Slug'}
+            </button>
+          </div>
           {errors.slug && (
             <p className="mt-1 text-sm text-red-600">{errors.slug}</p>
           )}
+          <p className="mt-1 text-sm text-gray-500">
+            The URL-friendly version of the product name. Click &quot;Generate Slug&quot; to create a unique slug.
+          </p>
         </div>
 
         <div className="col-span-2">

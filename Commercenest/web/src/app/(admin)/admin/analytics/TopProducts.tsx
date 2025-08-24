@@ -51,3 +51,4 @@ export function TopProducts({ products }: TopProductsProps) {
     </div>
   )
 }
+

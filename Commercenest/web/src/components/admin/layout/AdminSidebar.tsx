@@ -15,12 +15,12 @@ import {
 import { ADMIN_URLS } from '@/utils/admin-urls'
 
 const navigation = [
-  { name: 'Dashboard', href: '/admin', icon: HomeIcon },
+  { name: 'Dashboard', href: ADMIN_URLS.dashboard(), icon: HomeIcon },
   { name: 'Products', href: ADMIN_URLS.products(), icon: CubeIcon },
-  { name: 'Categories', href: '/admin/categories', icon: TagIcon },
+  { name: 'Categories', href: ADMIN_URLS.categories(), icon: TagIcon },
   { name: 'Orders', href: ADMIN_URLS.orders(), icon: ShoppingCartIcon },
   { name: 'Customers', href: ADMIN_URLS.customers(), icon: UsersIcon },
-  { name: 'Analytics', href: '/admin/analytics', icon: ChartBarIcon },
+  { name: 'Analytics', href: ADMIN_URLS.analytics(), icon: ChartBarIcon },
   { name: 'Settings', href: ADMIN_URLS.settings(), icon: Cog6ToothIcon },
 ]
 

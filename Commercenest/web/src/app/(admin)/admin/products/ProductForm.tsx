@@ -71,11 +71,28 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
   // Use initialData if provided
   const data = initialData
 
+  // Generate slug from name
+  const generateSlug = (name: string) => {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '')
+  }
+
   const handleInputChange = (field: keyof ProductFormData, value: string | number | boolean | null | unknown[]) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }))
+    
+    // Auto-generate slug when name changes
+    if (field === 'name' && typeof value === 'string' && value.trim()) {
+      const generatedSlug = generateSlug(value)
+      setFormData(prev => ({
+        ...prev,
+        slug: generatedSlug
+      }))
+    }
     
     // Clear error for this field
     if (errors[field]) {
@@ -111,6 +128,27 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
         router.refresh()
       } catch (error) {
         console.error('Failed to save product:', error)
+        
+        // Handle specific error types
+        const errorMessage = error instanceof Error ? error.message : 'An error occurred'
+        
+        if (errorMessage.includes('duplicate key value violates unique constraint "products_tenant_id_slug_key"')) {
+          setErrors(prev => ({
+            ...prev,
+            slug: 'A product with this slug already exists. Please choose a different slug.'
+          }))
+        } else if (errorMessage.includes('slug')) {
+          setErrors(prev => ({
+            ...prev,
+            slug: 'Invalid slug format. Use only lowercase letters, numbers, and hyphens.'
+          }))
+        } else {
+          // Set a general error
+          setErrors(prev => ({
+            ...prev,
+            general: errorMessage
+          }))
+        }
       }
     })
   }
@@ -133,6 +171,12 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
+        {errors.general && (
+          <div className="bg-red-50 border border-red-200 rounded-md p-4">
+            <div className="text-sm text-red-800">{errors.general}</div>
+          </div>
+        )}
+        
         <BasicInformationSection 
           formData={formData} 
           errors={errors}

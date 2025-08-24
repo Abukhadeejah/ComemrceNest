@@ -68,3 +68,4 @@ export async function updateSettings(formData: FormData) {
     throw error
   }
 }
+
