@@ -47,3 +47,4 @@ export function extractTenantFromAdminRoute(pathname: string): string | null {
   const match = pathname.match(/^\/([^\/]+)\/admin/)
   return match ? match[1] : null
 }
+

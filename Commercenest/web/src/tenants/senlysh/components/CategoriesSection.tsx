@@ -164,7 +164,7 @@ const CategoriesSection: React.FC<CategoriesSectionProps> = ({
                 <div className="flex gap-4 sm:gap-6 overflow-x-auto scrollbar-hide pb-4 sm:pb-6
                   scroll-smooth snap-x snap-mandatory
                   [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                  {row.categories.map((category, index) => (
+                  {row.categories.map((category) => (
                     <Link key={category.name} href={category.url} className="group flex-shrink-0 w-48 sm:w-56 md:w-64 snap-start">
                       <div className="relative overflow-hidden rounded-xl shadow-lg 
                         transition-transform duration-300 ease-out will-change-transform

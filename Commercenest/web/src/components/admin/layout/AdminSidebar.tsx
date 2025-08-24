@@ -12,15 +12,16 @@ import {
   ChartBarIcon,
   Cog6ToothIcon
 } from '@heroicons/react/24/outline'
+import { ADMIN_URLS } from '@/utils/admin-urls'
 
 const navigation = [
   { name: 'Dashboard', href: '/admin', icon: HomeIcon },
-  { name: 'Products', href: '/admin/products', icon: CubeIcon },
+  { name: 'Products', href: ADMIN_URLS.products(), icon: CubeIcon },
   { name: 'Categories', href: '/admin/categories', icon: TagIcon },
-  { name: 'Orders', href: '/admin/orders', icon: ShoppingCartIcon },
-  { name: 'Customers', href: '/admin/customers', icon: UsersIcon },
+  { name: 'Orders', href: ADMIN_URLS.orders(), icon: ShoppingCartIcon },
+  { name: 'Customers', href: ADMIN_URLS.customers(), icon: UsersIcon },
   { name: 'Analytics', href: '/admin/analytics', icon: ChartBarIcon },
-  { name: 'Settings', href: '/admin/settings', icon: Cog6ToothIcon },
+  { name: 'Settings', href: ADMIN_URLS.settings(), icon: Cog6ToothIcon },
 ]
 
 interface AdminSidebarProps {

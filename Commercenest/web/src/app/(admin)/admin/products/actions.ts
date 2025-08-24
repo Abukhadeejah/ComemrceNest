@@ -468,9 +468,15 @@ export async function getProducts(searchParams: {
   page?: string
   sort?: string
 }) {
-  const tenantId = await resolveTenantIdFromRequest()
-  if (!tenantId) { throw new Error('Tenant not found') }
-  await assertTenantAdmin(tenantId)
+  try {
+    const tenantId = await resolveTenantIdFromRequest()
+    if (!tenantId) { throw new Error('Tenant not found') }
+    await assertTenantAdmin(tenantId)
+
+    // Check if Supabase is configured
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      throw new Error('Supabase configuration missing')
+    }
 
   let query = supabaseAdmin
     .from('products')
@@ -526,22 +532,41 @@ export async function getProducts(searchParams: {
     pageSize,
     totalPages: Math.ceil((count || 0) / pageSize)
   }
+  } catch (error) {
+    console.error('getProducts error:', error)
+    throw error
+  }
 }
 
 export async function getCategories() {
-  const tenantId = await resolveTenantIdFromRequest()
-  if (!tenantId) { throw new Error('Tenant not found') }
-  await assertTenantAdmin(tenantId)
+  try {
+    const tenantId = await resolveTenantIdFromRequest()
+    if (!tenantId) { throw new Error('Tenant not found') }
+    await assertTenantAdmin(tenantId)
 
-  const { data, error } = await supabaseAdmin
-    .from('categories')
-    .select('id, name')
-    .eq('tenant_id', tenantId)
-    .order('name', { ascending: true })
+    // Check if Supabase is configured
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      throw new Error('Supabase configuration missing')
+    }
 
-  if (error) {
-    throw new Error(`Failed to fetch categories: ${error.message}`)
+    const { data, error } = await supabaseAdmin
+      .from('categories')
+      .select('id, name')
+      .eq('tenant_id', tenantId)
+      .order('name', { ascending: true })
+
+    if (error) {
+      throw new Error(`Failed to fetch categories: ${error.message}`)
+    }
+
+    return (data || []).map(category => ({
+    id: category.id,
+    name: category.name,
+    slug: category.name.toLowerCase().replace(/\s+/g, '-'),
+    created_at: new Date().toISOString()
+  }))
+  } catch (error) {
+    console.error('getCategories error:', error)
+    throw error
   }
-
-  return data || []
 }

@@ -3,7 +3,8 @@ import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
 
 export async function getAuthenticatedUserId(): Promise<string | null> {
-  const supabase = createServerComponentClient({ cookies })
+  const cookieStore = await cookies()
+  const supabase = createServerComponentClient({ cookies: () => Promise.resolve(cookieStore) })
   const { data: { user } } = await supabase.auth.getUser()
   return user?.id ?? null
 }
