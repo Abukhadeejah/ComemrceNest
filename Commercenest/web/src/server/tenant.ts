@@ -6,8 +6,18 @@ export async function resolveTenantIdFromRequest(): Promise<string | null> {
   const rawHost = h.get('x-tenant-host') || h.get('host') || ''
   const host = rawHost.split(':')[0]
   const pathname = h.get('x-pathname') || '/'
+  const tenantAdmin = h.get('x-tenant-admin')
   
   if (!host) return null
+  
+  // Handle tenant admin routes first
+  if (tenantAdmin) {
+    if (tenantAdmin === 'bluebell') {
+      return '11111111-1111-4111-8111-11111111bb01' // Bluebell tenant ID
+    } else if (tenantAdmin === 'senlysh') {
+      return '1e4c9aa7-e7af-4fe7-999b-c9c46219fa3c' // Senlysh tenant ID
+    }
+  }
   
   // Special handling for localhost development
   if (host === 'localhost') {

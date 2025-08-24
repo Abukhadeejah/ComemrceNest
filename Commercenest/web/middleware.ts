@@ -11,10 +11,19 @@ export function middleware(request: NextRequest) {
   
   // Add admin route flag
   const isAdminRoute = pathname.startsWith('/admin')
-  requestHeaders.set('x-is-admin-route', isAdminRoute ? 'true' : 'false')
+  const isTenantAdminRoute = pathname.match(/\/[^\/]+\/admin/)
+  requestHeaders.set('x-is-admin-route', (isAdminRoute || isTenantAdminRoute) ? 'true' : 'false')
+  
+  // Add tenant admin route info
+  if (isTenantAdminRoute) {
+    const tenantMatch = pathname.match(/^\/([^\/]+)\/admin/)
+    if (tenantMatch) {
+      requestHeaders.set('x-tenant-admin', tenantMatch[1])
+    }
+  }
   
   // Debug logging
-  console.log('Middleware - pathname:', pathname, 'isAdminRoute:', isAdminRoute)
+  console.log('Middleware - pathname:', pathname, 'isAdminRoute:', isAdminRoute, 'isTenantAdminRoute:', isTenantAdminRoute)
   
   return NextResponse.next({
     request: {
