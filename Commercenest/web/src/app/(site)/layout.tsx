@@ -1,23 +1,21 @@
 import type { Metadata } from 'next'
 import TenantProvider from '@/components/TenantProvider'
-import SenlyshHeader from '@/tenants/senlysh/SenlyshHeader'
-import SenlyshFooter from '@/tenants/senlysh/SenlyshFooter'
 
 export const metadata: Metadata = {
-  title: 'Senlysh - Fashion & Lifestyle',
-  description: 'Your destination for fashion-forward clothing and accessories. Discover the latest trends in fashion with our curated collection.',
-  keywords: 'fashion, clothing, accessories, lifestyle, shopping, online store',
-  authors: [{ name: 'Senlysh' }],
+  title: 'CommerceNest - Multi-tenant Platform',
+  description: 'Multi-tenant e-commerce platform',
+  keywords: 'e-commerce, multi-tenant, platform',
+  authors: [{ name: 'CommerceNest' }],
   openGraph: {
-    title: 'Senlysh - Fashion & Lifestyle',
-    description: 'Your destination for fashion-forward clothing and accessories',
+    title: 'CommerceNest - Multi-tenant Platform',
+    description: 'Multi-tenant e-commerce platform',
     type: 'website',
     locale: 'en_US',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Senlysh - Fashion & Lifestyle',
-    description: 'Your destination for fashion-forward clothing and accessories',
+    title: 'CommerceNest - Multi-tenant Platform',
+    description: 'Multi-tenant e-commerce platform',
   },
   icons: {
     icon: '/favicon.svg',
@@ -34,11 +32,9 @@ export default function SiteLayout({
   return (
     <TenantProvider>
       <div className="min-h-screen flex flex-col">
-        <SenlyshHeader />
         <main className="flex-1">
           {children}
         </main>
-        <SenlyshFooter />
       </div>
     </TenantProvider>
   )

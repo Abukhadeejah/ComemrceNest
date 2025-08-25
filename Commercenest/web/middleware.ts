@@ -22,8 +22,18 @@ export function middleware(request: NextRequest) {
     }
   }
   
+  // Add tenant route info for regular tenant routes (not just admin)
+  const tenantRouteMatch = pathname.match(/^\/([^\/]+)(?:\/|$)/)
+  if (tenantRouteMatch && !isAdminRoute) {
+    const tenantKey = tenantRouteMatch[1]
+    // Only set for known tenants
+    if (tenantKey === 'bluebell' || tenantKey === 'senlysh') {
+      requestHeaders.set('x-tenant-admin', tenantKey)
+    }
+  }
+  
   // Debug logging
-  console.log('Middleware - pathname:', pathname, 'isAdminRoute:', isAdminRoute, 'isTenantAdminRoute:', isTenantAdminRoute)
+  console.log('Middleware - pathname:', pathname, 'host:', host, 'tenantAdmin:', requestHeaders.get('x-tenant-admin'))
   
   return NextResponse.next({
     request: {

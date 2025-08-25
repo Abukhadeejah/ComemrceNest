@@ -3,7 +3,7 @@ import { supabaseAdmin } from '@/server/supabaseAdmin'
 export async function fetchPublishedProjects(tenantId: string) {
   return supabaseAdmin
     .from('portfolio_projects')
-    .select('id, title, slug, hero_image_url, featured')
+    .select('id, title, slug, hero_image_url, featured, description, location')
     .eq('tenant_id', tenantId)
     .eq('status', 'published')
     .order('created_at', { ascending: false })

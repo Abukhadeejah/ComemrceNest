@@ -40,7 +40,7 @@ export default async function BluebellProductsPage({ searchParams }: ProductsPag
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Interior Fabrics</h1>
           <p className="mt-2 text-gray-600">
-            Discover our curated collection of premium fabrics for exceptional interior design
+            Discover our curated collection of premium fabrics for interior design
           </p>
         </div>
 
@@ -75,9 +75,3 @@ function ProductGridSkeleton() {
     </div>
   )
 }
-
-
-
-
-
-
