@@ -114,15 +114,15 @@ function ProductCard({
   }
 
   return (
-    <div className="group bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-xl transition-all duration-300 border border-gray-100">
-      {/* Product Image Container */}
-      <div className="relative aspect-[4/5] overflow-hidden bg-gray-50">
+    <div className="group bg-white rounded-2xl shadow-sm overflow-hidden hover:shadow-2xl transition-all duration-500 border border-gray-100 hover:border-gray-200 transform hover:-translate-y-1">
+              {/* Product Image Container */}
+        <div className="relative aspect-[4/5] overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
         {product.hero_image_url ? (
           <Image
             src={product.hero_image_url}
             alt={product.name}
             fill
-            className="object-cover group-hover:scale-105 transition-transform duration-500"
+            className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
           />
         ) : (

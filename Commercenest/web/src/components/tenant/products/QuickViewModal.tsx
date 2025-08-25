@@ -2,7 +2,7 @@
 
 import { Fragment, useEffect, useState } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
-import { XMarkIcon, HeartIcon, ShoppingBagIcon, StarIcon, EyeIcon, ClockIcon, UsersIcon } from '@heroicons/react/24/outline'
+import { XMarkIcon, HeartIcon, ShoppingBagIcon, StarIcon, EyeIcon, ClockIcon, UsersIcon, FireIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -20,6 +20,11 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
   const [isWishlisted, setIsWishlisted] = useState(false)
   const [viewingCount, setViewingCount] = useState(0)
   const [recentPurchases, setRecentPurchases] = useState<string[]>([])
+  
+  // Limited Time Offer States
+  const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 })
+  const [flashSaleActive, setFlashSaleActive] = useState(false)
+  const [flashSaleDiscount, setFlashSaleDiscount] = useState(0)
 
   // Simulate social proof data
   useEffect(() => {
@@ -33,6 +38,13 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
       const recent = names.slice(0, Math.floor(Math.random() * 3) + 2)
       setRecentPurchases(recent)
       
+      // Simulate flash sale (30% chance)
+      const hasFlashSale = Math.random() < 0.3
+      setFlashSaleActive(hasFlashSale)
+      if (hasFlashSale) {
+        setFlashSaleDiscount(Math.floor(Math.random() * 20) + 15) // 15-35% discount
+      }
+      
       // Update viewing count every 30 seconds
       const interval = setInterval(() => {
         setViewingCount(prev => prev + Math.floor(Math.random() * 3) - 1)
@@ -41,6 +53,32 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
       return () => clearInterval(interval)
     }
   }, [isOpen, product])
+
+  // Countdown timer effect
+  useEffect(() => {
+    if (isOpen && flashSaleActive) {
+      // Set initial time (2 hours from now)
+      const endTime = new Date().getTime() + (2 * 60 * 60 * 1000) // 2 hours
+      
+      const timer = setInterval(() => {
+        const now = new Date().getTime()
+        const distance = endTime - now
+        
+        if (distance > 0) {
+          const hours = Math.floor(distance / (1000 * 60 * 60))
+          const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60))
+          const seconds = Math.floor((distance % (1000 * 60)) / 1000)
+          
+          setTimeLeft({ hours, minutes, seconds })
+        } else {
+          setFlashSaleActive(false)
+          clearInterval(timer)
+        }
+      }, 1000)
+      
+      return () => clearInterval(timer)
+    }
+  }, [isOpen, flashSaleActive])
 
   if (!product) return null
 
@@ -125,6 +163,64 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
                           </div>
                         </div>
                       </div>
+
+                      {/* Limited Time Offer - Flash Sale */}
+                      {flashSaleActive && (
+                        <div className="mb-4 bg-gradient-to-r from-red-50 to-pink-50 border-2 border-red-300 rounded-lg p-4 animate-pulse">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center space-x-2">
+                              <FireIcon className="w-5 h-5 text-red-600 animate-bounce" />
+                              <span className="text-red-800 font-bold text-sm">🔥 FLASH SALE!</span>
+                            </div>
+                            <div className="bg-red-600 text-white px-2 py-1 rounded-full text-xs font-bold">
+                              {flashSaleDiscount}% OFF
+                            </div>
+                          </div>
+                          
+                          {/* Countdown Timer */}
+                          <div className="mb-3">
+                            <div className="text-xs text-red-700 font-medium mb-2">⏰ Offer ends in:</div>
+                            <div className="flex space-x-2">
+                              <div className="bg-red-600 text-white px-2 py-1 rounded text-center min-w-[2rem]">
+                                <div className="text-xs font-bold">{timeLeft.hours.toString().padStart(2, '0')}</div>
+                                <div className="text-xs">Hrs</div>
+                              </div>
+                              <div className="bg-red-600 text-white px-2 py-1 rounded text-center min-w-[2rem]">
+                                <div className="text-xs font-bold">{timeLeft.minutes.toString().padStart(2, '0')}</div>
+                                <div className="text-xs">Min</div>
+                              </div>
+                              <div className="bg-red-600 text-white px-2 py-1 rounded text-center min-w-[2rem]">
+                                <div className="text-xs font-bold">{timeLeft.seconds.toString().padStart(2, '0')}</div>
+                                <div className="text-xs">Sec</div>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Urgency Message */}
+                          <div className="flex items-center space-x-2 text-xs text-red-700">
+                            <ExclamationTriangleIcon className="w-4 h-4" />
+                            <span className="font-medium">Don&apos;t miss out! This offer won&apos;t last long!</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Limited Time Offer - Regular Sale */}
+                      {!flashSaleActive && hasDiscount && (
+                        <div className="mb-4 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                              <ClockIcon className="w-4 h-4 text-blue-600" />
+                              <span className="text-blue-800 font-medium text-sm">Limited Time Offer</span>
+                            </div>
+                            <div className="bg-blue-600 text-white px-2 py-1 rounded-full text-xs font-bold">
+                              {discountPercentage}% OFF
+                            </div>
+                          </div>
+                          <div className="mt-2 text-xs text-blue-700">
+                            Save big on this premium product! Offer valid while supplies last.
+                          </div>
+                        </div>
+                      )}
 
                       {/* Recent Purchases Ticker */}
                       {recentPurchases.length > 0 && (
@@ -256,10 +352,20 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
                                 Low Stock!
                               </span>
                             )}
+                            {product.stock === 1 && (
+                              <span className="text-xs bg-red-600 text-white px-2 py-1 rounded-full font-bold animate-pulse">
+                                LAST ONE!
+                              </span>
+                            )}
                           </div>
                           {product.stock <= 3 && product.stock > 0 && (
                             <div className="mt-2 text-xs text-red-600 font-medium">
                               ⚠️ Only {product.stock} left! Order soon to avoid disappointment.
+                            </div>
+                          )}
+                          {product.stock === 1 && (
+                            <div className="mt-2 text-xs text-red-700 font-bold bg-red-50 p-2 rounded border border-red-200">
+                              🚨 This is the LAST item available! Don&apos;t miss your chance!
                             </div>
                           )}
                         </div>

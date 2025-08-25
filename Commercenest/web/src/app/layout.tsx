@@ -6,8 +6,13 @@ import { AdminWrapper } from '@/components/AdminWrapper'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Commercenest - Multi-tenant E-commerce Platform',
-  description: 'A modern multi-tenant e-commerce platform built with Next.js and Supabase',
+  title: 'Senlysh - Fashion & Lifestyle',
+  description: 'Your destination for fashion-forward clothing and accessories. Discover the latest trends in fashion with our curated collection.',
+  icons: {
+    icon: '/favicon.svg',
+    shortcut: '/favicon.svg',
+    apple: '/apple-touch-icon.svg',
+  },
 }
 
 export default function RootLayout({
