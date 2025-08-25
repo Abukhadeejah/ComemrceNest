@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { 
   createProduct, 
-  updateProduct
+  updateProduct,
+  uploadProductImage
 } from './actions'
 import { BasicInformationSection } from './components/BasicInformationSection'
 import { PricingSection } from './components/PricingSection'
@@ -63,6 +64,9 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
     sizeGuideId: ''
   })
 
+  // State for images (can be File objects for new uploads or URL strings for existing images)
+  const [imageFiles, setImageFiles] = useState<(File | string)[]>(initialData?.images || [])
+
   const [errors, setErrors] = useState<Record<string, string>>({})
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -70,6 +74,16 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
 
   // Use initialData if provided
   const data = initialData
+
+  // Populate form data when initialData is provided (edit mode)
+  useEffect(() => {
+    if (initialData && mode === 'edit') {
+      setFormData(prev => ({
+        ...prev,
+        ...initialData
+      }))
+    }
+  }, [initialData, mode])
 
   // Generate slug from name
   const generateSlug = (name: string) => {
@@ -111,19 +125,59 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
     // Add all form data
     Object.entries(formData).forEach(([key, value]) => {
       if (Array.isArray(value)) {
-        form.append(key, JSON.stringify(value))
+        // Only append arrays if they have content
+        if (value.length > 0) {
+          form.append(key, JSON.stringify(value))
+        }
       } else if (value !== null && value !== undefined) {
+        // Include all values, including empty strings
         form.append(key, String(value))
       }
     })
 
     startTransition(async () => {
       try {
+        let createdProductId: string | undefined
+        
         if (mode === 'edit' && data?.id) {
           await updateProduct(data.id as string, form)
+          
+          // Handle new image uploads for edit mode
+          const fileImages = imageFiles.filter(img => img instanceof File) as File[]
+          if (fileImages.length > 0) {
+            try {
+              console.log(`Uploading ${fileImages.length} new images for product ${data.id}`)
+              for (let i = 0; i < fileImages.length; i++) {
+                const file = fileImages[i]
+                await uploadProductImage(file, data.id)
+                console.log(`Uploaded image ${i + 1}/${fileImages.length}`)
+              }
+            } catch (uploadError) {
+              console.error('Error uploading images:', uploadError)
+              // Don't fail the product update if image upload fails
+            }
+          }
         } else {
-          await createProduct(form)
+          const result = await createProduct(form)
+          createdProductId = result.id
+          
+          // After product creation, upload images if any
+          if (imageFiles.length > 0 && createdProductId) {
+            try {
+              const fileImages = imageFiles.filter(img => img instanceof File) as File[]
+              console.log(`Uploading ${fileImages.length} images for product ${createdProductId}`)
+              for (let i = 0; i < fileImages.length; i++) {
+                const file = fileImages[i]
+                await uploadProductImage(file, createdProductId)
+                console.log(`Uploaded image ${i + 1}/${fileImages.length}`)
+              }
+            } catch (uploadError) {
+              console.error('Error uploading images:', uploadError)
+              // Don't fail the product creation if image upload fails
+            }
+          }
         }
+        
         router.push('/admin/products')
         router.refresh()
       } catch (error) {
@@ -230,15 +284,20 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
         */}
         
         <MediaSection 
-          images={[]}
-          onImagesChange={(images: File[]) => {
-            // Convert File[] to string[] for formData
-            const imageUrls = images.map(file => URL.createObjectURL(file))
+          images={imageFiles}
+          onImagesChange={(images: (File | string)[]) => {
+            setImageFiles(images)
+            // Only include existing image URLs (strings) in formData
+            // File objects will be handled separately during upload
+            const imageUrls = images
+              .filter(item => typeof item === 'string')
+              .map(item => item as string)
             setFormData(prev => ({
               ...prev,
               images: imageUrls
             }))
           }}
+          productId={data?.id as string}
         />
         
         <SeoSection 
@@ -268,7 +327,7 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
       {showPreview && (
         <ProductPreview 
           formData={formData}
-          images={[]}
+          images={imageFiles}
           onClose={() => setShowPreview(false)} 
         />
       )}

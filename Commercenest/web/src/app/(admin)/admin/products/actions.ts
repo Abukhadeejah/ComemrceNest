@@ -171,7 +171,7 @@ export async function createProduct(formData: FormData) {
   }
 
   // Handle category assignment
-  if (productData.category_id) {
+  if (productData.category_id && productData.category_id.trim() !== '') {
     await supabaseAdmin
       .from('product_categories')
       .insert({
@@ -187,8 +187,9 @@ export async function createProduct(formData: FormData) {
         .from('product_images')
         .insert({
           product_id: product.id,
-          image_url: imageUrl,
-          alt_text: `Product image ${index + 1}`,
+          tenant_id: tenantId,
+          url: imageUrl,
+          alt: `Product image ${index + 1}`,
           sort_order: index
         })
     })
@@ -300,14 +301,14 @@ export async function updateProduct(productId: string, formData: FormData) {
   }
 
   // Handle category assignment
-  if (productData.category_id) {
-    // Remove existing categories
-    await supabaseAdmin
-      .from('product_categories')
-      .delete()
-      .eq('product_id', productId)
+  // Remove existing categories first
+  await supabaseAdmin
+    .from('product_categories')
+    .delete()
+    .eq('product_id', productId)
 
-    // Add new category
+  // Add new category if one is selected
+  if (productData.category_id && productData.category_id.trim() !== '') {
     await supabaseAdmin
       .from('product_categories')
       .insert({
@@ -330,8 +331,9 @@ export async function updateProduct(productId: string, formData: FormData) {
         .from('product_images')
         .insert({
           product_id: productId,
-          image_url: imageUrl,
-          alt_text: `Product image ${index + 1}`,
+          tenant_id: tenantId,
+          url: imageUrl,
+          alt: `Product image ${index + 1}`,
           sort_order: index
         })
     })
@@ -471,9 +473,10 @@ export async function uploadProductImage(file: File, productId: string) {
   const { error: imageError } = await supabaseAdmin
     .from('product_images')
     .insert({
+      tenant_id: tenantId,
       product_id: productId,
-      image_url: urlData.publicUrl,
-      alt_text: file.name,
+      url: urlData.publicUrl,
+      alt: file.name,
       sort_order: 0
     })
 
