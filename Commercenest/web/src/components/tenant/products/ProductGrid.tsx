@@ -6,12 +6,16 @@ import { ProductListItem } from '@/server/modules/products/service'
 import { HeartIcon, ShoppingBagIcon, EyeIcon } from '@heroicons/react/24/outline'
 import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid'
 import { useState } from 'react'
+import { QuickViewModal } from './QuickViewModal'
 
 interface ProductGridProps {
   products: ProductListItem[]
 }
 
 export function ProductGrid({ products }: ProductGridProps) {
+  const [quickViewProduct, setQuickViewProduct] = useState<ProductListItem | null>(null)
+  const [isQuickViewOpen, setIsQuickViewOpen] = useState(false)
+
   if (products.length === 0) {
     return (
       <div className="text-center py-16">
@@ -29,16 +33,50 @@ export function ProductGrid({ products }: ProductGridProps) {
     )
   }
 
+  const handleQuickView = (product: ProductListItem) => {
+    setQuickViewProduct(product)
+    setIsQuickViewOpen(true)
+  }
+
+  const closeQuickView = () => {
+    setIsQuickViewOpen(false)
+    setQuickViewProduct(null)
+  }
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-      {products.map((product, index) => (
-        <ProductCard key={product.id} product={product} index={index} />
-      ))}
-    </div>
+    <>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {products.map((product, index) => (
+          <ProductCard 
+            key={product.id} 
+            product={product} 
+            index={index} 
+            onQuickView={handleQuickView}
+          />
+        ))}
+      </div>
+
+      {/* Quick View Modal */}
+      {isQuickViewOpen && quickViewProduct && (
+        <QuickViewModal 
+          product={quickViewProduct} 
+          isOpen={isQuickViewOpen}
+          onClose={closeQuickView} 
+        />
+      )}
+    </>
   )
 }
 
-function ProductCard({ product, index }: { product: ProductListItem; index: number }) {
+function ProductCard({ 
+  product, 
+  index, 
+  onQuickView 
+}: { 
+  product: ProductListItem; 
+  index: number;
+  onQuickView: (product: ProductListItem) => void;
+}) {
   const [isWishlisted, setIsWishlisted] = useState(false)
 
   const formatPrice = (priceCents: number) => {
@@ -69,10 +107,10 @@ function ProductCard({ product, index }: { product: ProductListItem; index: numb
     setIsWishlisted(!isWishlisted)
   }
 
-  const handleQuickView = (e: React.MouseEvent) => {
+  const handleQuickViewClick = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    // TODO: Implement quick view functionality
+    onQuickView(product)
   }
 
   return (
@@ -105,7 +143,7 @@ function ProductCard({ product, index }: { product: ProductListItem; index: numb
         </div>
 
         {/* Action Buttons */}
-        <div className="absolute top-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        <div className="absolute top-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">
           {/* Wishlist Button */}
           <button 
             onClick={handleWishlistToggle}
@@ -120,7 +158,7 @@ function ProductCard({ product, index }: { product: ProductListItem; index: numb
 
           {/* Quick View Button */}
           <button 
-            onClick={handleQuickView}
+            onClick={handleQuickViewClick}
             className="bg-white rounded-full p-2 shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-110"
           >
             <EyeIcon className="w-4 h-4 text-gray-600 hover:text-indigo-600" />
@@ -128,7 +166,7 @@ function ProductCard({ product, index }: { product: ProductListItem; index: numb
         </div>
 
         {/* Quick View Overlay */}
-        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100 z-10">
           <Link 
             href={`/products/${product.slug}`}
             className="bg-white text-gray-900 px-6 py-3 rounded-lg font-medium hover:bg-gray-50 transition-colors duration-200 shadow-lg transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300"
@@ -219,3 +257,5 @@ function ProductCard({ product, index }: { product: ProductListItem; index: numb
     </div>
   )
 }
+
+
