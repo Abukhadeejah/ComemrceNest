@@ -3,7 +3,9 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { ProductListItem } from '@/server/modules/products/service'
-import { HeartIcon } from '@heroicons/react/24/outline'
+import { HeartIcon, ShoppingBagIcon, EyeIcon } from '@heroicons/react/24/outline'
+import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid'
+import { useState } from 'react'
 
 interface ProductGridProps {
   products: ProductListItem[]
@@ -12,9 +14,17 @@ interface ProductGridProps {
 export function ProductGrid({ products }: ProductGridProps) {
   if (products.length === 0) {
     return (
-      <div className="text-center py-12">
-        <div className="text-gray-500 text-lg mb-4">No products found</div>
-        <p className="text-gray-400">Try adjusting your search or filter criteria</p>
+      <div className="text-center py-16">
+        <div className="text-gray-500 text-xl mb-4 font-medium">No products found</div>
+        <p className="text-gray-400 max-w-md mx-auto">
+          We couldn&apos;t find any products matching your criteria. Try adjusting your search or browse our categories.
+        </p>
+        <Link 
+          href="/products" 
+          className="inline-block mt-6 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors duration-200"
+        >
+          Browse All Products
+        </Link>
       </div>
     )
   }
@@ -29,6 +39,8 @@ export function ProductGrid({ products }: ProductGridProps) {
 }
 
 function ProductCard({ product, index }: { product: ProductListItem; index: number }) {
+  const [isWishlisted, setIsWishlisted] = useState(false)
+
   const formatPrice = (priceCents: number) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -43,92 +55,122 @@ function ProductCard({ product, index }: { product: ProductListItem; index: numb
     ? Math.round(((product.compare_at_price_cents! - product.price_cents) / product.compare_at_price_cents!) * 100)
     : 0
 
-  // Generate badges based on index for demo purposes
+  // Generate fashion-specific badges
   const badges = []
-  if (index % 4 === 0) badges.push({ text: 'Featured', className: 'bg-blue-500 text-white' })
-  if (hasDiscount) badges.push({ text: `-${discountPercentage}%`, className: 'bg-red-500 text-white' })
-  if (index % 5 === 0) badges.push({ text: 'Limited', className: 'bg-orange-500 text-white' })
+  if (hasDiscount) badges.push({ text: `-${discountPercentage}% OFF`, className: 'bg-red-500 text-white' })
+  if (index % 4 === 0) badges.push({ text: 'Trending', className: 'bg-purple-500 text-white' })
+  if (index % 5 === 0) badges.push({ text: 'New Arrival', className: 'bg-green-500 text-white' })
+  if (product.stock <= 5 && product.stock > 0) badges.push({ text: 'Low Stock', className: 'bg-orange-500 text-white' })
   if (product.stock === 0) badges.push({ text: 'Sold Out', className: 'bg-gray-500 text-white' })
 
+  const handleWishlistToggle = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsWishlisted(!isWishlisted)
+  }
+
+  const handleQuickView = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    // TODO: Implement quick view functionality
+  }
+
   return (
-    <div className="group bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-lg transition-all duration-300">
+    <div className="group bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-xl transition-all duration-300 border border-gray-100">
       {/* Product Image Container */}
-      <div className="relative aspect-square overflow-hidden bg-gray-100">
+      <div className="relative aspect-[4/5] overflow-hidden bg-gray-50">
         {product.hero_image_url ? (
           <Image
             src={product.hero_image_url}
             alt={product.name}
             fill
-            className="object-cover group-hover:scale-105 transition-transform duration-300"
+            className="object-cover group-hover:scale-105 transition-transform duration-500"
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-400">
-            <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gradient-to-br from-gray-50 to-gray-100">
+            <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
           </div>
         )}
         
         {/* Badges */}
-        <div className="absolute top-2 left-2 flex flex-col gap-1">
+        <div className="absolute top-3 left-3 flex flex-col gap-1">
           {badges.map((badge, i) => (
-            <span key={i} className={`text-xs px-2 py-1 rounded font-medium ${badge.className}`}>
+            <span key={i} className={`text-xs px-2 py-1 rounded-full font-medium shadow-sm ${badge.className}`}>
               {badge.text}
             </span>
           ))}
         </div>
 
-        {/* Countdown Timer (Demo) */}
-        {index % 3 === 0 && (
-          <div className="absolute top-2 right-2 bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded">
-            <div className="flex gap-1">
-              <span>127</span>
-              <span>Days</span>
-            </div>
-          </div>
-        )}
+        {/* Action Buttons */}
+        <div className="absolute top-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          {/* Wishlist Button */}
+          <button 
+            onClick={handleWishlistToggle}
+            className="bg-white rounded-full p-2 shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-110"
+          >
+            {isWishlisted ? (
+              <HeartSolidIcon className="w-4 h-4 text-red-500" />
+            ) : (
+              <HeartIcon className="w-4 h-4 text-gray-600 hover:text-red-500" />
+            )}
+          </button>
 
-        {/* Wishlist Button */}
-        <button className="absolute top-2 right-2 bg-white rounded-full p-2 shadow-md hover:bg-red-50 transition-colors duration-200 opacity-0 group-hover:opacity-100">
-          <HeartIcon className="w-4 h-4 text-gray-600 hover:text-red-500" />
-        </button>
+          {/* Quick View Button */}
+          <button 
+            onClick={handleQuickView}
+            className="bg-white rounded-full p-2 shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-110"
+          >
+            <EyeIcon className="w-4 h-4 text-gray-600 hover:text-indigo-600" />
+          </button>
+        </div>
 
         {/* Quick View Overlay */}
         <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
           <Link 
             href={`/products/${product.slug}`}
-            className="bg-white text-gray-900 px-4 py-2 rounded-md font-medium hover:bg-gray-100 transition-colors duration-200"
+            className="bg-white text-gray-900 px-6 py-3 rounded-lg font-medium hover:bg-gray-50 transition-colors duration-200 shadow-lg transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300"
           >
-            Quick View
+            View Details
           </Link>
         </div>
+
+        {/* Stock Status Overlay */}
+        {product.stock === 0 && (
+          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+            <span className="bg-white text-gray-900 px-4 py-2 rounded-lg font-medium">
+              Out of Stock
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Product Info */}
       <div className="p-4">
-        <Link href={`/products/${product.slug}`} className="block">
-          <h3 className="text-sm font-medium text-gray-900 group-hover:text-indigo-600 transition-colors duration-200 line-clamp-2 mb-2">
+        <Link href={`/products/${product.slug}`} className="block group">
+          <h3 className="text-sm font-medium text-gray-900 group-hover:text-indigo-600 transition-colors duration-200 line-clamp-2 mb-2 leading-tight">
             {product.name}
           </h3>
         </Link>
         
-        {/* Star Rating (Demo) */}
-        {index % 3 === 0 && (
-          <div className="flex items-center mb-2">
-            <div className="flex text-yellow-400">
-              {[...Array(5)].map((_, i) => (
-                <svg key={i} className="w-3 h-3 fill-current" viewBox="0 0 20 20">
-                  <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
-                </svg>
-              ))}
-            </div>
-            <span className="text-xs text-gray-500 ml-1">(5.0)</span>
+        {/* Star Rating */}
+        <div className="flex items-center mb-3">
+          <div className="flex text-yellow-400">
+            {[...Array(5)].map((_, i) => (
+              <svg key={i} className="w-3 h-3 fill-current" viewBox="0 0 20 20">
+                <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
+              </svg>
+            ))}
           </div>
-        )}
+          <span className="text-xs text-gray-500 ml-1">(4.8)</span>
+          <span className="text-xs text-gray-400 ml-2">• 127 reviews</span>
+        </div>
         
         {/* Price */}
-        <div className="flex items-center space-x-2 mb-3">
-          <span className="text-lg font-semibold text-gray-900">
+        <div className="flex items-center space-x-2 mb-4">
+          <span className="text-lg font-bold text-gray-900">
             {formatPrice(product.price_cents)}
           </span>
           {hasDiscount && (
@@ -138,35 +180,39 @@ function ProductCard({ product, index }: { product: ProductListItem; index: numb
           )}
         </div>
 
-        {/* Size Options (Demo) */}
-        {index % 2 === 0 && (
-          <div className="flex gap-1 mb-3">
-            {['M-38', 'L-40', 'XL-42'].map((size) => (
-              <button
-                key={size}
-                className="text-xs px-2 py-1 border border-gray-300 rounded hover:border-gray-400 transition-colors duration-200"
-              >
-                {size}
-              </button>
-            ))}
-          </div>
-        )}
+        {/* Size Options Preview */}
+        <div className="flex gap-1 mb-4">
+          {['S', 'M', 'L', 'XL'].map((size) => (
+            <button
+              key={size}
+              className="text-xs px-2 py-1 border border-gray-200 rounded hover:border-gray-400 transition-colors duration-200 hover:bg-gray-50"
+            >
+              {size}
+            </button>
+          ))}
+        </div>
 
-        {/* Stock Status */}
+        {/* Stock Status & Add to Cart */}
         <div className="flex items-center justify-between">
-          {product.stock > 0 ? (
-            <span className="text-xs text-green-600">
-              {product.stock} in stock
-            </span>
-          ) : (
-            <span className="text-xs text-red-600">
-              Out of stock
-            </span>
-          )}
+          <div className="flex items-center space-x-2">
+            {product.stock > 0 ? (
+              <span className="text-xs text-green-600 font-medium">
+                {product.stock} in stock
+              </span>
+            ) : (
+              <span className="text-xs text-red-600 font-medium">
+                Out of stock
+              </span>
+            )}
+          </div>
           
           {/* Add to Cart Button */}
-          <button className="bg-indigo-600 text-white text-xs py-2 px-3 rounded-md hover:bg-indigo-700 transition-colors duration-200">
-            Add to Cart
+          <button 
+            disabled={product.stock === 0}
+            className="bg-indigo-600 text-white text-sm py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors duration-200 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center space-x-1"
+          >
+            <ShoppingBagIcon className="w-4 h-4" />
+            <span>Add to Cart</span>
           </button>
         </div>
       </div>
