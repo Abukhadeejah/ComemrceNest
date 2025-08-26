@@ -31,11 +31,11 @@ export async function getProducts(params: GetProductsParams): Promise<ProductLis
   }
 
   const result = await fetchPublishedProductsPaged(tenantId, serviceParams)
-  
+
   // Handle potential error or null data
   if (result.error || !result.data) {
     return []
   }
-  
+
   return result.data as unknown as ProductListItem[]
 }

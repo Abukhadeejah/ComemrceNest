@@ -1,9 +1,14 @@
+// Disable static optimization for debugging
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 import { Suspense } from 'react'
 import { ProductGrid } from '@/components/tenant/products/ProductGrid'
 import { ProductFilters } from '@/components/tenant/products/ProductFilters'
 import { ProductSearch } from '@/components/tenant/products/ProductSearch'
 import { getProducts } from '@/server/products'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
+import { headers } from 'next/headers'
 
 interface ProductsPageProps {
   searchParams: Promise<{
@@ -15,10 +20,13 @@ interface ProductsPageProps {
   }>
 }
 
-export default async function ProductsPage({ searchParams }: ProductsPageProps) {
+export default async function BluebellProductsPage({ searchParams }: ProductsPageProps) {
   const params = await searchParams
   const tenantId = await resolveTenantIdFromRequest()
-  
+
+  const h = await headers()
+
+
   if (!tenantId) {
     return <div>Tenant not found</div>
   }
@@ -33,14 +41,16 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
     limit: 12
   })
 
+  console.log('[BLUEBELL_PRODUCTS_PAGE] Fetched products for tenant:', tenantId, 'Count:', products.length)
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Our Products</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Interior Fabrics</h1>
           <p className="mt-2 text-gray-600">
-            Discover our latest collection of fashion products
+            Discover our curated collection of premium fabrics for interior design
           </p>
         </div>
 
@@ -52,7 +62,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
 
         {/* Products Grid */}
         <Suspense fallback={<ProductGridSkeleton />}>
-          <ProductGrid products={products} />
+          <ProductGrid key={tenantId} products={products} />
         </Suspense>
       </div>
     </div>
@@ -75,10 +85,3 @@ function ProductGridSkeleton() {
     </div>
   )
 }
-
-
-
-
-
-
-

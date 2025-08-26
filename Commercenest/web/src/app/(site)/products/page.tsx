@@ -1,3 +1,7 @@
+// Disable static optimization for debugging
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 import { Suspense } from 'react'
 import { ProductGrid } from '@/components/tenant/products/ProductGrid'
 import { ProductFilters } from '@/components/tenant/products/ProductFilters'
@@ -19,7 +23,10 @@ interface ProductsPageProps {
 export default async function ProductsPage({ searchParams }: ProductsPageProps) {
   const params = await searchParams
   const tenantId = await resolveTenantIdFromRequest()
-  
+
+  console.log('[PRODUCTS_PAGE] Resolved tenantId:', tenantId)
+  console.log('[PRODUCTS_PAGE] Current URL path:', (await import('next/headers')).headers().get('x-pathname'))
+
   if (!tenantId) {
     return <div>Tenant not found</div>
   }
@@ -33,6 +40,11 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
     page: parseInt(params.page || '1'),
     limit: 12
   })
+
+  // Force fresh data by adding timestamp
+  const timestamp = Date.now()
+
+  console.log('[PRODUCTS_PAGE] Fetched products for tenant:', tenantId, 'Count:', products.length)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
@@ -106,7 +118,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
 
         {/* Products Grid */}
         <Suspense fallback={<ProductGridSkeleton />}>
-          <ProductGrid products={products} />
+          <ProductGrid key={tenantId} products={products} />
         </Suspense>
 
         {/* Load More Section */}

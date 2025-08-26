@@ -16,6 +16,9 @@ export function ProductGrid({ products }: ProductGridProps) {
   const [quickViewProduct, setQuickViewProduct] = useState<ProductListItem | null>(null)
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false)
 
+  // Debug logging
+  console.log('[PRODUCT_GRID] Received products:', products.length, products.map(p => p.name))
+
   if (products.length === 0) {
     return (
       <div className="text-center py-16">

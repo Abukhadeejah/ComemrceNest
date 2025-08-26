@@ -42,11 +42,13 @@ export async function fetchPublishedProductsPaged(
   if (categoryId) {
     selectCols += ', product_categories!inner(category_id)'
   }
+
   let query = supabaseAdmin
     .from('products')
     .select(selectCols, { count: 'exact' })
     .eq('tenant_id', tenantId)
     .eq('status', 'published')
+
   if (categoryId) {
     query = query.eq('product_categories.category_id', categoryId)
   }
@@ -60,6 +62,7 @@ export async function fetchPublishedProductsPaged(
     query = query.lte('price_cents', maxPriceCents)
   }
   const { data, count, error } = await query.order(sort, { ascending: dir === 'asc' }).range(from, to)
+
   return { data, count, error }
 }
 

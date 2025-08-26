@@ -28,47 +28,68 @@ interface TenantConfig {
 
 export async function resolveTenantIdFromRequest(): Promise<string | null> {
   const h = await headers()
-  const rawHost = h.get('x-tenant-host') || h.get('host') || ''
+  const rawHost = h.get('host') || ''
   const host = rawHost.split(':')[0]
   const pathname = h.get('x-pathname') || '/'
   const tenantAdmin = h.get('x-tenant-admin')
-  
-  if (!host) return null
-  
+
+  if (!host) {
+    return null
+  }
+
   // 1. Try tenant admin header first (most reliable for tenant-specific routes)
   if (tenantAdmin) {
     const tenantId = await resolveTenantIdFromKey(tenantAdmin)
-    if (tenantId) return tenantId
+    if (tenantId) {
+      return tenantId
+    }
   }
-  
+
   // 2. Try host-based resolution (for custom domains)
   const { data: hostData } = await supabaseAdmin
     .from('tenant_domains')
     .select('tenant_id')
     .eq('hostname', host)
     .maybeSingle()
-    
-  if (hostData?.tenant_id) return hostData.tenant_id
-  
+
+  if (hostData?.tenant_id) {
+    return hostData.tenant_id
+  }
+
   // 3. Try path-based resolution for subdomain routing
   const pathSegments = pathname.split('/').filter(Boolean)
   if (pathSegments.length > 0) {
     const tenantKey = pathSegments[0]
     const tenantId = await resolveTenantIdFromKey(tenantKey)
-    if (tenantId) return tenantId
+    if (tenantId) {
+      return tenantId
+    }
   }
-  
+
   // 4. Special handling for localhost development
   if (host === 'localhost') {
-    if (pathname.startsWith('/bluebell')) {
-      return await resolveTenantIdFromKey('bluebell')
+    const pathSegments = pathname.split('/').filter(Boolean)
+
+    if (pathSegments.length > 0) {
+      const firstSegment = pathSegments[0].toLowerCase()
+
+      if (firstSegment === 'bluebell') {
+        return '11111111-1111-4111-8111-11111111bb01' // Bluebell Interiors
+      }
+
+      if (firstSegment === 'senlysh') {
+        return '1e4c9aa7-e7af-4fe7-999b-c9c46219fa3c' // Senlysh Fashion
+      }
     }
-    // Default to Senlysh for localhost
-    return await resolveTenantIdFromKey('senlysh')
+
+    // For root path or other paths, default to Senlysh
+    return '1e4c9aa7-e7af-4fe7-999b-c9c46219fa3c' // Senlysh Fashion
   }
-  
+
   // 5. Fallback to default tenant
-  return await getDefaultTenantId()
+  const defaultId = await getDefaultTenantId()
+  console.log('[TENANT_RESOLUTION] Step 5: Default tenant ID:', defaultId)
+  return defaultId
 }
 
 // Helper function to resolve tenant ID from tenant key (name or slug)
@@ -76,38 +97,44 @@ async function resolveTenantIdFromKey(tenantKey: string): Promise<string | null>
   // Try exact name match first
   const { data: tenantData } = await supabaseAdmin
     .from('tenants')
-    .select('id')
+    .select('id, name')
     .eq('name', tenantKey)
     .maybeSingle()
-  
-  if (tenantData?.id) return tenantData.id
-  
+
+  if (tenantData?.id) {
+    return tenantData.id
+  }
+
   // Try case-insensitive name match
   const { data: tenantDataCI } = await supabaseAdmin
     .from('tenants')
-    .select('id')
+    .select('id, name')
     .ilike('name', `%${tenantKey}%`)
     .maybeSingle()
-  
-  if (tenantDataCI?.id) return tenantDataCI.id
-  
+
+  if (tenantDataCI?.id) {
+    return tenantDataCI.id
+  }
+
   // Try common tenant key mappings
   const keyMappings: Record<string, string> = {
     'bluebell': 'Bluebell Interiors',
     'senlysh': 'Senlysh Fashion',
   }
-  
+
   const mappedName = keyMappings[tenantKey.toLowerCase()]
   if (mappedName) {
     const { data: mappedTenant } = await supabaseAdmin
       .from('tenants')
-      .select('id')
+      .select('id, name')
       .eq('name', mappedName)
       .maybeSingle()
-    
-    if (mappedTenant?.id) return mappedTenant.id
+
+    if (mappedTenant?.id) {
+      return mappedTenant.id
+    }
   }
-  
+
   return null
 }
 

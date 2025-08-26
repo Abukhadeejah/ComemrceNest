@@ -3,12 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "validate:registry": "node scripts/validate-registry.js",
+    "validate:imports": "node scripts/validate-imports.js",
+    "validate:contracts": "node scripts/validate-contracts.js",
+    "ci:validate": "npm run validate:registry && npm run validate:imports && npm run validate:contracts",
+    "scaffold:tenant": "node scripts/scaffold-tenant.js"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.7",

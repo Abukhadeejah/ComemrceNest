@@ -36,8 +36,8 @@ export default function CommerceNestHomePage() {
                 </Link>
               </div>
             </div>
-          </div>
-        </div>
+      </div>
+    </div>
       </section>
 
       {/* Features Section */}
@@ -112,8 +112,8 @@ export default function CommerceNestHomePage() {
                 Senlysh Fashion
               </Link>
             </div>
-          </div>
         </div>
+      </div>
       </section>
     </main>
   )

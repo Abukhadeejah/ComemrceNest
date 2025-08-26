@@ -105,7 +105,7 @@ export class StorageService {
 
       return true
     } catch (error) {
-      console.error('Failed to delete image:', error)
+      // Failed to delete image
       return false
     }
   }
@@ -125,7 +125,7 @@ export class StorageService {
 
       return data.signedUrl
     } catch (error) {
-      console.error('Failed to get signed URL:', error)
+      // Failed to get signed URL
       return null
     }
   }
