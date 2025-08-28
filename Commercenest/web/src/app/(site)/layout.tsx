@@ -3,23 +3,60 @@ import { headers } from 'next/headers'
 import TenantProvider from '@/components/TenantProvider'
 import TenantLayoutServer from '@/components/tenant/TenantLayoutServer'
 import { CartProvider } from '@/lib/cart'
+import { getTenantConfig } from '@/tenants'
 
-export const metadata: Metadata = {
-  title: 'CommerceNest - Multi-tenant Platform',
-  description: 'Multi-tenant e-commerce platform',
-  keywords: 'e-commerce, multi-tenant, platform, SaaS',
-  authors: [{ name: 'CommerceNest' }],
-  openGraph: {
-    title: 'CommerceNest - Multi-tenant Platform',
-    description: 'Multi-tenant e-commerce platform',
-    type: 'website',
-    locale: 'en_US',
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'CommerceNest - Multi-tenant Platform',
-    description: 'Multi-tenant e-commerce platform',
-  },
+export async function generateMetadata(): Promise<Metadata> {
+  const headersList = await headers()
+  const pathname = headersList.get('x-pathname') || '/'
+
+  const segments = pathname.split('/').filter(Boolean)
+  const first = segments[0]?.toLowerCase()
+  const isTenant = first === 'bluebell' || first === 'senlysh'
+  const tenantKey = isTenant ? first : undefined
+
+  if (!tenantKey) {
+    return {
+      title: {
+        default: 'CommerceNest - Multi-tenant Platform',
+        template: '%s | CommerceNest',
+      },
+      description: 'Multi-tenant e-commerce platform',
+      openGraph: {
+        title: 'CommerceNest - Multi-tenant Platform',
+        description: 'Multi-tenant e-commerce platform',
+        type: 'website',
+        locale: 'en_US',
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title: 'CommerceNest - Multi-tenant Platform',
+        description: 'Multi-tenant e-commerce platform',
+      },
+    }
+  }
+
+  const cfg = getTenantConfig(tenantKey)
+  const brand = cfg.brand?.name || tenantKey
+  const tagline = cfg.brand?.tagline || 'Premium Fabrics & Design'
+
+  return {
+    title: {
+      default: `${brand} - ${tagline}`,
+      template: `%s | ${brand}`,
+    },
+    description: cfg.brand?.tagline || 'Premium multi-tenant storefront',
+    openGraph: {
+      title: `${brand} - ${tagline}`,
+      description: cfg.brand?.tagline || 'Premium multi-tenant storefront',
+      type: 'website',
+      locale: 'en_US',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${brand} - ${tagline}`,
+      description: cfg.brand?.tagline || 'Premium multi-tenant storefront',
+    },
+  }
 }
 
 export default async function SiteLayout({

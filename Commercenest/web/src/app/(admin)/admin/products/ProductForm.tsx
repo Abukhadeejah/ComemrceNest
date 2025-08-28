@@ -21,7 +21,7 @@ import { ProductFormData } from '@/types/product'
 
 interface ProductFormProps {
   mode: 'create' | 'edit'
-  initialData?: Partial<ProductFormData>
+  initialData?: Partial<ProductFormData> & { variantOptions?: unknown[]; variantCombinations?: unknown[] }
   categories: Record<string, unknown>[]
 }
 
@@ -69,8 +69,16 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
   const [imageFiles, setImageFiles] = useState<(File | string)[]>(initialData?.images || [])
 
   // State for variants
-  const [variantOptions, setVariantOptions] = useState(initialData?.variantOptions || [])
-  const [variantCombinations, setVariantCombinations] = useState(initialData?.variantCombinations || [])
+  type UIOptionValue = { id: string; value: string; displayValue: string; colorHex?: string; imageUrl?: string }
+  type UIOption = { id: string; name: string; displayName: string; type: 'text'|'color'|'image'|'select'; required: boolean; values: UIOptionValue[] }
+  type UICombination = { id: string; options: Record<string, string>; priceCents: number; stock: number; sku: string; imageUrl?: string }
+
+  const [variantOptions, setVariantOptions] = useState<UIOption[]>(
+    Array.isArray(initialData?.variantOptions) ? (initialData?.variantOptions as UIOption[]) : []
+  )
+  const [variantCombinations, setVariantCombinations] = useState<UICombination[]>(
+    Array.isArray(initialData?.variantCombinations) ? (initialData?.variantCombinations as UICombination[]) : []
+  )
 
   const [errors, setErrors] = useState<Record<string, string>>({})
   const router = useRouter()

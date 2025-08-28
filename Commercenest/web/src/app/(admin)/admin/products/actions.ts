@@ -42,6 +42,7 @@ interface ProductData {
   gift_card_expiry_days?: number | null
   // Variants and size guides (handled separately)
   variantOptions?: Record<string, unknown>[]
+  variantCombinations?: Record<string, unknown>[]
   sizeGuides?: Record<string, unknown>[]
   sizeGuideId?: string
   images?: string[]
@@ -107,6 +108,7 @@ export async function createProduct(formData: FormData) {
     status: formData.get('status') as string,
     images: formData.getAll('images') as string[],
     variantOptions: JSON.parse(formData.get('variantOptions') as string || '[]'),
+    variantCombinations: JSON.parse(formData.get('variantCombinations') as string || '[]'),
     sizeGuides: JSON.parse(formData.get('sizeGuides') as string || '[]'),
     sizeGuideId: formData.get('sizeGuideId') as string
   }
@@ -197,7 +199,7 @@ export async function createProduct(formData: FormData) {
   }
 
   // Handle variant options
-  if (productData.variantOptions && productData.variantOptions.length > 0) {
+  if (Array.isArray(productData.variantOptions) && productData.variantOptions.length > 0) {
     const variantOptionPromises = productData.variantOptions.map(async (option: Record<string, unknown>) => {
       // First, create the variant option
       const { data: variantOption, error: optionError } = await supabaseAdmin
@@ -225,8 +227,11 @@ export async function createProduct(formData: FormData) {
         })
 
       // Create option values
-      if (option.values && Array.isArray(option.values)) {
-        const valuePromises = option.values.map(async (value: Record<string, unknown>) => {
+      const optionValues = Array.isArray((option as Record<string, unknown> & { values?: Record<string, unknown>[] }).values)
+        ? ((option as Record<string, unknown> & { values?: Record<string, unknown>[] }).values as Record<string, unknown>[])
+        : []
+      if (optionValues.length > 0) {
+        const valuePromises = optionValues.map(async (value: Record<string, unknown>) => {
           return supabaseAdmin
             .from('variant_option_values')
             .insert({
@@ -247,7 +252,7 @@ export async function createProduct(formData: FormData) {
   }
 
   // Handle variant combinations
-  if (productData.variantCombinations && productData.variantCombinations.length > 0) {
+  if (Array.isArray(productData.variantCombinations) && productData.variantCombinations.length > 0) {
     const combinationPromises = productData.variantCombinations.map(async (combo: Record<string, unknown>) => {
       // Create the variant combination
       const { data: variant, error: variantError } = await supabaseAdmin
@@ -267,8 +272,8 @@ export async function createProduct(formData: FormData) {
       if (variantError) throw variantError
 
       // Create variant combinations for each option-value pair
-      if (combo.options && typeof combo.options === 'object') {
-        const optionEntries = Object.entries(combo.options as Record<string, unknown>)
+      if ((combo as Record<string, unknown> & { options?: Record<string, unknown> }).options && typeof (combo as Record<string, unknown> & { options?: Record<string, unknown> }).options === 'object') {
+        const optionEntries = Object.entries(((combo as Record<string, unknown> & { options?: Record<string, unknown> }).options) as Record<string, unknown>)
         const comboPromises = optionEntries.map(async ([optionId, valueId]) => {
           // Find the option and value IDs (this is a simplified approach)
           // In a real implementation, you'd need to maintain proper ID mappings
@@ -334,6 +339,7 @@ export async function updateProduct(productId: string, formData: FormData) {
     status: formData.get('status') as string,
     images: formData.getAll('images') as string[],
     variantOptions: JSON.parse(formData.get('variantOptions') as string || '[]'),
+    variantCombinations: JSON.parse(formData.get('variantCombinations') as string || '[]'),
     sizeGuides: JSON.parse(formData.get('sizeGuides') as string || '[]'),
     sizeGuideId: formData.get('sizeGuideId') as string
   }
@@ -435,7 +441,7 @@ export async function updateProduct(productId: string, formData: FormData) {
   }
 
   // Handle variant options update
-  if (productData.variantOptions) {
+  if (Array.isArray(productData.variantOptions)) {
     // Remove existing variant options and related data
     await supabaseAdmin
       .from('product_variant_options')
@@ -500,8 +506,11 @@ export async function updateProduct(productId: string, formData: FormData) {
           })
 
         // Create option values
-        if (option.values && Array.isArray(option.values)) {
-          const valuePromises = option.values.map(async (value: Record<string, unknown>) => {
+        const optionValues = Array.isArray((option as Record<string, unknown> & { values?: Record<string, unknown>[] }).values)
+          ? ((option as Record<string, unknown> & { values?: Record<string, unknown>[] }).values as Record<string, unknown>[])
+          : []
+        if (optionValues.length > 0) {
+          const valuePromises = optionValues.map(async (value: Record<string, unknown>) => {
             return supabaseAdmin
               .from('variant_option_values')
               .insert({
@@ -523,7 +532,7 @@ export async function updateProduct(productId: string, formData: FormData) {
   }
 
   // Handle variant combinations update
-  if (productData.variantCombinations) {
+  if (Array.isArray(productData.variantCombinations)) {
     // Remove existing combinations
     await supabaseAdmin
       .from('variant_combinations')
@@ -556,8 +565,8 @@ export async function updateProduct(productId: string, formData: FormData) {
         if (variantError) throw variantError
 
         // Create variant combinations for each option-value pair
-        if (combo.options && typeof combo.options === 'object') {
-          const optionEntries = Object.entries(combo.options as Record<string, unknown>)
+        if ((combo as Record<string, unknown> & { options?: Record<string, unknown> }).options && typeof (combo as Record<string, unknown> & { options?: Record<string, unknown> }).options === 'object') {
+          const optionEntries = Object.entries(((combo as Record<string, unknown> & { options?: Record<string, unknown> }).options) as Record<string, unknown>)
           const comboPromises = optionEntries.map(async ([optionId, valueId]) => {
             // Find the option and value IDs (this is a simplified approach)
             // In a real implementation, you'd need to maintain proper ID mappings

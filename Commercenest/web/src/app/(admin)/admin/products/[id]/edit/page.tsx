@@ -75,33 +75,37 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
     }
 
     // Transform variant options
-    const variantOptions = product.variant_options?.map((pvo: Record<string, unknown>) => {
-      const option = pvo.option as Record<string, unknown>
+    const rawOptions = Array.isArray(product.variant_options) ? product.variant_options : []
+    const variantOptions = rawOptions.map((pvo: Record<string, unknown>) => {
+      const option = (pvo.option || {}) as Record<string, unknown>
       return {
-        id: option.id as string,
-        name: option.name as string,
-        displayName: option.display_name as string,
-        type: option.type as string,
-        required: option.required as boolean,
-        values: option.values?.map((value: Record<string, unknown>) => ({
-          id: value.id as string,
-          value: value.value as string,
-          displayValue: value.display_value as string,
-          colorHex: value.color_hex as string,
-          imageUrl: value.image_url as string
-        })) || []
+        id: (option.id as string) || '',
+        name: (option.name as string) || '',
+        displayName: (option.display_name as string) || '',
+        type: (option.type as string) || 'select',
+        required: Boolean(option.required),
+        values: Array.isArray((option as Record<string, unknown> & { values?: Record<string, unknown>[] }).values)
+          ? ((option as Record<string, unknown> & { values?: Record<string, unknown>[] }).values as Record<string, unknown>[]).map((value: Record<string, unknown>) => ({
+              id: (value.id as string) || '',
+              value: (value.value as string) || '',
+              displayValue: (value.display_value as string) || '',
+              colorHex: (value.color_hex as string) || undefined,
+              imageUrl: (value.image_url as string) || undefined
+            }))
+          : []
       }
-    }) || []
+    })
 
     // Transform variant combinations
-    const variantCombinations = product.variants?.map((variant: Record<string, unknown>) => ({
-      id: variant.id as string,
-      options: variant.attributes as Record<string, string>,
-      priceCents: variant.price_cents as number,
-      stock: variant.stock as number,
-      sku: variant.sku as string,
+    const rawVariants = Array.isArray(product.variants) ? product.variants : []
+    const variantCombinations = rawVariants.map((variant: Record<string, unknown>) => ({
+      id: (variant.id as string) || '',
+      options: (variant.attributes as Record<string, string>) || {},
+      priceCents: (variant.price_cents as number) || 0,
+      stock: (variant.stock as number) || 0,
+      sku: (variant.sku as string) || '',
       imageUrl: ''
-    })) || []
+    }))
 
     // Transform product data to match ProductForm expectations
     const formData = {

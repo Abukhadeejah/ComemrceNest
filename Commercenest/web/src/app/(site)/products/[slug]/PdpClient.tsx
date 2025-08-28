@@ -2,7 +2,7 @@
 import { useMemo, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+// import { useRouter } from 'next/navigation'
 import { Playfair_Display, Inter } from 'next/font/google'
 import { useCart } from '@/lib/cart'
 
@@ -12,6 +12,7 @@ const inter = Inter({ subsets: ['latin'], weight: ['300','400','500','600','700'
 export type PdpImage = { id: string; url: string; alt?: string | null }
 
 type Props = {
+  productId?: string
   name: string
   description?: string | null
   hero_image_url?: string | null
@@ -20,9 +21,9 @@ type Props = {
   tenantKey?: string
 }
 
-export default function PdpClient({ name, description, hero_image_url, images, price_cents, tenantKey }: Props) {
+export default function PdpClient({ productId, name, description, hero_image_url, images, price_cents, tenantKey }: Props) {
   const { addItem } = useCart()
-  const router = useRouter()
+  // const router = useRouter()
   const [isAddingToCart, setIsAddingToCart] = useState(false)
 
   const gallery = useMemo(() => {
@@ -50,7 +51,7 @@ export default function PdpClient({ name, description, hero_image_url, images, p
     setIsAddingToCart(true)
     try {
       addItem({
-        productId: 'current_product_id', // This should be passed from the server component
+        productId: productId || 'current_product_id',
         name,
         price: price_cents,
         imageUrl: hero_image_url || images[0]?.url,

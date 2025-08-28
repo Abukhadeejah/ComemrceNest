@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import { resolveTenantIdFromRequest } from '@/server/tenant'
 import { fetchProductBySlug, fetchProductImages } from '@/server/modules/products/service'
 import PdpClient from '@/app/(site)/products/[slug]/PdpClient'
 
@@ -9,8 +10,11 @@ interface BluebellProductPageProps {
 export default async function BluebellProductPage({ params }: BluebellProductPageProps) {
   const { slug } = await params
   
-  // Bluebell tenant ID (hardcoded for now, should be resolved from context)
-  const tenantId = '11111111-1111-4111-8111-11111111bb01'
+  // Resolve tenant dynamically (guardrails: avoid hardcoding tenant IDs)
+  const tenantId = await resolveTenantIdFromRequest()
+  if (!tenantId) {
+    notFound()
+  }
   
   const { data: product, error } = await fetchProductBySlug(tenantId, slug)
   
@@ -22,6 +26,7 @@ export default async function BluebellProductPage({ params }: BluebellProductPag
 
   return (
     <PdpClient
+      productId={product.id}
       name={product.name}
       description={product.description}
       hero_image_url={product.hero_image_url}

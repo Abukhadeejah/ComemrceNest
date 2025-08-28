@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { PlusIcon, XMarkIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline'
 
 interface VariantOption {
@@ -348,7 +348,7 @@ export function VariantsSection({
                   {variantCombinations.length === 0 ? (
                     <div className="text-center py-8 text-gray-500">
                       <p>No combinations generated yet.</p>
-                      <p className="text-sm mt-1">Click "Generate" to create all possible combinations.</p>
+                      <p className="text-sm mt-1">Click &quot;Generate&quot; to create all possible combinations.</p>
                     </div>
                   ) : (
                     <div className="space-y-4">
@@ -435,6 +435,7 @@ export function VariantsSection({
 
 // Helper component for adding option values
 function AddValueButton({
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   option,
   onAdd
 }: {

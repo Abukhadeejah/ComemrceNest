@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { Playfair_Display } from 'next/font/google';
 import { useCart } from '@/lib/cart';
+import { useTenant } from '@/hooks/useTenant';
 
 const playfair = Playfair_Display({ subsets: ['latin'], weight: ['700','800','900'] });
 
@@ -12,6 +13,8 @@ export default function Header() {
   const { state } = useCart();
   const cartCount = state.itemCount;
   const wishlistCount = 0; // TODO: Implement wishlist functionality later
+  const tenant = useTenant();
+  const basePath = `/${tenant.key || 'bluebell'}`;
 
   return (
     <>
@@ -32,7 +35,7 @@ export default function Header() {
         <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-4">
           <div className="flex items-center justify-between">
             {/* Logo */}
-            <Link href="/" className="flex items-center gap-2 sm:gap-3 transition-transform hover:scale-[1.02]">
+            <Link href={basePath} className="flex items-center gap-2 sm:gap-3 transition-transform hover:scale-[1.02]">
               <div className="w-12 h-12 sm:w-16 sm:h-16">
                 <svg viewBox="0 0 220 140" className="w-full h-full">
                   <g transform="translate(110, 25)">
@@ -72,11 +75,11 @@ export default function Header() {
 
             {/* Navigation Menu - Desktop */}
             <nav className="hidden lg:flex space-x-8">
-              <Link href="/" className="text-gray-800 hover:text-primary font-semibold text-sm uppercase tracking-wide transition-colors border-b-2 border-primary pb-1">
+              <Link href={basePath} className="text-gray-800 hover:text-primary font-semibold text-sm uppercase tracking-wide transition-colors border-b-2 border-primary pb-1">
                 HOME
               </Link>
               <div className="relative group">
-                <Link href="/products" className="text-gray-800 hover:text-primary font-semibold text-sm uppercase tracking-wide transition-colors pb-1 flex items-center gap-1">
+                <Link href={`${basePath}/products`} className="text-gray-800 hover:text-primary font-semibold text-sm uppercase tracking-wide transition-colors pb-1 flex items-center gap-1">
                   FABRICS
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -84,25 +87,25 @@ export default function Header() {
                 </Link>
                 {/* Dropdown Menu */}
                 <div className="absolute top-full left-0 bg-white shadow-lg border border-gray-200 rounded-md py-2 min-w-[200px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300">
-                  <Link href="/products/upholstery" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900">Upholstery Fabrics</Link>
-                  <Link href="/products/curtains" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900">Curtain & Drapery</Link>
-                  <Link href="/products/cushions" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900">Cushion Covers</Link>
-                  <Link href="/products/accessories" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900">Accessories</Link>
+                  <Link href={`${basePath}/products/upholstery`} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900">Upholstery Fabrics</Link>
+                  <Link href={`${basePath}/products/curtains`} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900">Curtain & Drapery</Link>
+                  <Link href={`${basePath}/products/cushions`} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900">Cushion Covers</Link>
+                  <Link href={`${basePath}/products/accessories`} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900">Accessories</Link>
                 </div>
               </div>
-              <Link href="/portfolio" className="text-gray-800 hover:text-primary font-semibold text-sm uppercase tracking-wide transition-colors pb-1">
+              <Link href={`${basePath}/portfolio`} className="text-gray-800 hover:text-primary font-semibold text-sm uppercase tracking-wide transition-colors pb-1">
                 PORTFOLIO
               </Link>
-              <Link href="/new-arrivals" className="text-gray-800 hover:text-primary font-semibold text-sm uppercase tracking-wide transition-colors pb-1">
+              <Link href={`${basePath}/new-arrivals`} className="text-gray-800 hover:text-primary font-semibold text-sm uppercase tracking-wide transition-colors pb-1">
                 NEW ARRIVALS
               </Link>
-              <Link href="/sale" className="text-mustard hover:text-primary font-semibold text-sm uppercase tracking-wide transition-colors pb-1">
+              <Link href={`${basePath}/sale`} className="text-mustard hover:text-primary font-semibold text-sm uppercase tracking-wide transition-colors pb-1">
                 SALE
               </Link>
-              <Link href="/about" className="text-gray-800 hover:text-primary font-semibold text-sm uppercase tracking-wide transition-colors pb-1">
+              <Link href={`${basePath}/about`} className="text-gray-800 hover:text-primary font-semibold text-sm uppercase tracking-wide transition-colors pb-1">
                 ABOUT US
               </Link>
-              <Link href="/contact" className="text-gray-800 hover:text-primary font-semibold text-sm uppercase tracking-wide transition-colors pb-1">
+              <Link href={`${basePath}/contact`} className="text-gray-800 hover:text-primary font-semibold text-sm uppercase tracking-wide transition-colors pb-1">
                 CONTACT
               </Link>
             </nav>
@@ -180,7 +183,7 @@ export default function Header() {
             <nav className="container mx-auto px-4 py-4">
               <div className="flex flex-col space-y-4">
                 <Link 
-                  href="/" 
+                  href={basePath} 
                   className="text-gray-800 hover:text-primary font-semibold text-base uppercase tracking-wide transition-colors border-b-2 border-primary pb-2"
                   onClick={() => setIsMenuOpen(false)}
                 >
@@ -188,49 +191,49 @@ export default function Header() {
                 </Link>
                 <div className="space-y-2">
                   <Link 
-                    href="/products" 
+                    href={`${basePath}/products`} 
                     className="text-gray-800 hover:text-primary font-semibold text-base uppercase tracking-wide transition-colors pb-2 block"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     FABRICS
                   </Link>
                   <div className="ml-4 space-y-1">
-                    <Link href="/products/upholstery" className="block text-sm text-gray-600 hover:text-gray-800">Upholstery Fabrics</Link>
-                    <Link href="/products/curtains" className="block text-sm text-gray-600 hover:text-gray-800">Curtain & Drapery</Link>
-                    <Link href="/products/cushions" className="block text-sm text-gray-600 hover:text-gray-800">Cushion Covers</Link>
-                    <Link href="/products/accessories" className="block text-sm text-gray-600 hover:text-gray-800">Accessories</Link>
+                    <Link href={`${basePath}/products/upholstery`} className="block text-sm text-gray-600 hover:text-gray-800">Upholstery Fabrics</Link>
+                    <Link href={`${basePath}/products/curtains`} className="block text-sm text-gray-600 hover:text-gray-800">Curtain & Drapery</Link>
+                    <Link href={`${basePath}/products/cushions`} className="block text-sm text-gray-600 hover:text-gray-800">Cushion Covers</Link>
+                    <Link href={`${basePath}/products/accessories`} className="block text-sm text-gray-600 hover:text-gray-800">Accessories</Link>
                   </div>
                 </div>
                 <Link 
-                  href="/portfolio" 
+                  href={`${basePath}/portfolio`} 
                   className="text-gray-800 hover:text-primary font-semibold text-base uppercase tracking-wide transition-colors pb-2"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   PORTFOLIO
                 </Link>
                 <Link 
-                  href="/new-arrivals" 
+                  href={`${basePath}/new-arrivals`} 
                   className="text-gray-800 hover:text-primary font-semibold text-base uppercase tracking-wide transition-colors pb-2"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   NEW ARRIVALS
                 </Link>
                 <Link 
-                  href="/sale" 
+                  href={`${basePath}/sale`} 
                   className="text-mustard hover:text-primary font-semibold text-base uppercase tracking-wide transition-colors pb-2"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   SALE
                 </Link>
                 <Link 
-                  href="/about" 
+                  href={`${basePath}/about`} 
                   className="text-gray-800 hover:text-primary font-semibold text-base uppercase tracking-wide transition-colors pb-2"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   ABOUT US
                 </Link>
                 <Link 
-                  href="/contact" 
+                  href={`${basePath}/contact`} 
                   className="text-gray-800 hover:text-primary font-semibold text-base uppercase tracking-wide transition-colors pb-2"
                   onClick={() => setIsMenuOpen(false)}
                 >
