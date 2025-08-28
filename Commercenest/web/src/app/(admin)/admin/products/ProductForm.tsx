@@ -16,6 +16,7 @@ import { OrganizationSection } from './components/OrganizationSection'
 import { MediaSection } from './components/MediaSection'
 import { SeoSection } from './components/SeoSection'
 import { ProductPreview } from './components/ProductPreview'
+import { VariantsSection } from './components/VariantsSection'
 import { ProductFormData } from '@/types/product'
 
 interface ProductFormProps {
@@ -66,6 +67,10 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
 
   // State for images (can be File objects for new uploads or URL strings for existing images)
   const [imageFiles, setImageFiles] = useState<(File | string)[]>(initialData?.images || [])
+
+  // State for variants
+  const [variantOptions, setVariantOptions] = useState(initialData?.variantOptions || [])
+  const [variantCombinations, setVariantCombinations] = useState(initialData?.variantCombinations || [])
 
   const [errors, setErrors] = useState<Record<string, string>>({})
   const router = useRouter()
@@ -134,6 +139,10 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
         form.append(key, String(value))
       }
     })
+
+    // Add variant data
+    form.append('variantOptions', JSON.stringify(variantOptions))
+    form.append('variantCombinations', JSON.stringify(variantCombinations))
 
     startTransition(async () => {
       try {
@@ -262,26 +271,14 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
           onInputChange={handleInputChange}
         />
 
-        {/* Temporarily disabled due to TypeScript issues */}
-        {/*
-        <FashionDetailsSection 
-          formData={formData} 
-          errors={errors}
-          onInputChange={handleInputChange}
+        <VariantsSection
+          hasVariants={formData.has_variants || false}
+          onHasVariantsChange={(hasVariants) => handleInputChange('has_variants', hasVariants)}
+          variantOptions={variantOptions}
+          onVariantOptionsChange={setVariantOptions}
+          variantCombinations={variantCombinations}
+          onVariantCombinationsChange={setVariantCombinations}
         />
-
-        <VariantsSection 
-          formData={formData} 
-          errors={errors}
-          onInputChange={handleInputChange}
-        />
-
-        <SizeGuideSection 
-          formData={formData} 
-          errors={errors}
-          onInputChange={handleInputChange}
-        />
-        */}
         
         <MediaSection 
           images={imageFiles}

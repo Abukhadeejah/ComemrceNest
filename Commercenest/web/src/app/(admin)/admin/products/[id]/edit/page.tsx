@@ -17,7 +17,7 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
       notFound()
     }
 
-    // Get product with category and images
+    // Get product with category, images, and variants
     const { data: product, error } = await supabaseAdmin
       .from('products')
       .select(`
@@ -29,6 +29,30 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
           url,
           alt,
           sort_order
+        ),
+        variant_options:product_variant_options(
+          option:variant_options(
+            id,
+            name,
+            display_name,
+            type,
+            required,
+            values:variant_option_values(
+              id,
+              value,
+              display_value,
+              color_hex,
+              image_url
+            )
+          )
+        ),
+        variants:product_variants(
+          id,
+          name,
+          sku,
+          price_cents,
+          stock,
+          attributes
         )
       `)
       .eq('id', id)
@@ -49,6 +73,35 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
     if (categoriesError) {
       console.log('Error fetching categories:', categoriesError)
     }
+
+    // Transform variant options
+    const variantOptions = product.variant_options?.map((pvo: Record<string, unknown>) => {
+      const option = pvo.option as Record<string, unknown>
+      return {
+        id: option.id as string,
+        name: option.name as string,
+        displayName: option.display_name as string,
+        type: option.type as string,
+        required: option.required as boolean,
+        values: option.values?.map((value: Record<string, unknown>) => ({
+          id: value.id as string,
+          value: value.value as string,
+          displayValue: value.display_value as string,
+          colorHex: value.color_hex as string,
+          imageUrl: value.image_url as string
+        })) || []
+      }
+    }) || []
+
+    // Transform variant combinations
+    const variantCombinations = product.variants?.map((variant: Record<string, unknown>) => ({
+      id: variant.id as string,
+      options: variant.attributes as Record<string, string>,
+      priceCents: variant.price_cents as number,
+      stock: variant.stock as number,
+      sku: variant.sku as string,
+      imageUrl: ''
+    })) || []
 
     // Transform product data to match ProductForm expectations
     const formData = {
@@ -74,6 +127,8 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
       meta_description: product.meta_description || '',
       category_id: product.categories?.[0]?.category?.id || '',
       images: product.images?.map((img: Record<string, unknown>) => img.url) || [],
+      variantOptions,
+      variantCombinations,
       // Fashion-specific fields
       material_composition: product.material_composition || '',
       care_instructions: product.care_instructions || '',

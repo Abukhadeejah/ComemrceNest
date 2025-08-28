@@ -3,13 +3,15 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { Playfair_Display } from 'next/font/google';
+import { useCart } from '@/lib/cart';
 
 const playfair = Playfair_Display({ subsets: ['latin'], weight: ['700','800','900'] });
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [cartCount] = useState(2); // Mock cart count
-  const [wishlistCount] = useState(8); // Mock wishlist count
+  const { state } = useCart();
+  const cartCount = state.itemCount;
+  const wishlistCount = 0; // TODO: Implement wishlist functionality later
 
   return (
     <>

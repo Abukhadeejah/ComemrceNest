@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { headers } from 'next/headers'
 import TenantProvider from '@/components/TenantProvider'
 import TenantLayoutServer from '@/components/tenant/TenantLayoutServer'
+import { CartProvider } from '@/lib/cart'
 
 export const metadata: Metadata = {
   title: 'CommerceNest - Multi-tenant Platform',
@@ -43,10 +44,12 @@ export default async function SiteLayout({
   }
 
   return (
-    <TenantProvider tenantKey={tenantKey}>
-      <TenantLayoutServer tenantKey={tenantKey}>
-        {children}
-      </TenantLayoutServer>
-    </TenantProvider>
+    <CartProvider>
+      <TenantProvider tenantKey={tenantKey}>
+        <TenantLayoutServer tenantKey={tenantKey}>
+          {children}
+        </TenantLayoutServer>
+      </TenantProvider>
+    </CartProvider>
   )
 }

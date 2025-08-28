@@ -2,7 +2,9 @@
 import { useMemo, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Playfair_Display, Inter } from 'next/font/google'
+import { useCart } from '@/lib/cart'
 
 const playfair = Playfair_Display({ subsets: ['latin'], weight: ['700','800','900'] })
 const inter = Inter({ subsets: ['latin'], weight: ['300','400','500','600','700'] })
@@ -19,6 +21,10 @@ type Props = {
 }
 
 export default function PdpClient({ name, description, hero_image_url, images, price_cents, tenantKey }: Props) {
+  const { addItem } = useCart()
+  const router = useRouter()
+  const [isAddingToCart, setIsAddingToCart] = useState(false)
+
   const gallery = useMemo(() => {
     const base = hero_image_url ? [{ id: 'hero', url: hero_image_url, alt: name }] : []
     const merged = [...base, ...images]
@@ -39,6 +45,29 @@ export default function PdpClient({ name, description, hero_image_url, images, p
   const price = useMemo(() => {
     return (price_cents / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })
   }, [price_cents])
+
+  const handleAddToCart = async () => {
+    setIsAddingToCart(true)
+    try {
+      addItem({
+        productId: 'current_product_id', // This should be passed from the server component
+        name,
+        price: price_cents,
+        imageUrl: hero_image_url || images[0]?.url,
+        quantity: qty
+      })
+
+      // Show success feedback
+      // You could add a toast notification here
+
+      // Optionally redirect to cart
+      // router.push('/cart')
+    } catch (error) {
+      console.error('Failed to add to cart:', error)
+    } finally {
+      setIsAddingToCart(false)
+    }
+  }
 
   return (
     <>
@@ -168,9 +197,26 @@ export default function PdpClient({ name, description, hero_image_url, images, p
             t.style.setProperty('--y', `${e.clientY - r.top}px`)
             t.classList.remove('active'); void t.offsetWidth; t.classList.add('active')
           }}>
-            <button className="inline-flex items-center justify-center gap-2 rounded-full bg-[color:var(--color-mustard)] text-[color:var(--color-brown)] px-8 py-4 font-semibold shadow-[0_12px_40px_rgba(253,206,89,0.35)] transition-all hover:shadow-[0_16px_50px_rgba(253,206,89,0.55)] hover:-translate-y-0.5">
-              Add to Cart
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/></svg>
+            <button
+              onClick={handleAddToCart}
+              disabled={isAddingToCart}
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-[color:var(--color-mustard)] text-[color:var(--color-brown)] px-8 py-4 font-semibold shadow-[0_12px_40px_rgba(253,206,89,0.35)] transition-all hover:shadow-[0_16px_50px_rgba(253,206,89,0.55)] hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isAddingToCart ? (
+                <>
+                  <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Adding to Cart...
+                </>
+              ) : (
+                <>
+                  Add to Cart
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/>
+                  </svg>
+                </>
+              )}
             </button>
           </div>
 

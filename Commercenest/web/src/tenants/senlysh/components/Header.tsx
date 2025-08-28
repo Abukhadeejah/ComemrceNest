@@ -3,11 +3,13 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useCart } from '@/lib/cart';
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [cartCount] = useState(3); // Mock cart count
-  const [wishlistCount] = useState(12); // Mock wishlist count
+  const { state } = useCart();
+  const cartCount = state.itemCount;
+  const wishlistCount = 0; // TODO: Implement wishlist functionality later
 
   return (
     <>

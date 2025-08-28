@@ -12,7 +12,7 @@ type HomeClientProps = {
   projects: { id: string; title: string; slug: string; hero_image_url: string | null }[]
 }
 
-export default function Home({ products }: HomeClientProps) {
+export default function Home({ products, projects }: HomeClientProps) {
   const [loaded, setLoaded] = useState(false)
   useEffect(() => setLoaded(true), [])
   // Testimonials grid is static for now; slider removed for modularity
@@ -116,7 +116,7 @@ export default function Home({ products }: HomeClientProps) {
               { title: 'Luxury Bedroom', badge: 'Luxury Collection', bg: 'from-[color:var(--color-crimson)] via-red-600 to-[color:var(--color-mustard)]' },
               { title: 'Classic Study', badge: 'Classic Design', bg: 'from-[color:var(--color-brown)] via-amber-800 to-[color:var(--color-primary)]' },
             ].map((card, idx) => (
-              <div key={card.title} className={`group bg-white rounded-2xl overflow-hidden border border-primary/10 hover:border-mustard/40 shadow-md hover:shadow-lg transition-all duration-700 ease-out hover:-translate-y-1 relative overflow-hidden ${loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'} ${idx===1 ? 'md:mt-10' : ''}`} style={{ transitionDelay: `${idx * 120}ms` }}>
+              <div key={card.title} className={`group bg-white rounded-2xl overflow-hidden border border-primary/10 hover:border-mustard/40 shadow-md hover:shadow-lg transition-all duration-700 ease-out hover:-translate-y-1 relative ${loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'} ${idx===1 ? 'md:mt-10' : ''}`} style={{ transitionDelay: `${idx * 120}ms` }}>
                 {/* Light yellow shadow animation */}
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-200/20 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out z-10"></div>
                 
