@@ -21,8 +21,7 @@ export class StorageService {
   static async uploadImage(
     file: File, 
     tenantId: string, 
-    productId?: string,
-    onProgress?: (progress: UploadProgress) => void
+    productId?: string
   ): Promise<UploadResult> {
     try {
       // Generate unique filename
@@ -37,7 +36,7 @@ export class StorageService {
         : `${tenantId}/temp/${filename}`
 
       // Upload file
-      const { data, error } = await supabaseAdmin.storage
+      const { error } = await supabaseAdmin.storage
         .from(this.bucketName)
         .upload(path, file, {
           cacheControl: '3600',
@@ -72,8 +71,7 @@ export class StorageService {
   static async uploadImages(
     files: File[], 
     tenantId: string, 
-    productId?: string,
-    onProgress?: (index: number, progress: UploadProgress) => void
+    productId?: string
   ): Promise<UploadResult[]> {
     const results: UploadResult[] = []
     
@@ -81,8 +79,7 @@ export class StorageService {
       const result = await this.uploadImage(
         files[i], 
         tenantId, 
-        productId,
-        (progress) => onProgress?.(i, progress)
+        productId
       )
       results.push(result)
     }
@@ -104,7 +101,7 @@ export class StorageService {
       }
 
       return true
-    } catch (error) {
+    } catch {
       // Failed to delete image
       return false
     }
@@ -124,7 +121,7 @@ export class StorageService {
       }
 
       return data.signedUrl
-    } catch (error) {
+    } catch {
       // Failed to get signed URL
       return null
     }

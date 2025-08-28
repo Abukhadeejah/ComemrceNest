@@ -45,18 +45,7 @@ export async function resolveTenantIdFromRequest(): Promise<string | null> {
     }
   }
 
-  // 2. Try host-based resolution (for custom domains)
-  const { data: hostData } = await supabaseAdmin
-    .from('tenant_domains')
-    .select('tenant_id')
-    .eq('hostname', host)
-    .maybeSingle()
-
-  if (hostData?.tenant_id) {
-    return hostData.tenant_id
-  }
-
-  // 3. Try path-based resolution for subdomain routing
+  // 2. Try path-based resolution for tenant routes first
   const pathSegments = pathname.split('/').filter(Boolean)
   if (pathSegments.length > 0) {
     const tenantKey = pathSegments[0]
@@ -66,7 +55,7 @@ export async function resolveTenantIdFromRequest(): Promise<string | null> {
     }
   }
 
-  // 4. Special handling for localhost development
+  // 3. Special handling for localhost development
   if (host === 'localhost') {
     const pathSegments = pathname.split('/').filter(Boolean)
 
@@ -82,14 +71,26 @@ export async function resolveTenantIdFromRequest(): Promise<string | null> {
       }
     }
 
-    // For root path or other paths, default to Senlysh
-    return '1e4c9aa7-e7af-4fe7-999b-c9c46219fa3c' // Senlysh Fashion
+    // For root paths (/, /products, etc.), return null for platform content
+    // Root routes are reserved for CommerceNest platform, not tenant-specific content
+    // Ignore any host-based mappings for localhost root routes
+    return null
   }
 
-  // 5. Fallback to default tenant
-  const defaultId = await getDefaultTenantId()
-  console.log('[TENANT_RESOLUTION] Step 5: Default tenant ID:', defaultId)
-  return defaultId
+  // 4. Try host-based resolution (for custom domains) - only for non-localhost
+  const { data: hostData } = await supabaseAdmin
+    .from('tenant_domains')
+    .select('tenant_id')
+    .eq('hostname', host)
+    .maybeSingle()
+
+  if (hostData?.tenant_id) {
+    return hostData.tenant_id
+  }
+
+  // 5. For production, root paths should also return null for platform content
+  // Only tenant-specific paths should resolve to tenant IDs
+  return null
 }
 
 // Helper function to resolve tenant ID from tenant key (name or slug)
@@ -138,18 +139,7 @@ async function resolveTenantIdFromKey(tenantKey: string): Promise<string | null>
   return null
 }
 
-// Get default tenant ID (first active tenant)
-async function getDefaultTenantId(): Promise<string | null> {
-  const { data } = await supabaseAdmin
-    .from('tenants')
-    .select('id')
-    .eq('status', 'active')
-    .order('created_at', { ascending: true })
-    .limit(1)
-    .maybeSingle()
-  
-  return data?.id || null
-}
+
 
 export async function getPrimaryHostnameForTenant(tenantId: string): Promise<string | null> {
   const { data } = await supabaseAdmin

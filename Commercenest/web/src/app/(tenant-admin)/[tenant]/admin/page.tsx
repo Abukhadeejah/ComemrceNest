@@ -4,6 +4,8 @@ import { AdminLayout } from '@/components/admin/layout/AdminLayout'
 import { CubeIcon, ShoppingCartIcon, CurrencyRupeeIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
 import { assertTenantAdmin } from '@/server/auth'
+import AdminBrandingWrapper from '@/components/admin/AdminBrandingWrapper'
+import type { TenantKey } from '@/registry/types'
 
 interface TenantAdminPageProps {
   params: Promise<{
@@ -65,9 +67,10 @@ export default async function TenantAdminPage({ params }: TenantAdminPageProps) 
   ]
 
   return (
-    <AdminLayout title={`${tenant.charAt(0).toUpperCase() + tenant.slice(1)} Admin Dashboard`}>
-      {/* Stats */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+    <AdminBrandingWrapper tenantKey={tenant as TenantKey}>
+      <AdminLayout title={`${tenant.charAt(0).toUpperCase() + tenant.slice(1)} Admin Dashboard`}>
+        {/* Stats */}
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((item) => (
           <div
             key={item.name}
@@ -159,7 +162,8 @@ export default async function TenantAdminPage({ params }: TenantAdminPageProps) 
           </ul>
         </div>
       </div>
-    </AdminLayout>
+      </AdminLayout>
+    </AdminBrandingWrapper>
   )
 }
 

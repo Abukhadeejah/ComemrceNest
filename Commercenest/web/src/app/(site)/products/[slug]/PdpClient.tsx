@@ -15,9 +15,10 @@ type Props = {
   hero_image_url?: string | null
   images: PdpImage[]
   price_cents: number
+  tenantKey?: string
 }
 
-export default function PdpClient({ name, description, hero_image_url, images, price_cents }: Props) {
+export default function PdpClient({ name, description, hero_image_url, images, price_cents, tenantKey }: Props) {
   const gallery = useMemo(() => {
     const base = hero_image_url ? [{ id: 'hero', url: hero_image_url, alt: name }] : []
     const merged = [...base, ...images]
@@ -45,12 +46,12 @@ export default function PdpClient({ name, description, hero_image_url, images, p
       <div className="bg-gray-50 border-b border-gray-100">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4">
           <nav className="flex items-center gap-2 text-sm">
-            <Link href="/" className="group relative font-medium text-[color:var(--color-brown)] transition-colors hover:text-[color:var(--color-primary)]">
+            <Link href={tenantKey ? `/${tenantKey}` : "/"} className="group relative font-medium text-[color:var(--color-brown)] transition-colors hover:text-[color:var(--color-primary)]">
               Home
               <span className="pointer-events-none absolute -bottom-0.5 left-0 h-0.5 w-0 bg-gradient-to-r from-[color:var(--color-crimson)] to-[color:var(--color-mustard)] transition-all duration-300 group-hover:w-full" />
             </Link>
             <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/></svg>
-            <Link href="/products" className="group relative font-medium text-[color:var(--color-brown)] transition-colors hover:text-[color:var(--color-primary)]">
+            <Link href={tenantKey ? `/${tenantKey}/products` : "/products"} className="group relative font-medium text-[color:var(--color-brown)] transition-colors hover:text-[color:var(--color-primary)]">
               Products
               <span className="pointer-events-none absolute -bottom-0.5 left-0 h-0.5 w-0 bg-gradient-to-r from-[color:var(--color-crimson)] to-[color:var(--color-mustard)] transition-all duration-300 group-hover:w-full" />
             </Link>
@@ -88,7 +89,14 @@ export default function PdpClient({ name, description, hero_image_url, images, p
                 style={{ transformOrigin: `${origin.x}% ${origin.y}%` }}
               />
             ) : (
-              <div className="h-full w-full bg-neutral-100" />
+              <div className="h-full w-full bg-gradient-to-br from-blue-100 via-blue-200 to-blue-300 flex items-center justify-center">
+                <div className="text-center text-blue-600">
+                  <svg className="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <p className="text-sm font-medium">Image Coming Soon</p>
+                </div>
+              </div>
             )}
             {/* Badge */}
             <div className="absolute top-4 right-4 rounded-full bg-[color:var(--color-mustard)] text-[color:var(--color-brown)] px-3 py-1 text-xs font-bold shadow-lg">Premium Quality</div>

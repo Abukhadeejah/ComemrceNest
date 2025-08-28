@@ -1,6 +1,6 @@
 import type { FooterProps } from './contracts'
 
-export default function DefaultFooter({ config, theme }: FooterProps) {
+export default function DefaultFooter({ config }: FooterProps) {
 	return (
 		<footer className="bg-gray-900 text-white">
 			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

@@ -17,7 +17,7 @@ export function MediaSection({ images, onImagesChange, productId }: MediaSection
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const handleImageUpload = async (files: FileList | File[]) => {
+  const handleImageUpload = useCallback(async (files: FileList | File[]) => {
     const fileArray = Array.from(files)
     const validFiles: File[] = []
     const errors: string[] = []
@@ -87,7 +87,7 @@ export function MediaSection({ images, onImagesChange, productId }: MediaSection
       // For new products, show a message that images will be uploaded when product is saved
       console.log('Images will be uploaded when product is created')
     }
-  }
+  }, [images, onImagesChange, productId])
 
   const handleFileInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
@@ -126,7 +126,7 @@ export function MediaSection({ images, onImagesChange, productId }: MediaSection
     if (files.length > 0) {
       handleImageUpload(files)
     }
-  }, [])
+  }, [handleImageUpload])
 
   const handleClick = () => {
     fileInputRef.current?.click()

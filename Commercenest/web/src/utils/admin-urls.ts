@@ -1,17 +1,14 @@
 // Utility function to generate correct admin URLs based on tenant and environment
 export function getAdminUrl(path: string, tenant?: string): string {
-  // In development, use the old /admin route
-  if (process.env.NODE_ENV === 'development') {
-    return `/admin${path}`
-  }
-  
-  // In production, use tenant-specific routes
+  // Always use tenant-specific routes for proper tenant isolation
   if (tenant) {
     return `/${tenant}/admin${path}`
   }
   
-  // Fallback to senlysh for production
-  return `/senlysh/admin${path}`
+  // If no tenant provided, we can't generate a valid URL
+  // This should be handled by the calling component
+  console.warn('getAdminUrl called without tenant parameter')
+  return `/admin${path}`
 }
 
 // Common admin URL patterns

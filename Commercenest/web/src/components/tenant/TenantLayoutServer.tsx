@@ -1,8 +1,9 @@
 import { resolveTenantContext } from '@/server/tenant/resolver'
 import type { ReactNode } from 'react'
+import Link from 'next/link'
 
 interface TenantLayoutServerProps {
-	tenantKey: string
+	tenantKey?: string
 	children: ReactNode
 }
 
@@ -20,11 +21,70 @@ function ErrorBoundary({ children }: { children: ReactNode; fallback: ReactNode 
 
 /**
  * Server component that resolves tenant context and renders tenant-specific layout
+ * For root routes (undefined tenantKey), renders platform-level layout
  */
 export default async function TenantLayoutServer({ 
 	tenantKey, 
 	children 
 }: TenantLayoutServerProps) {
+	// For root routes (undefined tenantKey), render platform-level layout
+	if (!tenantKey) {
+		return (
+			<div className="min-h-screen flex flex-col">
+				<header className="bg-white shadow-sm border-b border-gray-200">
+					<div className="max-w-7xl mx-auto px-4 py-4">
+						<div className="flex items-center justify-between">
+							<h1 className="text-xl font-bold text-gray-900">CommerceNest</h1>
+							<nav className="flex space-x-6">
+								<Link href="/" className="text-gray-600 hover:text-gray-900">Home</Link>
+								<Link href="/products" className="text-gray-600 hover:text-gray-900">Products</Link>
+								<Link href="/about" className="text-gray-600 hover:text-gray-900">About</Link>
+								<Link href="/contact" className="text-gray-600 hover:text-gray-900">Contact</Link>
+							</nav>
+						</div>
+					</div>
+				</header>
+				<main className="flex-1">
+					{children}
+				</main>
+				<footer className="bg-gray-900 text-white py-8">
+					<div className="max-w-7xl mx-auto px-4">
+						<div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+							<div>
+								<h3 className="text-lg font-semibold mb-4">CommerceNest</h3>
+								<p className="text-gray-300">Multi-tenant e-commerce platform</p>
+							</div>
+							<div>
+								<h4 className="font-semibold mb-4">Platform</h4>
+								<ul className="space-y-2 text-gray-300">
+									<li><a href="/senlysh" className="hover:text-white">Senlysh Fashion</a></li>
+									<li><a href="/bluebell" className="hover:text-white">Bluebell Interiors</a></li>
+								</ul>
+							</div>
+							<div>
+								<h4 className="font-semibold mb-4">Support</h4>
+								<ul className="space-y-2 text-gray-300">
+									<li><a href="/help" className="hover:text-white">Help Center</a></li>
+									<li><a href="/contact" className="hover:text-white">Contact Us</a></li>
+								</ul>
+							</div>
+							<div>
+								<h4 className="font-semibold mb-4">Legal</h4>
+								<ul className="space-y-2 text-gray-300">
+									<li><a href="/privacy" className="hover:text-white">Privacy Policy</a></li>
+									<li><a href="/terms" className="hover:text-white">Terms of Service</a></li>
+								</ul>
+							</div>
+						</div>
+						<div className="border-t border-gray-800 mt-8 pt-8 text-center">
+							<p>&copy; 2024 CommerceNest. All rights reserved.</p>
+						</div>
+					</div>
+				</footer>
+			</div>
+		)
+	}
+
 	try {
 		// Resolve tenant context with caching and fallbacks
 		const context = await resolveTenantContext(tenantKey)
@@ -104,11 +164,10 @@ export default async function TenantLayoutServer({
 				</Layout>
 			</ErrorBoundary>
 		)
-		
 	} catch (error) {
 		console.error(`[TenantLayoutServer] Failed to render tenant layout for ${tenantKey}:`, error)
 		
-		// Fallback to minimal layout
+		// Fallback to basic layout
 		return (
 			<div className="min-h-screen flex flex-col">
 				<header className="bg-white shadow-sm border-b border-gray-200">

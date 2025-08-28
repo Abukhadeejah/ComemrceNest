@@ -15,15 +15,30 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true)
     setError(null)
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     setLoading(false)
+    
     if (error) {
       setError(error.message)
       return
     }
-    // 🔧 FIX: Redirect to the correct tenant admin route
-    router.push('/senlysh/admin')
-    router.refresh()
+
+    if (data.user) {
+      // Simple email-based tenant mapping for login redirect
+      const emailToTenant: Record<string, string> = {
+        'admin@bluebell.in': 'bluebell',
+        'admin@senlysh.in': 'senlysh',
+      }
+      
+      const tenantKey = emailToTenant[data.user.email || '']
+      if (tenantKey) {
+        router.push(`/${tenantKey}/admin`)
+        router.refresh()
+      } else {
+        setError('No tenant access found for this email')
+      }
+    }
   }
 
   return (

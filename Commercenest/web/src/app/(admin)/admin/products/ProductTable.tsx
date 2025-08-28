@@ -7,6 +7,8 @@ import {
   PencilIcon, 
   TrashIcon
 } from '@heroicons/react/24/outline'
+import { ADMIN_URLS } from '@/utils/admin-urls'
+import { useAdminTenantKey } from '@/components/admin/AdminBrandingWrapper'
 
 interface Product {
   id: string
@@ -25,6 +27,7 @@ interface ProductTableProps {
 
 export function ProductTable({ products }: ProductTableProps) {
   const [selectedProducts, setSelectedProducts] = useState<string[]>([])
+  const tenantKey = useAdminTenantKey()
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -150,13 +153,13 @@ export function ProductTable({ products }: ProductTableProps) {
               <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 <div className="flex items-center justify-end space-x-2">
                   <Link
-                    href={`/admin/products/${product.id}`}
+                    href={ADMIN_URLS.productDetail(product.id, tenantKey)}
                     className="text-indigo-600 hover:text-indigo-900"
                   >
                     <EyeIcon className="h-4 w-4" />
                   </Link>
                   <Link
-                    href={`/admin/products/${product.id}/edit`}
+                    href={ADMIN_URLS.productEdit(product.id, tenantKey)}
                     className="text-gray-600 hover:text-gray-900"
                   >
                     <PencilIcon className="h-4 w-4" />
