@@ -3,6 +3,8 @@
 import { FunnelIcon } from '@heroicons/react/24/outline'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useCallback } from 'react'
+import { ADMIN_URLS } from '@/utils/admin-urls'
+import { useAdminTenantKey } from '@/components/admin/AdminBrandingWrapper'
 
 interface Category {
   id: string
@@ -22,6 +24,7 @@ export function ProductFilters({
 }: ProductFiltersProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const tenantKey = useAdminTenantKey()
 
   const createQueryString = useCallback(
     (name: string, value: string) => {
@@ -39,7 +42,8 @@ export function ProductFilters({
   )
 
   const handleFilterChange = (filterType: string, value: string) => {
-    router.push(`/admin/products?${createQueryString(filterType, value)}`)
+    const base = ADMIN_URLS.products(tenantKey)
+    router.push(`${base}?${createQueryString(filterType, value)}`)
   }
 
   return (
@@ -77,7 +81,7 @@ export function ProductFilters({
       {/* Clear Filters */}
       {(currentStatus || currentCategory) && (
         <button
-          onClick={() => router.push('/admin/products')}
+          onClick={() => router.push(ADMIN_URLS.products(tenantKey))}
           className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900 border border-gray-300 rounded-md hover:bg-gray-50"
         >
           Clear Filters

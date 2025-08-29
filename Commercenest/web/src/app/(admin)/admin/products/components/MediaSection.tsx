@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useId } from 'react'
 import { PhotoIcon, XMarkIcon, CloudArrowUpIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import { uploadProductImage } from '../actions'
 
@@ -16,6 +16,8 @@ export function MediaSection({ images, onImagesChange, productId }: MediaSection
   const [uploadErrors, setUploadErrors] = useState<Record<number, string>>({})
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const dialogOpenRef = useRef(false)
+  const inputId = useId()
 
   const handleImageUpload = useCallback(async (files: FileList | File[]) => {
     const fileArray = Array.from(files)
@@ -92,7 +94,11 @@ export function MediaSection({ images, onImagesChange, productId }: MediaSection
   const handleFileInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
       handleImageUpload(event.target.files)
+      // Clear the input value so selecting the same file again triggers onChange
+      event.target.value = ''
     }
+    // Mark dialog as closed after selection
+    dialogOpenRef.current = false
   }
 
   const removeImage = (index: number) => {
@@ -129,7 +135,15 @@ export function MediaSection({ images, onImagesChange, productId }: MediaSection
   }, [handleImageUpload])
 
   const handleClick = () => {
+    if (dialogOpenRef.current) return
+    dialogOpenRef.current = true
     fileInputRef.current?.click()
+  }
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      fileInputRef.current?.click()
+    }
   }
 
   return (
@@ -152,6 +166,9 @@ export function MediaSection({ images, onImagesChange, productId }: MediaSection
             onDragOver={handleDragOver}
             onDrop={handleDrop}
             onClick={handleClick}
+            onKeyDown={handleKeyDown}
+            role="button"
+            tabIndex={0}
           >
             {isUploading ? (
               <div className="space-y-4">
@@ -165,9 +182,9 @@ export function MediaSection({ images, onImagesChange, productId }: MediaSection
               <>
                 <PhotoIcon className="mx-auto h-12 w-12 text-gray-400" />
                 <div className="mt-4">
-                  <span className="text-indigo-600 hover:text-indigo-500 font-medium">
+                  <label htmlFor={inputId} className="text-indigo-600 hover:text-indigo-500 font-medium cursor-pointer" onClick={(e) => { e.stopPropagation(); handleClick(); }}>
                     Click to upload
-                  </span>
+                  </label>
                   <p className="text-gray-500 mt-1">or drag and drop</p>
                 </div>
                 <p className="text-xs text-gray-500 mt-2">
@@ -181,11 +198,12 @@ export function MediaSection({ images, onImagesChange, productId }: MediaSection
             
             <input
               ref={fileInputRef}
+              id={inputId}
               type="file"
               multiple
               accept="image/*"
               onChange={handleFileInputChange}
-              className="hidden"
+              className="sr-only"
             />
           </div>
         </div>

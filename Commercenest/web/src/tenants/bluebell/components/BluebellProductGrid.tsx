@@ -44,8 +44,9 @@ function ProductCard({ product }: { product: ProductListItem }) {
     return { text: 'Premium', bg: 'bg-bluebell-mustard', textColor: 'text-bluebell-brown' }
   }
   
-  // Hardcoded fabric images for now - will be dynamic when admin panel is ready
+  // Prefer backend image when available; fallback to themed mocks
   const getProductImage = () => {
+    if (product.hero_image_url) return product.hero_image_url
     const name = product.name.toLowerCase()
     if (name.includes('marble') || name.includes('coffee')) {
       return 'https://images.pexels.com/photos/7232401/pexels-photo-7232401.jpeg?auto=compress&cs=tinysrgb&w=800'
@@ -84,6 +85,7 @@ function ProductCard({ product }: { product: ProductListItem }) {
             src={getProductImage()}
             alt={product.name}
             fill
+            unoptimized
             className="object-cover transition-transform duration-500 group-hover:scale-110"
           />
           

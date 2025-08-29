@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { ADMIN_URLS } from '@/utils/admin-urls'
+import { useAdminTenantKey } from '@/components/admin/AdminBrandingWrapper'
 
 interface CategoryFormProps {
   mode: 'create' | 'edit'
@@ -15,6 +17,7 @@ interface CategoryFormProps {
 
 export function CategoryForm({ mode, tenantId, initialData }: CategoryFormProps) {
   const router = useRouter()
+  const tenantKey = useAdminTenantKey()
   const [formData, setFormData] = useState({
     name: initialData?.name || '',
     slug: initialData?.slug || ''
@@ -44,7 +47,7 @@ export function CategoryForm({ mode, tenantId, initialData }: CategoryFormProps)
         throw new Error('Failed to save category')
       }
 
-      router.push('/admin/categories')
+      router.push(ADMIN_URLS.categories(tenantKey))
       router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
@@ -128,6 +131,10 @@ export function CategoryForm({ mode, tenantId, initialData }: CategoryFormProps)
     </form>
   )
 }
+
+
+
+
 
 
 

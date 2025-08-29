@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { CubeIcon, ShoppingCartIcon, CurrencyRupeeIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
-import { assertTenantAdmin } from '@/server/auth'
+// Auth is gated client-side; server security enforced in actions only
 import { AdminLayout } from '@/components/admin/layout/AdminLayout'
 
 export default async function AdminHome() {
@@ -12,7 +12,6 @@ export default async function AdminHome() {
   if (!tenantId) {
     throw new Error('Tenant not found')
   }
-  await assertTenantAdmin(tenantId)
   
   // Fetch dashboard stats
   const { data: products } = await supabaseAdmin

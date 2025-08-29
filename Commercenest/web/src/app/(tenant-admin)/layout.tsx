@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
 import { redirect } from 'next/navigation'
 import { AdminSidebar } from '@/components/admin/layout/AdminSidebar'
+import AuthGate from '@/components/admin/AuthGate'
 import AdminBrandingWrapper from '@/components/admin/AdminBrandingWrapper'
 import type { TenantKey } from '@/registry/types'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
@@ -35,14 +36,16 @@ export default async function TenantAdminLayout({
 
   return (
     <AdminBrandingWrapper tenantKey={tenantKey as TenantKey}>
-      <div className="min-h-screen bg-gray-50">
-        <AdminSidebar />
-        <div className="lg:pl-64">
-          <main className="py-6">
-            {children}
-          </main>
+      <AuthGate>
+        <div className="min-h-screen bg-gray-50">
+          <AdminSidebar />
+          <div className="lg:pl-64">
+            <main className="py-6">
+              {children}
+            </main>
+          </div>
         </div>
-      </div>
+      </AuthGate>
     </AdminBrandingWrapper>
   )
 }

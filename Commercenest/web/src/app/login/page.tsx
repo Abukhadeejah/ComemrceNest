@@ -16,7 +16,7 @@ export default function LoginPage() {
     setLoading(true)
     setError(null)
     
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
     setLoading(false)
     
     if (error) {
@@ -24,7 +24,7 @@ export default function LoginPage() {
       return
     }
 
-    if (data.user) {
+    if (data.user && data.session) {
       // Simple email-based tenant mapping for login redirect
       const emailToTenant: Record<string, string> = {
         'admin@bluebell.in': 'bluebell',
@@ -33,8 +33,7 @@ export default function LoginPage() {
       
       const tenantKey = emailToTenant[data.user.email || '']
       if (tenantKey) {
-        router.push(`/${tenantKey}/admin`)
-        router.refresh()
+        router.replace(`/${tenantKey}/admin`)
       } else {
         setError('No tenant access found for this email')
       }
@@ -50,6 +49,7 @@ export default function LoginPage() {
           <input 
             className="w-full rounded border p-2" 
             type="email" 
+            autoComplete="email"
             value={email} 
             onChange={(e) => setEmail(e.target.value)} 
             required 
@@ -60,6 +60,7 @@ export default function LoginPage() {
           <input 
             className="w-full rounded border p-2" 
             type="password" 
+            autoComplete="current-password"
             value={password} 
             onChange={(e) => setPassword(e.target.value)} 
             required 
@@ -67,6 +68,7 @@ export default function LoginPage() {
         </div>
         {error ? <p className="text-sm text-red-600">{error}</p> : null}
         <button 
+          type="submit"
           disabled={loading} 
           className="w-full rounded bg-black px-4 py-2 text-white disabled:opacity-60 hover:bg-gray-800"
         >

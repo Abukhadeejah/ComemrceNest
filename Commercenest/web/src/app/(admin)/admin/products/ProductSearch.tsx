@@ -3,6 +3,8 @@
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useTransition } from 'react'
+import { ADMIN_URLS } from '@/utils/admin-urls'
+import { useAdminTenantKey } from '@/components/admin/AdminBrandingWrapper'
 
 interface ProductSearchProps {
   currentSearch?: string
@@ -12,6 +14,7 @@ export function ProductSearch({ currentSearch }: ProductSearchProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [isPending, startTransition] = useTransition()
+  const tenantKey = useAdminTenantKey()
 
   const createQueryString = useCallback(
     (name: string, value: string) => {
@@ -30,7 +33,8 @@ export function ProductSearch({ currentSearch }: ProductSearchProps) {
 
   const handleSearch = (term: string) => {
     startTransition(() => {
-      router.push(`/admin/products?${createQueryString('search', term)}`)
+      const base = ADMIN_URLS.products(tenantKey)
+      router.push(`${base}?${createQueryString('search', term)}`)
     })
   }
 
@@ -56,6 +60,8 @@ export function ProductSearch({ currentSearch }: ProductSearchProps) {
     </div>
   )
 }
+
+
 
 
 

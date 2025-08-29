@@ -26,9 +26,15 @@ export default function PdpClient({ productId, name, description, hero_image_url
   // const router = useRouter()
   const [isAddingToCart, setIsAddingToCart] = useState(false)
 
+  const normalizeUrl = (url?: string | null): string => {
+    if (!url) return ''
+    return url.replace(/^(https?:)\/(?!\/)/, '$1//')
+  }
+
   const gallery = useMemo(() => {
-    const base = hero_image_url ? [{ id: 'hero', url: hero_image_url, alt: name }] : []
-    const merged = [...base, ...images]
+    const base = hero_image_url ? [{ id: 'hero', url: normalizeUrl(hero_image_url), alt: name }] : []
+    const normalizedImages = images.map(img => ({ ...img, url: normalizeUrl(img.url) }))
+    const merged = [...base, ...normalizedImages]
     const seen = new Set<string>()
     return merged.filter(img => {
       const key = img.url
@@ -115,6 +121,7 @@ export default function PdpClient({ productId, name, description, hero_image_url
                 src={gallery[index].url}
                 alt={gallery[index].alt || name}
                 fill
+                unoptimized
                 className={`object-cover transition-transform duration-200 ease-out animate-fadeIn ${zoom ? 'scale-110' : 'scale-100'}`}
                 style={{ transformOrigin: `${origin.x}% ${origin.y}%` }}
               />
@@ -147,7 +154,7 @@ export default function PdpClient({ productId, name, description, hero_image_url
                       i===index ? 'border-[color:var(--color-primary)] ring-2 ring-[color:var(--color-primary)] scale-105' : 'border-gray-200 hover:border-[color:var(--color-primary)] hover:shadow hover:scale-105'
                     }`}
                   >
-                    <Image src={img.url} alt={img.alt || name} fill className="object-cover" />
+                    <Image src={img.url} alt={img.alt || name} fill unoptimized className="object-cover" />
                     {/* subtle texture on thumbs */}
                     <div className="absolute inset-0 opacity-10 [background-image:repeating-linear-gradient(45deg,rgba(255,255,255,0.3)_0px,rgba(255,255,255,0.3)_6px,transparent_6px,transparent_12px)]" />
                   </button>

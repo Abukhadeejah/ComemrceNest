@@ -2,6 +2,8 @@
 
 import { useState, useTransition, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { ADMIN_URLS } from '@/utils/admin-urls'
+import { useAdminTenantKey } from '@/components/admin/AdminBrandingWrapper'
 import { 
   createProduct, 
   updateProduct,
@@ -84,6 +86,7 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [showPreview, setShowPreview] = useState(false)
+  const tenantKey = useAdminTenantKey()
 
   // Use initialData if provided
   const data = initialData
@@ -195,7 +198,7 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
           }
         }
         
-        router.push('/admin/products')
+        router.push(ADMIN_URLS.products(tenantKey))
         router.refresh()
       } catch (error) {
         console.error('Failed to save product:', error)
@@ -314,7 +317,7 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
         <div className="flex justify-end gap-4 pt-6 border-t">
           <button
             type="button"
-            onClick={() => router.push('/admin/products')}
+            onClick={() => router.push(ADMIN_URLS.products(tenantKey))}
             className="px-6 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
           >
             Cancel

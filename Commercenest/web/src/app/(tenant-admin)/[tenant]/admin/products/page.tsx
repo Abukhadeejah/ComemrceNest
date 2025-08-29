@@ -44,8 +44,8 @@ export default async function TenantAdminProducts({ params, searchParams }: Tena
   }
   
   const [products, categories] = await Promise.all([
-    getProducts(paramsWithTenant),
-    getCategories()
+    getProducts(paramsWithTenant, tenantId),
+    getCategories(tenantId)
   ])
 
   return (

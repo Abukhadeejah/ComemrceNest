@@ -70,7 +70,7 @@ export async function fetchPublishedProductsPaged(
 export async function fetchProductBySlug(tenantId: string, slug: string) {
   return supabaseAdmin
     .from('products')
-    .select('id, name, slug, description, price_cents, currency, hero_image_url')
+    .select('id, name, slug, description, price_cents, currency, hero_image_url, meta_title, meta_description')
     .eq('tenant_id', tenantId)
     .eq('slug', slug)
     .maybeSingle()

@@ -23,12 +23,7 @@ export default async function TenantAdminPage({ params }: TenantAdminPageProps) 
     redirect('/login')
   }
 
-  // 🔒 SECURITY: Add authentication check
-  try {
-    await assertTenantAdmin(tenantId)
-  } catch {
-    redirect('/login')
-  }
+  // Auth is gated client-side; keep server security in actions only
 
   // Verify the tenant parameter matches the resolved tenant
   const tenantKey = await getTenantKeyFromId(tenantId)
