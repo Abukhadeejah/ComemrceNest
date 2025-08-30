@@ -122,7 +122,7 @@ function ProductCard({ product }: { product: ProductListItem }) {
           </p>
           <div className="flex items-baseline justify-start mb-4 gap-2">
             <span className="text-2xl leading-none font-serif font-bold text-bluebell-crimson whitespace-nowrap">₹{Number(pricePerYard).toLocaleString('en-IN')}</span>
-            <span className="text-bluebell-brown text-sm leading-none whitespace-nowrap">per meter</span>
+            <span className="text-bluebell-brown text-sm leading-none whitespace-nowrap">per metre</span>
           </div>
           <div className="flex space-x-3 mt-auto"></div>
         </div>
