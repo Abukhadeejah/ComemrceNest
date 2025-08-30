@@ -31,11 +31,20 @@ export async function POST(request: Request) {
     .eq('env', 'test')
     .maybeSingle()
 
-  if (!pay?.enabled || !pay?.razorpay_key_id || !pay?.razorpay_key_secret) {
+  // Determine credentials: prefer enabled tenant settings, else fall back to env vars
+  let keyId = pay?.enabled ? pay.razorpay_key_id : undefined
+  let keySecret = pay?.enabled ? decodeSecret(pay.razorpay_key_secret) : undefined
+
+  if (!keyId || !keySecret) {
+    keyId = process.env.RAZORPAY_KEY_ID
+    keySecret = process.env.RAZORPAY_KEY_SECRET
+  }
+
+  if (!keyId || !keySecret) {
     return NextResponse.json({ error: 'payments_not_configured' }, { status: 400 })
   }
 
-  const client = new Razorpay({ key_id: pay.razorpay_key_id, key_secret: decodeSecret(pay.razorpay_key_secret) })
+  const client = new Razorpay({ key_id: keyId, key_secret: keySecret })
   const body = (await request.json().catch(() => ({}))) as { amountPaise?: number }
   const amountPaise = typeof body.amountPaise === 'number' ? body.amountPaise : 100 // minimal default
 
@@ -56,14 +65,14 @@ export async function POST(request: Request) {
     tenant_id: tenantId,
     order_number: order.id,
     email: 'guest@example.com',
-    total_cents: Math.ceil(amountPaise / 100) * 100,
+    total_cents: amountPaise,
     currency: 'INR',
     status: 'pending',
     payment_provider: 'razorpay',
     razorpay_order_id: order.id,
   })
 
-  return NextResponse.json({ order })
+  return NextResponse.json({ order, keyId })
 }
 
 

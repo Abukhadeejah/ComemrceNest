@@ -68,10 +68,19 @@ export async function POST(request: Request) {
     .eq('tenant_id', order.tenant_id)
     .eq('env', 'test')
     .maybeSingle()
-  if (!pay?.webhook_secret) return NextResponse.json({ error: 'secret_not_configured' }, { status: 400 })
+
+  // Resolve webhook secret: prefer DB value, else env fallback
+  let secret = ''
+  if (pay?.webhook_secret) {
+    secret = decodeSecret(pay.webhook_secret)
+  } else if (process.env.RAZORPAY_WEBHOOK_SECRET) {
+    secret = process.env.RAZORPAY_WEBHOOK_SECRET
+  }
+  if (!secret) {
+    return NextResponse.json({ error: 'secret_not_configured' }, { status: 400 })
+  }
 
   // Verify signature
-  const secret = decodeSecret(pay.webhook_secret)
   const ok = verifySignature(bodyText, signature, secret)
   if (!ok) return NextResponse.json({ error: 'invalid_signature' }, { status: 400 })
 
