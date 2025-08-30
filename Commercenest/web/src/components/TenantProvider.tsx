@@ -3,9 +3,27 @@ import { supabaseAdmin } from '@/server/supabaseAdmin'
 import { getTenantConfig } from '@/tenants'
 import TenantContextProvider from './TenantContextProvider'
 
-export default async function TenantProvider({ children }: { children: React.ReactNode }) {
-  const tenantId = await resolveTenantIdFromRequest()
-  const tenantKey = tenantId ? await resolveTenantKeyFromId(tenantId) : 'default'
+export default async function TenantProvider({ 
+  children, 
+  tenantKey 
+}: { 
+  children: React.ReactNode
+  tenantKey?: string 
+}) {
+  // Resolve tenant key/id with safe fallbacks
+  let finalTenantKey: string
+  let tenantId: string | undefined
+
+  if (tenantKey) {
+    finalTenantKey = tenantKey
+    tenantId = undefined
+  } else {
+    const resolvedTenantId = await resolveTenantIdFromRequest()
+    const resolvedTenantKey = resolvedTenantId ? await resolveTenantKeyFromId(resolvedTenantId) : null
+    finalTenantKey = resolvedTenantKey ?? 'default'
+    tenantId = resolvedTenantId ?? undefined
+  }
+  
   let accent: string | undefined
   
   if (tenantId) {
@@ -14,7 +32,7 @@ export default async function TenantProvider({ children }: { children: React.Rea
     accent = settings?.brand_accent_hex || undefined
   }
   
-  const cfg = getTenantConfig(tenantKey || 'default')
+  const cfg = getTenantConfig(finalTenantKey)
   const colors = cfg.theme.colors
   const brandAccent = accent || colors.accent || colors.primary
 

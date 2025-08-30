@@ -3,15 +3,23 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "validate:registry": "node scripts/validate-registry.js",
+    "validate:imports": "node scripts/validate-imports.js",
+    "validate:contracts": "node scripts/validate-contracts.js",
+    "ci:validate": "npm run validate:registry && npm run validate:imports && npm run validate:contracts",
+    "scaffold:tenant": "node scripts/scaffold-tenant.js"
   },
   "dependencies": {
+    "@headlessui/react": "^2.2.7",
+    "@heroicons/react": "^2.2.0",
     "@supabase/auth-helpers-nextjs": "^0.10.0",
+    "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.54.0",
     "@vercel/analytics": "^1.5.0",
     "class-variance-authority": "^0.7.1",

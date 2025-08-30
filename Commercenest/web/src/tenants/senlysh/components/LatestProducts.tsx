@@ -86,7 +86,7 @@ const LatestProducts: React.FC<LatestProductsProps> = ({
 }) => {
   const [hoveredProduct, setHoveredProduct] = useState<string | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState<{ [key: string]: number }>({});
-  const [isTransitioning, setIsTransitioning] = useState<{ [key: string]: boolean }>({});
+
 
   // Auto-cycle images on hover
   useEffect(() => {
@@ -115,13 +115,7 @@ const LatestProducts: React.FC<LatestProductsProps> = ({
   };
 
   const handleImageClick = (productName: string, index: number) => {
-    setIsTransitioning(prev => ({ ...prev, [productName]: true }));
     setCurrentImageIndex(prev => ({ ...prev, [productName]: index }));
-    
-    // Reset transition flag after animation
-    setTimeout(() => {
-      setIsTransitioning(prev => ({ ...prev, [productName]: false }));
-    }, 300);
   };
 
   return (
@@ -136,9 +130,7 @@ const LatestProducts: React.FC<LatestProductsProps> = ({
             scroll-smooth snap-x snap-mandatory
             [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             {products.map((product, index) => {
-              const isHovered = hoveredProduct === product.name;
               const imageIndex = currentImageIndex[product.name] || 0;
-              const currentImage = product.images[imageIndex];
 
               return (
                 <div 

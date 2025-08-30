@@ -2,7 +2,9 @@
 import { useMemo, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+// import { useRouter } from 'next/navigation'
 import { Playfair_Display, Inter } from 'next/font/google'
+import { useCart } from '@/lib/cart'
 
 const playfair = Playfair_Display({ subsets: ['latin'], weight: ['700','800','900'] })
 const inter = Inter({ subsets: ['latin'], weight: ['300','400','500','600','700'] })
@@ -10,17 +12,29 @@ const inter = Inter({ subsets: ['latin'], weight: ['300','400','500','600','700'
 export type PdpImage = { id: string; url: string; alt?: string | null }
 
 type Props = {
+  productId?: string
   name: string
   description?: string | null
   hero_image_url?: string | null
   images: PdpImage[]
   price_cents: number
+  tenantKey?: string
 }
 
-export default function PdpClient({ name, description, hero_image_url, images, price_cents }: Props) {
+export default function PdpClient({ productId, name, description, hero_image_url, images, price_cents, tenantKey }: Props) {
+  const { addItem } = useCart()
+  // const router = useRouter()
+  const [isAddingToCart, setIsAddingToCart] = useState(false)
+
+  const normalizeUrl = (url?: string | null): string => {
+    if (!url) return ''
+    return url.replace(/^(https?:)\/(?!\/)/, '$1//')
+  }
+
   const gallery = useMemo(() => {
-    const base = hero_image_url ? [{ id: 'hero', url: hero_image_url, alt: name }] : []
-    const merged = [...base, ...images]
+    const base = hero_image_url ? [{ id: 'hero', url: normalizeUrl(hero_image_url), alt: name }] : []
+    const normalizedImages = images.map(img => ({ ...img, url: normalizeUrl(img.url) }))
+    const merged = [...base, ...normalizedImages]
     const seen = new Set<string>()
     return merged.filter(img => {
       const key = img.url
@@ -39,18 +53,41 @@ export default function PdpClient({ name, description, hero_image_url, images, p
     return (price_cents / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })
   }, [price_cents])
 
+  const handleAddToCart = async () => {
+    setIsAddingToCart(true)
+    try {
+      addItem({
+        productId: productId || 'current_product_id',
+        name,
+        price: price_cents,
+        imageUrl: hero_image_url || images[0]?.url,
+        quantity: qty
+      })
+
+      // Show success feedback
+      // You could add a toast notification here
+
+      // Optionally redirect to cart
+      // router.push('/cart')
+    } catch (error) {
+      console.error('Failed to add to cart:', error)
+    } finally {
+      setIsAddingToCart(false)
+    }
+  }
+
   return (
     <>
       {/* Breadcrumb (flush under navbar, no extra top spacing) */}
       <div className="bg-gray-50 border-b border-gray-100">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4">
           <nav className="flex items-center gap-2 text-sm">
-            <Link href="/" className="group relative font-medium text-[color:var(--color-brown)] transition-colors hover:text-[color:var(--color-primary)]">
+            <Link href={tenantKey ? `/${tenantKey}` : "/"} className="group relative font-medium text-[color:var(--color-brown)] transition-colors hover:text-[color:var(--color-primary)]">
               Home
               <span className="pointer-events-none absolute -bottom-0.5 left-0 h-0.5 w-0 bg-gradient-to-r from-[color:var(--color-crimson)] to-[color:var(--color-mustard)] transition-all duration-300 group-hover:w-full" />
             </Link>
             <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/></svg>
-            <Link href="/products" className="group relative font-medium text-[color:var(--color-brown)] transition-colors hover:text-[color:var(--color-primary)]">
+            <Link href={tenantKey ? `/${tenantKey}/products` : "/products"} className="group relative font-medium text-[color:var(--color-brown)] transition-colors hover:text-[color:var(--color-primary)]">
               Products
               <span className="pointer-events-none absolute -bottom-0.5 left-0 h-0.5 w-0 bg-gradient-to-r from-[color:var(--color-crimson)] to-[color:var(--color-mustard)] transition-all duration-300 group-hover:w-full" />
             </Link>
@@ -84,11 +121,19 @@ export default function PdpClient({ name, description, hero_image_url, images, p
                 src={gallery[index].url}
                 alt={gallery[index].alt || name}
                 fill
+                unoptimized
                 className={`object-cover transition-transform duration-200 ease-out animate-fadeIn ${zoom ? 'scale-110' : 'scale-100'}`}
                 style={{ transformOrigin: `${origin.x}% ${origin.y}%` }}
               />
             ) : (
-              <div className="h-full w-full bg-neutral-100" />
+              <div className="h-full w-full bg-gradient-to-br from-blue-100 via-blue-200 to-blue-300 flex items-center justify-center">
+                <div className="text-center text-blue-600">
+                  <svg className="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <p className="text-sm font-medium">Image Coming Soon</p>
+                </div>
+              </div>
             )}
             {/* Badge */}
             <div className="absolute top-4 right-4 rounded-full bg-[color:var(--color-mustard)] text-[color:var(--color-brown)] px-3 py-1 text-xs font-bold shadow-lg">Premium Quality</div>
@@ -109,7 +154,7 @@ export default function PdpClient({ name, description, hero_image_url, images, p
                       i===index ? 'border-[color:var(--color-primary)] ring-2 ring-[color:var(--color-primary)] scale-105' : 'border-gray-200 hover:border-[color:var(--color-primary)] hover:shadow hover:scale-105'
                     }`}
                   >
-                    <Image src={img.url} alt={img.alt || name} fill className="object-cover" />
+                    <Image src={img.url} alt={img.alt || name} fill unoptimized className="object-cover" />
                     {/* subtle texture on thumbs */}
                     <div className="absolute inset-0 opacity-10 [background-image:repeating-linear-gradient(45deg,rgba(255,255,255,0.3)_0px,rgba(255,255,255,0.3)_6px,transparent_6px,transparent_12px)]" />
                   </button>
@@ -160,9 +205,26 @@ export default function PdpClient({ name, description, hero_image_url, images, p
             t.style.setProperty('--y', `${e.clientY - r.top}px`)
             t.classList.remove('active'); void t.offsetWidth; t.classList.add('active')
           }}>
-            <button className="inline-flex items-center justify-center gap-2 rounded-full bg-[color:var(--color-mustard)] text-[color:var(--color-brown)] px-8 py-4 font-semibold shadow-[0_12px_40px_rgba(253,206,89,0.35)] transition-all hover:shadow-[0_16px_50px_rgba(253,206,89,0.55)] hover:-translate-y-0.5">
-              Add to Cart
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/></svg>
+            <button
+              onClick={handleAddToCart}
+              disabled={isAddingToCart}
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-[color:var(--color-mustard)] text-[color:var(--color-brown)] px-8 py-4 font-semibold shadow-[0_12px_40px_rgba(253,206,89,0.35)] transition-all hover:shadow-[0_16px_50px_rgba(253,206,89,0.55)] hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isAddingToCart ? (
+                <>
+                  <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Adding to Cart...
+                </>
+              ) : (
+                <>
+                  Add to Cart
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/>
+                  </svg>
+                </>
+              )}
             </button>
           </div>
 

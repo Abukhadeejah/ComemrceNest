@@ -518,4 +518,175 @@ INTEGRATIONS_SIGNING_SECRET=
 - Plugin distribution model: internal modules vs separate repo/packages; strategy to avoid clutter while keeping deploys simple.
 - Extension points to prioritize for MVP (pricing, checkout discounts, fulfillment hooks).
 
+# CommerceNest Technical Specification
+
+## 1. Business Model & Architecture
+
+### 1.1) Business Model: Two-Tier Solution Architecture
+
+CommerceNest operates on a **two-tier business model** that caters to different market segments:
+
+#### **Tier 1: Generic UI Solution (Lower Cost)**
+- **Target Market**: Budget-conscious businesses, startups, small retailers
+- **Pricing**: Lower cost tier for basic e-commerce needs
+- **Features**:
+  - Standardized UI components and layouts
+  - Basic branding customization (logo, primary colors)
+  - Shared design patterns and templates
+  - Limited customization options
+  - Standard admin interface
+- **Technical Implementation**: Uses default registry components (`src/components/tenant/Default*.tsx`)
+- **Onboarding**: Quick setup with minimal customization
+
+#### **Tier 2: Complete Branded UI Solution (Premium Cost)**
+- **Target Market**: Premium brands, established businesses, luxury retailers
+- **Pricing**: Premium cost tier for full customization
+- **Features**:
+  - Fully customized headers, footers, and layouts
+  - Unique welcome banners and branding elements
+  - Custom color schemes, typography, and design systems
+  - Exclusive design elements and animations
+  - Advanced admin branding and customization
+  - Dedicated design consultation
+- **Technical Implementation**: Uses tenant-specific registry components (`src/tenants/{tenant}/components/*.tsx`)
+- **Onboarding**: Full design consultation and custom development
+
+#### **Current Tenant Classification**
+- **Bluebell Interiors**: Tier 2 (Premium) - Complete branded UI with custom interior design focus
+- **Senlysh Fashion**: Tier 2 (Premium) - Complete branded UI with custom fashion focus
+
+#### **Business Benefits**
+1. **Market Segmentation**: Caters to different budget levels and customization needs
+2. **Scalable Revenue**: Higher margins on premium tier, volume on basic tier
+3. **Flexible Onboarding**: Quick setup for basic needs, comprehensive for premium
+4. **Technical Efficiency**: Shared infrastructure with tiered customization
+
+### 1.2) Multi-Tenant Architecture Overview
+
+CommerceNest is built on a **registry-based multi-tenant architecture** that enables:
+
+- **Plug-and-Play Tenant Onboarding**: New tenants can be added without code changes
+- **Dynamic Component Loading**: Tenant-specific UI components loaded at runtime
+- **Isolated Data & Branding**: Each tenant operates independently
+- **Scalable Infrastructure**: Shared platform with tenant-specific customization
+
+### 1.3) Technical Architecture
+
+#### **Core Components**
+- **Registry System**: Central mapping of tenant keys to component loaders
+- **Middleware**: Tenant detection and request routing
+- **Server-Side Resolution**: Dynamic component loading with caching
+- **Component Contracts**: Type-safe interfaces for all tenant components
+
+#### **Component Architecture**
+```
+Registry Entry = {
+  header: ComponentLoader      # Custom header with welcome banner
+  footer: ComponentLoader      # Custom footer
+  layout: ComponentLoader      # Custom layout wrapper
+  home: ComponentLoader        # Custom homepage
+  metadata: MetadataLoader     # SEO and page metadata
+  adminBranding: AdminBrandingLoader  # Admin panel branding
+  welcomeBanner: ComponentLoader      # Welcome banner (if separate)
+}
+```
+
+## 2. Tenant Implementation Patterns
+
+### 2.1) Welcome Banner Implementation
+
+**Current Pattern**: Welcome banners are **embedded within Header components**, not separate components
+- **Location**: `src/tenants/{tenant}/components/Header.tsx`
+- **Style**: Marquee running from right to left
+- **Height**: Minimal height (not large colorful banners)
+- **Background**: Tenant-specific gradient (Blue for Bluebell, Pink/Purple for Senlysh)
+
+**Why This Pattern Works**:
+- Maintains existing working structure
+- Avoids component duplication
+- Ensures consistent positioning
+- Simplifies maintenance
+
+### 2.2) Component Organization
+
+#### **Tenant-Specific Components (Tier 2)**
+```
+src/tenants/{tenant}/components/
+├── Header.tsx         # Custom header with embedded welcome banner
+├── Footer.tsx         # Custom footer
+├── Layout.tsx         # Custom layout wrapper
+├── Home.tsx           # Custom homepage
+├── Metadata.tsx       # SEO metadata
+├── AdminBranding.tsx  # Admin panel branding
+└── WelcomeBanner.tsx  # (Unused - banner embedded in Header)
+```
+
+#### **Default Components (Tier 1)**
+```
+src/components/tenant/
+├── DefaultHeader.tsx          # Generic header
+├── DefaultFooter.tsx          # Generic footer
+├── DefaultLayout.tsx          # Generic layout
+├── DefaultHome.tsx            # Generic homepage
+├── DefaultMetadata.tsx        # Generic metadata
+├── DefaultAdminBranding.tsx   # Generic admin branding
+└── DefaultWelcomeBanner.tsx   # Generic welcome banner
+```
+
+## 3. Development Guidelines
+
+### 3.1) What NOT to Change
+
+**Working Components (DO NOT MODIFY)**:
+1. **Bluebell Header**: Contains working welcome banner
+2. **Senlysh Header**: Contains working welcome banner
+3. **Registry Structure**: Current mapping works perfectly
+4. **Tenant Resolution**: Middleware and resolver working correctly
+5. **Component Contracts**: Type definitions are stable
+
+### 3.2) Avoid These Mistakes
+
+- ❌ Don't create separate welcome banner components
+- ❌ Don't modify existing working headers
+- ❌ Don't change registry structure unnecessarily
+- ❌ Don't add large colorful banners
+- ❌ Don't break existing tenant isolation
+
+### 3.3) Best Practices
+
+- ✅ Preserve working code - don't fix what isn't broken
+- ✅ Understand existing structure before modifying
+- ✅ Test incrementally with Browser MCP
+- ✅ Align with business model requirements
+- ✅ Use registry for component loading
+- ✅ Document architectural decisions
+
+## 4. Future Development
+
+### 4.1) Adding New Tenants
+
+#### **Tier 1 Tenant (Generic UI)**
+1. No code changes required
+2. Uses default registry components
+3. Basic branding via configuration
+4. Quick onboarding process
+
+#### **Tier 2 Tenant (Premium UI)**
+1. Create tenant folder: `src/tenants/{new-tenant}/`
+2. Implement custom components
+3. Add to registry mapping
+4. Configure tenant-specific branding
+5. Full design consultation and development
+
+### 4.2) Scaling Considerations
+
+- **Performance**: Registry caching for component loading
+- **Maintenance**: Shared infrastructure with tenant isolation
+- **Customization**: Tiered approach balances flexibility and efficiency
+- **Revenue**: Clear pricing tiers aligned with value delivery
+
+---
+
+*This specification serves as the authoritative reference for CommerceNest development. All architectural decisions should align with the established patterns and business model.*
+
 

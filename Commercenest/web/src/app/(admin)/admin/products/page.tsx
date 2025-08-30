@@ -1,94 +1,72 @@
-import { resolveTenantIdFromRequest } from '@/server/tenant'
-import { supabaseAdmin } from '@/server/supabaseAdmin'
-import { assertTenantAdmin } from '@/server/auth'
-import { revalidateTag } from 'next/cache'
-import { tenantProductsTag } from '@/server/cacheTags'
+import { Suspense } from 'react'
+import { getProducts, getCategories } from './actions'
+import { ProductTable } from './ProductTable'
+import { ProductSearch } from './ProductSearch'
+import { ProductFilters } from './ProductFilters'
+import { CreateProductButton } from './CreateProductButton'
 
-export default async function AdminProducts() {
-  const tenantId = await resolveTenantIdFromRequest()
-  const { data: products } = tenantId
-    ? await supabaseAdmin
-        .from('products')
-        .select('id, name, slug, status, price_cents, currency, stock')
-        .eq('tenant_id', tenantId)
-        .order('updated_at', { ascending: false })
-    : { data: [] as Array<{ id: string; name: string; slug: string; status: string; price_cents: number; currency: string; stock: number }>} 
+interface AdminProductsProps {
+  searchParams: Promise<{
+    search?: string
+    status?: string
+    category?: string
+    page?: string
+    sort?: string
+  }>
+}
 
-  return (
-    <main className="p-6 space-y-4">
-      <h1 className="text-xl font-semibold">Products</h1>
-      <form action={createProduct} className="flex gap-2">
-        <input className="border px-2 py-1" name="name" placeholder="Name" required />
-        <input className="border px-2 py-1" name="slug" placeholder="slug" required />
-        <input className="border px-2 py-1" name="price_cents" placeholder="price (cents)" type="number" required />
-        <button className="border px-3 py-1 rounded">Create</button>
-      </form>
-      <ul className="space-y-2">
-        {(products ?? []).map((p) => (
-          <li key={p.id} className="rounded border p-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-medium">{p.name}</div>
-                <div className="text-xs text-neutral-600">{p.slug} · {p.status} · {p.currency} {p.price_cents/100}</div>
-              </div>
-              <form action={publishProduct}>
-                <input type="hidden" name="id" value={p.id} />
-                <button className="text-sm underline">Publish</button>
-              </form>
+export default async function AdminProducts({ searchParams }: AdminProductsProps) {
+  try {
+    const params = await searchParams
+    
+    const [products, categories] = await Promise.all([
+      getProducts(params),
+      getCategories()
+    ])
+
+    return (
+      <div className="p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Products</h1>
+          <CreateProductButton />
+        </div>
+
+        <div className="bg-white shadow rounded-lg">
+          <div className="p-6 border-b border-gray-200">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <ProductSearch currentSearch={params.search} />
+              <ProductFilters 
+                categories={categories}
+                currentStatus={params.status}
+                currentCategory={params.category}
+              />
             </div>
-            <form action={uploadProductImage} encType="multipart/form-data" className="flex items-center gap-2">
-              <input type="hidden" name="product_id" value={p.id} />
-              <input className="text-sm" type="file" name="file" accept="image/*" required />
-              <button className="border px-2 py-1 rounded text-sm">Upload Image</button>
-            </form>
-          </li>
-        ))}
-      </ul>
-    </main>
-  )
-}
+          </div>
 
-async function createProduct(formData: FormData) {
-  'use server'
-  const tenantId = await resolveTenantIdFromRequest()
-  if (!tenantId) return
-  await assertTenantAdmin(tenantId)
-  const name = String(formData.get('name') || '')
-  const slug = String(formData.get('slug') || '')
-  const price_cents = Number(formData.get('price_cents') || 0)
-  await supabaseAdmin.from('products').insert({ tenant_id: tenantId, name, slug, price_cents, currency: 'INR', status: 'draft', stock: 0 })
-  revalidateTag(tenantProductsTag(tenantId))
-}
-
-async function publishProduct(formData: FormData) {
-  'use server'
-  const tenantId = await resolveTenantIdFromRequest()
-  if (!tenantId) return
-  await assertTenantAdmin(tenantId)
-  const id = String(formData.get('id') || '')
-  await supabaseAdmin.from('products').update({ status: 'published' }).eq('id', id).eq('tenant_id', tenantId)
-  revalidateTag(tenantProductsTag(tenantId))
-}
-
-async function uploadProductImage(formData: FormData) {
-  'use server'
-  const tenantId = await resolveTenantIdFromRequest()
-  if (!tenantId) return
-  await assertTenantAdmin(tenantId)
-  const productId = String(formData.get('product_id') || '')
-  const file = formData.get('file') as unknown as File | null
-  if (!file) return
-  const fileAny = file as unknown as { name?: string; type?: string }
-  const keySafeName = fileAny.name?.toString?.() || 'image'
-  const objectPath = `${tenantId}/${productId}/${Date.now()}_${keySafeName}`
-  const upload = await supabaseAdmin.storage.from('product-images').upload(objectPath, file as File, { upsert: true, contentType: fileAny.type || 'image/jpeg' })
-  if (upload.error) return
-  const { data } = supabaseAdmin.storage.from('product-images').getPublicUrl(objectPath)
-  const url = data.publicUrl
-  await supabaseAdmin.from('product_images').insert({ tenant_id: tenantId as unknown as string, product_id: productId as unknown as string, url, alt: keySafeName, sort_order: 0 })
-  // Set hero image if not present
-  await supabaseAdmin.from('products').update({ hero_image_url: url }).eq('id', productId).eq('tenant_id', tenantId).is('hero_image_url', null)
-  revalidateTag(tenantProductsTag(tenantId))
+          <Suspense fallback={<div className="p-6">Loading products...</div>}>
+            <ProductTable
+              products={products.data || []}
+            />
+          </Suspense>
+        </div>
+      </div>
+    )
+  } catch (error) {
+    console.error('Admin Products Error:', error)
+    return (
+      <div className="p-6">
+        <div className="bg-red-50 border border-red-200 rounded-md p-4">
+          <h2 className="text-lg font-semibold text-red-800 mb-2">Error Loading Products</h2>
+          <p className="text-red-700 mb-4">
+            {error instanceof Error ? error.message : 'An unexpected error occurred'}
+          </p>
+          <div className="bg-gray-100 p-3 rounded text-sm font-mono">
+            <pre>{JSON.stringify(error, null, 2)}</pre>
+          </div>
+        </div>
+      </div>
+    )
+  }
 }
 
 

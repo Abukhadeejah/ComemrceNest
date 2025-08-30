@@ -1,0 +1,53 @@
+<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle with gradient -->
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00BCD4;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FF8C42;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Main circle background -->
+  <circle cx="90" cy="90" r="85" fill="url(#grad1)" stroke="#2F2E41" stroke-width="2"/>
+  
+  <!-- Large stylized "S" for Senlysh -->
+  <path d="M65 45C65 45 80 45 90 45C100 45 115 45 115 60C115 75 100 75 90 75C80 75 65 75 65 90C65 105 80 105 90 105C100 105 115 105 115 120C115 135 100 135 90 135C80 135 65 135 65 135" 
+        stroke="white" stroke-width="8" stroke-linecap="round" fill="none"/>
+  
+  <!-- Small accent dot -->
+  <circle cx="125" cy="55" r="8" fill="#FFD93D"/>
+</svg>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

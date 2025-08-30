@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import Image from 'next/image';
 
 interface Review {
@@ -39,15 +39,7 @@ const CustomerReviews: React.FC<CustomerReviewsProps> = ({
   reviews = defaultReviews,
   bgColor = "bg-white"
 }) => {
-  const [currentReview, setCurrentReview] = useState(0);
 
-  const nextReview = () => {
-    setCurrentReview((prev) => (prev + 1) % reviews.length);
-  };
-
-  const prevReview = () => {
-    setCurrentReview((prev) => (prev - 1 + reviews.length) % reviews.length);
-  };
 
   return (
     <section className={`py-16 ${bgColor}`}>

@@ -4,7 +4,7 @@ import { supabaseAdmin } from '@/server/supabaseAdmin'
 export async function fetchPublishedProducts(tenantId: string) {
   return supabaseAdmin
     .from('products')
-    .select('id, name, slug, price_cents, currency, hero_image_url')
+    .select('id, name, slug, description, price_cents, compare_at_price_cents, currency, hero_image_url, stock')
     .eq('tenant_id', tenantId)
     .eq('status', 'published')
     .order('updated_at', { ascending: false })
@@ -14,9 +14,12 @@ export type ProductListItem = {
   id: string
   name: string
   slug: string
+  description?: string
   price_cents: number
+  compare_at_price_cents?: number
   currency: string
   hero_image_url: string | null
+  stock: number
 }
 
 export type ProductListParams = {
@@ -36,15 +39,17 @@ export async function fetchPublishedProductsPaged(
   const { sort = 'updated_at', dir = 'desc', page = 1, pageSize = 12, q, minPriceCents, maxPriceCents, categoryId } = params
   const from = (page - 1) * pageSize
   const to = from + pageSize - 1
-  let selectCols = 'id, name, slug, price_cents, currency, hero_image_url'
+  let selectCols = 'id, name, slug, description, price_cents, compare_at_price_cents, currency, hero_image_url, stock'
   if (categoryId) {
     selectCols += ', product_categories!inner(category_id)'
   }
+
   let query = supabaseAdmin
     .from('products')
     .select(selectCols, { count: 'exact' })
     .eq('tenant_id', tenantId)
     .eq('status', 'published')
+
   if (categoryId) {
     query = query.eq('product_categories.category_id', categoryId)
   }
@@ -58,13 +63,14 @@ export async function fetchPublishedProductsPaged(
     query = query.lte('price_cents', maxPriceCents)
   }
   const { data, count, error } = await query.order(sort, { ascending: dir === 'asc' }).range(from, to)
+
   return { data, count, error }
 }
 
 export async function fetchProductBySlug(tenantId: string, slug: string) {
   return supabaseAdmin
     .from('products')
-    .select('id, name, slug, description, price_cents, currency, hero_image_url')
+    .select('id, name, slug, description, price_cents, currency, hero_image_url, meta_title, meta_description')
     .eq('tenant_id', tenantId)
     .eq('slug', slug)
     .maybeSingle()
@@ -77,6 +83,28 @@ export async function fetchProductImages(tenantId: string, productId: string) {
     .eq('tenant_id', tenantId)
     .eq('product_id', productId)
     .order('sort_order', { ascending: true })
+}
+
+export type CreateProductData = {
+  name: string
+  description?: string
+  price_cents: number
+  slug: string
+  status: string
+  stock: number
+  tenant_id: string
+}
+
+export async function createProduct(tenantId: string, productData: CreateProductData) {
+  return supabaseAdmin
+    .from('products')
+    .insert({
+      ...productData,
+      tenant_id: tenantId,
+      currency: 'INR'
+    })
+    .select()
+    .single()
 }
 
 

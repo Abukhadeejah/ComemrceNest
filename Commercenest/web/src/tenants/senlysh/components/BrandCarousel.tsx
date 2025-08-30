@@ -69,7 +69,7 @@ const BrandCarousel: React.FC<BrandCarouselProps> = ({
 }) => {
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const carouselRef = useRef<HTMLDivElement>(null);
-  const autoPlayRef = useRef<NodeJS.Timeout>();
+  const autoPlayRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   // Auto-play functionality with smooth scrolling
   useEffect(() => {

@@ -21,6 +21,11 @@ const nextConfig: NextConfig = {
         hostname: "images.unsplash.com",
         pathname: "/**",
       },
+      {
+        protocol: "https" as const,
+        hostname: "images.pexels.com",
+        pathname: "/**",
+      },
     ],
   },
   // Production optimizations
@@ -42,16 +47,6 @@ const nextConfig: NextConfig = {
             value: 'max-age=63072000; includeSubDomains; preload'
           }
         ],
-      },
-    ]
-  },
-  // Redirects for multi-tenant domains
-  async redirects() {
-    return [
-      {
-        source: '/admin',
-        destination: '/admin/dashboard',
-        permanent: false,
       },
     ]
   },

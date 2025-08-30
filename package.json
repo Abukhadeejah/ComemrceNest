@@ -1,6 +1,0 @@
-{
-  "devDependencies": {
-    "@browsermcp/mcp": "^0.1.3",
-    "@modelcontextprotocol/sdk": "^1.17.4"
-  }
-}
