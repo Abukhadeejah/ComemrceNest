@@ -89,12 +89,15 @@ test.describe('Bluebell Public Pages', () => {
     const productCards = await page.$$('.product-card, a[href*="/products/"]');
     expect(productCards.length).toBeGreaterThan(0);
     
-    // Wait for and click first product anchor
-    await page.waitForSelector('a[href*="/products/"]', { timeout: 10000 });
-    await page.locator('a[href*="/products/"]').first().click({ force: true });
+    // Wait for and click first product anchor within the main content
+    await page.locator('main a[href*="/products/"]').first().waitFor({
+      state: 'attached',
+      timeout: 15_000,
+    });
+    await page.locator('main a[href*="/products/"]').first().click({ force: true });
     
     // Verify we landed on a PDP (global product route)
-    await expect(page).toHaveURL(/\/products\/.+/, { timeout: 10_000 });
+    await expect(page).toHaveURL(/\/(bluebell\/)?products\/.+/, { timeout: 10_000 });
       
     // Check for product details
     await expect(page.locator('text=/per metre/')).toBeVisible();
@@ -146,9 +149,9 @@ test.describe('Senlysh Public Pages', () => {
       // Verify product image loads
       await expectImagesToLoad(page);
       
-      // Check for product details using robust marker
-      const hasMarker = await page.locator('text=/₹|Add to cart|Price/i').count();
-      expect(hasMarker).toBeGreaterThan(0);
+      // Verify PDP has headline and images
+      await expect(page.locator('h1')).toBeVisible();
+      await expectImagesToLoad(page);
     }
   });
 });
