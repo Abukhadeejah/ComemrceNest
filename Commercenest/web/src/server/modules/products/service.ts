@@ -101,9 +101,9 @@ export async function fetchProductImages(tenantId: string, productId: string) {
   for (const row of data) {
     if (row.url && (row.url.includes('[') || row.url.includes('%22') || row.url.includes('"'))) {
       // Corrupted JSON-like blob – pull every URL out.
-      const matches = row.url.match(urlRegex) || []
+      const matches = (row.url.match(urlRegex) ?? []) as string[]
       if (matches.length) {
-        matches.forEach((u, idx) => {
+        matches.forEach((u: string, idx: number) => {
           const clean = sanitizeUrl(u)
           if (clean) {
             transformed.push({
