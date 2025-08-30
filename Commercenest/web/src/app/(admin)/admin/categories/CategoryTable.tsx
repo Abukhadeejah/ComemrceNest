@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { ADMIN_URLS } from '@/utils/admin-urls'
+import { useAdminTenantKey } from '@/components/admin/AdminBrandingWrapper'
 
 interface Category {
   id: string
@@ -16,6 +18,7 @@ interface CategoryTableProps {
 
 export function CategoryTable({ categories }: CategoryTableProps) {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
+  const tenantKey = useAdminTenantKey()
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -113,13 +116,13 @@ export function CategoryTable({ categories }: CategoryTableProps) {
               <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 <div className="flex items-center justify-end space-x-2">
                   <Link
-                    href={`/admin/categories/${category.id}`}
+                    href={ADMIN_URLS.categoryDetail(category.id, tenantKey)}
                     className="text-blue-600 hover:text-blue-900"
                   >
                     View
                   </Link>
                   <Link
-                    href={`/admin/categories/${category.id}/edit`}
+                    href={ADMIN_URLS.categoryEdit(category.id, tenantKey)}
                     className="text-indigo-600 hover:text-indigo-900"
                   >
                     Edit
@@ -144,6 +147,7 @@ export function CategoryTable({ categories }: CategoryTableProps) {
     </div>
   )
 }
+
 
 
 
