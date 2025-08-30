@@ -38,10 +38,18 @@ export default function PdpClient({ productId, name, description, hero_image_url
     if (!trimmed) return ''
     // fix single-slash protocol e.g. https:/foo ⇒ https://foo
     const fixed = trimmed.replace(/^(https?:)\/(?!\/)/, '$1//')
-    // quick sanity-check: must start with http/https and contain no spaces
-    if (!/^https?:\/\//i.test(fixed)) return ''
-    if (/\s/.test(fixed)) return ''
-    return fixed
+    // If the string still contains junk like %22 or [] or quotes, try to extract the
+    // first well-formed URL fragment.
+    let candidate = fixed
+    if (/[%"'\[\]]/.test(candidate)) {
+      const m = candidate.match(/https?:\/\/[^\s'"\]\)]+/)
+      if (m) candidate = m[0]
+    }
+
+    // quick sanity-check: must start with http/https and contain no whitespace
+    if (!/^https?:\/\//i.test(candidate)) return ''
+    if (/\s/.test(candidate)) return ''
+    return candidate
   }
 
   const gallery = useMemo(() => {
