@@ -26,50 +26,46 @@ export default function PdpClient({ productId, name, description, hero_image_url
   // const router = useRouter()
   const [isAddingToCart, setIsAddingToCart] = useState(false)
 
-  /**
-   * Returns a safe, absolute http(s) URL or empty string.
-   * 1. Trims whitespace
-   * 2. Fixes “https:/” → “https://” (single–slash protocol)
-   * 3. Rejects anything that does not start with http/https
-   */
+  // Safe URL normalizer:
+  // 1. trim & fix single-slash protocol
+  // 2. if quotes/brackets present, extract first http(s) substring
+  // 3. strip trailing slashes
   const safeUrl = (url?: string | null): string => {
     if (!url) return ''
-    const trimmed = url.trim()
-    if (!trimmed) return ''
-    // fix single-slash protocol e.g. https:/foo ⇒ https://foo
-    const fixed = trimmed.replace(/^(https?:)\/(?!\/)/, '$1//')
-    // If the string still contains junk like %22 or [] or quotes, try to extract the
-    // first well-formed URL fragment.
-    let candidate = fixed
-    if (/[%"'\[\]]/.test(candidate)) {
-      const m = candidate.match(/https?:\/\/[^\s'"\]\)]+/)
-      if (m) candidate = m[0]
+    let str = url.trim().replace(/^(https?:)\/(?!\/)/, '$1//')
+    if (/["'%\[\]]/.test(str)) {
+      const m = str.match(/https?:\/\/[^\s'"\]\)]+/)
+      if (m) str = m[0]
     }
-
-    // quick sanity-check: must start with http/https and contain no whitespace
-    if (!/^https?:\/\//i.test(candidate)) return ''
-    if (/\s/.test(candidate)) return ''
-    return candidate
+    return str.replace(/\/+$/, '')
   }
 
   const gallery = useMemo(() => {
-    const baseHeroUrl = safeUrl(hero_image_url)
-    const base = baseHeroUrl ? [{ id: 'hero', url: baseHeroUrl, alt: name }] : []
+    const allowedExt = /\.(png|jpe?g|webp|gif|avif|svg)$/i
+    const folderPrefix = productId
+      ? `/storage/v1/object/public/product-images/${productId}/`
+      : null
 
-    const normalizedImages = images
-      .map(img => ({ ...img, url: safeUrl(img.url) }))
-      .filter(img => !!img.url) // drop invalid / empty
-
+    const base = hero_image_url ? [{ id: 'hero', url: safeUrl(hero_image_url), alt: name }] : []
+    const normalizedImages = images.map(img => ({ ...img, url: safeUrl(img.url) }))
     const merged = [...base, ...normalizedImages]
     const seen = new Set<string>()
+
     return merged.filter(img => {
-      const key = img.url
-      if (!key) return false
-      if (seen.has(key)) return false
-      seen.add(key)
+      const url = img.url
+      if (!url) return false
+      if (seen.has(url)) return false
+      if (folderPrefix && !url.includes(folderPrefix)) return false
+      try {
+        const { pathname } = new URL(url)
+        if (!allowedExt.test(pathname)) return false
+      } catch {
+        return false
+      }
+      seen.add(url)
       return true
     })
-  }, [hero_image_url, images, name])
+  }, [hero_image_url, images, name, productId])
   const [index, setIndex] = useState(0)
   const [zoom, setZoom] = useState(false)
   const [origin, setOrigin] = useState<{x:number;y:number}>({ x: 50, y: 50 })
