@@ -87,7 +87,10 @@ export async function fetchProductImages(tenantId: string, productId: string) {
   // Helper to fix single-slash protocol and trim.
   const sanitizeUrl = (raw?: string | null): string => {
     if (!raw) return ''
-    return raw.trim().replace(/^(https?:)\/(?!\/)/, '$1//')
+    return raw
+      .trim()
+      .replace(/^(https?:)\/(?!\/)/, '$1//')
+      .replace(/\/+$/, '')
   }
 
   const urlRegex = /https?:\/\/[^\s'"\]\)]+/g

@@ -48,6 +48,42 @@ interface ProductData {
   images?: string[]
 }
 
+function normalizeImageInputs(imageInputs: string[]): string[] {
+  const urlRegex = /https?:\/\/[^\s'"\]\)]+/g
+  const out: string[] = []
+  const pushClean = (u?: string) => {
+    if (!u) return
+    const clean = u.trim().replace(/^(https?:)\/(?!\/)/, '$1//').replace(/\/+$/, '')
+    if (clean) out.push(clean)
+  }
+  for (const s of imageInputs || []) {
+    if (!s) continue
+    const t = String(s)
+    let parsed: unknown
+    if (t.trim().startsWith('[') || t.includes('%5B') || t.includes('%22')) {
+      try {
+        parsed = JSON.parse(t)
+      } catch {
+        parsed = undefined
+      }
+    }
+    if (Array.isArray(parsed)) {
+      for (const v of parsed) {
+        if (typeof v === 'string') {
+          const m = v.match(urlRegex)
+          if (m?.length) m.forEach(pushClean)
+          else pushClean(v)
+        }
+      }
+      continue
+    }
+    const matches = t.match(urlRegex)
+    if (matches?.length) matches.forEach(pushClean)
+    else pushClean(t)
+  }
+  return Array.from(new Set(out))
+}
+
 export async function checkSlugExists(slug: string, tenantId: string, excludeId?: string) {
   const query = supabaseAdmin
     .from('products')
@@ -183,8 +219,9 @@ export async function createProduct(formData: FormData) {
   }
 
   // Handle image uploads
-  if (productData.images && productData.images.length > 0) {
-    const imagePromises = productData.images.map(async (imageUrl: string, index: number) => {
+  const normalizedImages = normalizeImageInputs(productData.images || [])
+  if (normalizedImages.length > 0) {
+    const imagePromises = normalizedImages.map(async (imageUrl: string, index: number) => {
       return supabaseAdmin
         .from('product_images')
         .insert({
@@ -418,7 +455,8 @@ export async function updateProduct(productId: string, formData: FormData) {
   }
 
   // Handle image uploads
-  if (productData.images && productData.images.length > 0) {
+  const normalizedImagesUpdate = normalizeImageInputs(productData.images || [])
+  if (normalizedImagesUpdate.length > 0) {
     // Remove existing images
     await supabaseAdmin
       .from('product_images')
@@ -426,7 +464,7 @@ export async function updateProduct(productId: string, formData: FormData) {
       .eq('product_id', productId)
 
     // Add new images
-    const imagePromises = productData.images.map(async (imageUrl: string, index: number) => {
+    const imagePromises = normalizedImagesUpdate.map(async (imageUrl: string, index: number) => {
       return supabaseAdmin
         .from('product_images')
         .insert({
