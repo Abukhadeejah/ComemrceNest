@@ -46,10 +46,11 @@ interface RazorpayOptions {
 }
 
 interface RazorpayInstance {
-  on: (event: 'payment.failed', handler: (response: RazorpayFailure) => void) => void
-  on: (event: string, handler: (response: unknown) => void) => void
-  open: () => void
-  close: () => void
+  // Method-overload style signatures to avoid duplicate identifier error
+  on(event: 'payment.failed', handler: (response: RazorpayFailure) => void): void
+  on(event: string, handler: (response: unknown) => void): void
+  open(): void
+  close(): void
 }
 
 declare global {

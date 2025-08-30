@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 
 // Base URL from environment or default
 const BASE = process.env.E2E_BASE_URL || process.env.STAGING_BASE_URL || 'http://localhost:3000';
@@ -6,7 +6,7 @@ const BASE = process.env.E2E_BASE_URL || process.env.STAGING_BASE_URL || 'http:/
 /**
  * Helper to verify CSS variables are defined
  */
-async function assertCssVars(page) {
+async function assertCssVars(page: Page) {
   // Check that primary brand colors are defined
   const cssVars = await page.evaluate(() => {
     const styles = getComputedStyle(document.documentElement);
@@ -19,13 +19,13 @@ async function assertCssVars(page) {
   });
   
   // Verify at least some CSS vars are defined
-  expect(Object.values(cssVars).some(val => val && val.trim() !== '')).toBeTruthy();
+  expect(Object.values(cssVars).some((val) => typeof val === 'string' && val.trim() !== '')).toBeTruthy();
 }
 
 /**
  * Helper to verify images are loaded
  */
-async function expectImagesToLoad(page) {
+async function expectImagesToLoad(page: Page) {
   // Wait for at least one image to be loaded
   await page.locator('img').first().waitFor({ state: 'attached', timeout: 10000 });
   
@@ -41,7 +41,7 @@ async function expectImagesToLoad(page) {
 /**
  * Helper to click an element if it exists
  */
-async function clickIfExists(page, selector) {
+async function clickIfExists(page: Page, selector: string) {
   const locator = page.locator(selector);
   const count = await locator.count();
   if (count > 0) {

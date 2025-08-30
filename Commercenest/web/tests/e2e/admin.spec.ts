@@ -8,10 +8,10 @@ const ADMIN_EMAIL = process.env.STAGING_ADMIN_EMAIL;
 const ADMIN_PASSWORD = process.env.STAGING_ADMIN_PASSWORD;
 
 // Skip all admin tests if credentials are missing
-test.describe.skip(
-  !ADMIN_EMAIL || !ADMIN_PASSWORD,
+test.describe(
   'Admin Area Tests (requires credentials)',
   () => {
+    test.skip(!ADMIN_EMAIL || !ADMIN_PASSWORD, 'Missing admin credentials in environment');
     // Login before each test
     test.beforeEach(async ({ page }) => {
       // Go to login page
