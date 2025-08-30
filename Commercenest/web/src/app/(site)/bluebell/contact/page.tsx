@@ -22,7 +22,8 @@ export default async function ContactPage() {
   
   const { data: companyProfile } = await fetchCompanyProfileByTenantId(tenantId)
   const companyName = companyProfile?.name || 'Bluebell Interiors'
-  const companyEmail = companyProfile?.email || '#'
+  // Static fallback e-mail until settings include a contact address
+  const companyEmail = 'info@bluebellinteriors.com'
   
   return (
     <div className="min-h-screen bg-gray-50">
@@ -69,7 +70,7 @@ export default async function ContactPage() {
                   <strong>Phone:</strong> +91 98765 43210
                 </p>
                 <p className="text-bluebell-brown mb-2">
-                  <strong>Email:</strong> <a href={`mailto:${companyEmail}`} className="text-bluebell-blue hover:underline">{companyEmail === '#' ? 'info@bluebellinteriors.com' : companyEmail}</a>
+                  <strong>Email:</strong> <a href={`mailto:${companyEmail}`} className="text-bluebell-blue hover:underline">{companyEmail}</a>
                 </p>
                 <p className="text-bluebell-brown mb-2">
                   <strong>Hours:</strong> Monday-Saturday: 10am - 7pm
@@ -79,7 +80,7 @@ export default async function ContactPage() {
               <div>
                 <h3 className="text-xl font-medium text-bluebell-blue mb-4">Send a Message</h3>
                 <p className="text-bluebell-brown mb-6">
-                  Fill out the form below and we'll get back to you as soon as possible.
+                  Fill out the form below and we&apos;ll get back to you as soon as possible.
                 </p>
                 
                 <div className="space-y-4">

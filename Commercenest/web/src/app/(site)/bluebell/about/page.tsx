@@ -66,7 +66,7 @@ export default async function AboutPage() {
               At {companyName}, we believe that great design should be accessible to everyone. Our team of experienced designers works closely with clients to understand their vision and bring it to life through our curated selection of premium fabrics.
             </p>
             <p className="text-bluebell-brown mb-6 leading-relaxed">
-              Whether you're looking to refresh a single room or redesign your entire home, we're here to guide you through every step of the process. From initial consultation to final installation, we ensure a seamless experience that exceeds expectations.
+              Whether you&apos;re looking to refresh a single room or redesign your entire home, we&apos;re here to guide you through every step of the process. From initial consultation to final installation, we ensure a seamless experience that exceeds expectations.
             </p>
             
             <div className="mt-12 text-center">
