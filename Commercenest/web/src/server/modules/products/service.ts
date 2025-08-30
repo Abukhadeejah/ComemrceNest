@@ -97,30 +97,47 @@ export async function fetchProductImages(tenantId: string, productId: string) {
 
   const urlRegex = /https?:\/\/[^\s'"\]\)]+/g
   const transformed: Array<{ id: string; url: string; alt?: string | null; sort_order: number }> = []
+  // Accept only images that live under this product's folder path
+  const folderPrefix = `/storage/v1/object/public/product-images/${productId}/`
+  const allowedExt = /\.(png|jpe?g|webp|gif|avif|svg)$/i
+  const seen = new Set<string>()
+
+  const isValid = (u: string): boolean => {
+    if (!u.includes(folderPrefix)) return false
+    try {
+      const { pathname } = new URL(u)
+      return allowedExt.test(pathname)
+    } catch {
+      return false
+    }
+  }
 
   for (const row of data) {
     if (row.url && (row.url.includes('[') || row.url.includes('%22') || row.url.includes('"'))) {
       // Corrupted JSON-like blob – pull every URL out.
       const matches = (row.url.match(urlRegex) ?? []) as string[]
-      if (matches.length) {
-        matches.forEach((u: string, idx: number) => {
-          const clean = sanitizeUrl(u)
-          if (clean) {
-            transformed.push({
-              id: `${row.id}-${idx}`,
-              url: clean,
-              alt: row.alt,
-              sort_order: (row.sort_order || 0) + idx,
-            })
-          }
+      let localIdx = 0
+      for (const raw of matches) {
+        const clean = sanitizeUrl(raw)
+        if (!clean || !isValid(clean) || seen.has(clean)) continue
+        seen.add(clean)
+        transformed.push({
+          id: `${row.id}-${localIdx}`,
+          url: clean,
+          alt: row.alt,
+          sort_order: (row.sort_order || 0) + localIdx,
         })
+        localIdx += 1
+      }
+      if (seen.size) {
         continue
       }
       // If no usable url found, fall through to push sanitized original.
     }
 
     const clean = sanitizeUrl(row.url)
-    if (clean) {
+    if (clean && isValid(clean) && !seen.has(clean)) {
+      seen.add(clean)
       transformed.push({
         id: row.id,
         url: clean,
