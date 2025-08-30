@@ -89,12 +89,13 @@ test.describe('Bluebell Public Pages', () => {
     const productCards = await page.$$('.product-card, a[href*="/products/"]');
     expect(productCards.length).toBeGreaterThan(0);
     
-    // Wait for and click first product anchor within the main content
-    await page.locator('main a[href*="/products/"]').first().waitFor({
+    // Wait for and click first product anchor within the main content,
+    // excluding the products index navigation link itself
+    await page.locator('main a[href*="/products/"]:not([href$="/products"])').first().waitFor({
       state: 'attached',
       timeout: 15_000,
     });
-    await page.locator('main a[href*="/products/"]').first().click({ force: true });
+    await page.locator('main a[href*="/products/"]:not([href$="/products"])').first().click({ force: true });
     
     // Verify we landed on a PDP (global product route)
     await expect(page).toHaveURL(/\/(bluebell\/)?products\/.+/, { timeout: 10_000 });
