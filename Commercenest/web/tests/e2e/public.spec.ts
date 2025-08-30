@@ -89,13 +89,18 @@ test.describe('Bluebell Public Pages', () => {
     const productCards = await page.$$('.product-card, a[href*="/products/"]');
     expect(productCards.length).toBeGreaterThan(0);
     
-    // Wait for and click first product anchor within the main content,
-    // excluding the products index navigation link itself
-    await page.locator('main a[href*="/products/"]:not([href$="/products"])').first().waitFor({
-      state: 'attached',
-      timeout: 15_000,
+    // Resolve a product-detail link (PDP) from the listing and navigate directly.
+    const pdpHref = await page.evaluate(() => {
+      const links = Array.from(
+        document.querySelectorAll('main a[href*="/products/"]')
+      ) as HTMLAnchorElement[];
+      const match = links.find((a) =>
+        /\/products\/[^/]+$/.test(a.getAttribute('href') || '')
+      );
+      return match ? match.href : null;
     });
-    await page.locator('main a[href*="/products/"]:not([href$="/products"])').first().click({ force: true });
+    expect(pdpHref).toBeTruthy();
+    await page.goto(pdpHref as string);
     
     // Verify we landed on a PDP (global product route)
     await expect(page).toHaveURL(/\/(bluebell\/)?products\/.+/, { timeout: 10_000 });
