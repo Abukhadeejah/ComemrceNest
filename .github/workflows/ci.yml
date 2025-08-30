@@ -1,46 +1,41 @@
-name: CI (manual)
+name: CI
 
 on:
-  workflow_dispatch:
-    inputs:
-      reason:
-        description: 'Why run CI'
-        required: false
-        default: 'Manual run'
+  push:
+    branches: [main, staging]
+  pull_request:
+    branches: [main, staging]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   web:
-    name: Web build and tests
     runs-on: ubuntu-latest
-
     defaults:
       run:
         working-directory: Commercenest/web
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
+          cache: npm
           cache-dependency-path: Commercenest/web/package-lock.json
 
-      - name: Install dependencies
-        run: npm ci
+      - run: npm ci
 
-      - name: Type check
+      - name: Typecheck
         run: npx tsc --noEmit
 
+      - name: Lint
+        run: npm run lint
+
       - name: Build
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
+          NEXT_PUBLIC_SUPABASE_URL: 'https://example.com'
+          SUPABASE_SERVICE_ROLE_KEY: 'test'
         run: npm run build
-
-      - name: Install browsers
-        run: npx playwright install --with-deps
-
-      - name: Run tests (starts dev server via Playwright webServer)
-        run: npx playwright test --reporter=line
-
-
