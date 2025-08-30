@@ -26,14 +26,32 @@ export default function PdpClient({ productId, name, description, hero_image_url
   // const router = useRouter()
   const [isAddingToCart, setIsAddingToCart] = useState(false)
 
-  const normalizeUrl = (url?: string | null): string => {
+  /**
+   * Returns a safe, absolute http(s) URL or empty string.
+   * 1. Trims whitespace
+   * 2. Fixes “https:/” → “https://” (single–slash protocol)
+   * 3. Rejects anything that does not start with http/https
+   */
+  const safeUrl = (url?: string | null): string => {
     if (!url) return ''
-    return url.replace(/^(https?:)\/(?!\/)/, '$1//')
+    const trimmed = url.trim()
+    if (!trimmed) return ''
+    // fix single-slash protocol e.g. https:/foo ⇒ https://foo
+    const fixed = trimmed.replace(/^(https?:)\/(?!\/)/, '$1//')
+    // quick sanity-check: must start with http/https and contain no spaces
+    if (!/^https?:\/\//i.test(fixed)) return ''
+    if (/\s/.test(fixed)) return ''
+    return fixed
   }
 
   const gallery = useMemo(() => {
-    const base = hero_image_url ? [{ id: 'hero', url: normalizeUrl(hero_image_url), alt: name }] : []
-    const normalizedImages = images.map(img => ({ ...img, url: normalizeUrl(img.url) }))
+    const baseHeroUrl = safeUrl(hero_image_url)
+    const base = baseHeroUrl ? [{ id: 'hero', url: baseHeroUrl, alt: name }] : []
+
+    const normalizedImages = images
+      .map(img => ({ ...img, url: safeUrl(img.url) }))
+      .filter(img => !!img.url) // drop invalid / empty
+
     const merged = [...base, ...normalizedImages]
     const seen = new Set<string>()
     return merged.filter(img => {
