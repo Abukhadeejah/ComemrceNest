@@ -1,10 +1,9 @@
- 
 import { supabaseAdmin } from '@/server/supabaseAdmin'
 
 export async function fetchPublishedProducts(tenantId: string) {
   return supabaseAdmin
     .from('products')
-    .select('id, name, slug, price_cents, compare_at_price_cents, stock, currency, hero_image_url')
+    .select('id, name, slug, description, price_cents, compare_at_price_cents, stock, currency, hero_image_url')
     .eq('tenant_id', tenantId)
     .eq('status', 'published')
     .order('updated_at', { ascending: false })
@@ -14,6 +13,7 @@ export type ProductListItem = {
   id: string
   name: string
   slug: string
+  description: string | null
   price_cents: number
   compare_at_price_cents?: number | null
   currency: string
@@ -38,7 +38,7 @@ export async function fetchPublishedProductsPaged(
   const { sort = 'updated_at', dir = 'desc', page = 1, pageSize = 12, q, minPriceCents, maxPriceCents, categoryId } = params
   const from = (page - 1) * pageSize
   const to = from + pageSize - 1
-  let selectCols = 'id, name, slug, price_cents, compare_at_price_cents, stock, currency, hero_image_url'
+  let selectCols = 'id, name, slug, description, price_cents, compare_at_price_cents, stock, currency, hero_image_url'
   if (categoryId) {
     selectCols += ', product_categories!inner(category_id)'
   }
@@ -134,5 +134,3 @@ export async function fetchProductImages(tenantId: string, productId: string) {
   transformed.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
   return transformed
 }
-
-
