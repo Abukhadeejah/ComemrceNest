@@ -8,19 +8,22 @@ import { useAdminTenantKey } from '@/components/admin/AdminBrandingWrapper'
 interface CategoryFormProps {
   mode: 'create' | 'edit'
   tenantId: string
+  allCategories?: Array<{ id: string; name: string }>
   initialData?: {
     id?: string
     name: string
     slug: string
+    parentId?: string | null
   }
 }
 
-export function CategoryForm({ mode, tenantId, initialData }: CategoryFormProps) {
+export function CategoryForm({ mode, tenantId, allCategories = [], initialData }: CategoryFormProps) {
   const router = useRouter()
   const tenantKey = useAdminTenantKey()
   const [formData, setFormData] = useState({
     name: initialData?.name || '',
-    slug: initialData?.slug || ''
+    slug: initialData?.slug || '',
+    parentId: initialData?.parentId || ''
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -37,14 +40,16 @@ export function CategoryForm({ mode, tenantId, initialData }: CategoryFormProps)
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          ...formData,
-          tenantId,
+          name: formData.name,
+          slug: formData.slug,
+          parentId: formData.parentId || null,
           id: initialData?.id
         }),
       })
 
       if (!response.ok) {
-        throw new Error('Failed to save category')
+        const data = await response.json().catch(() => ({}))
+        throw new Error(data?.error || 'Failed to save category')
       }
 
       router.push(ADMIN_URLS.categories(tenantKey))
@@ -110,6 +115,26 @@ export function CategoryForm({ mode, tenantId, initialData }: CategoryFormProps)
         <p className="mt-1 text-sm text-gray-500">
           The URL-friendly version of the category name
         </p>
+      </div>
+
+      <div>
+        <label htmlFor="parentId" className="block text-sm font-medium text-gray-700">
+          Parent category (optional)
+        </label>
+        <select
+          id="parentId"
+          name="parentId"
+          value={formData.parentId || ''}
+          onChange={(e) => setFormData(prev => ({ ...prev, parentId: e.target.value || '' }))}
+          className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+        >
+          <option value="">No parent</option>
+          {allCategories
+            .filter(c => c.id !== initialData?.id)
+            .map(c => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+        </select>
       </div>
 
       <div className="flex justify-end space-x-3">

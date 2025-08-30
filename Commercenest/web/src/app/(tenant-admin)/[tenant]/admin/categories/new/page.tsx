@@ -1,5 +1,6 @@
 import { resolveTenantIdFromRequest } from '../../../../../../server/tenant'
 import { CategoryForm } from '../../../../../(admin)/admin/categories/CategoryForm'
+import { getCategories } from '../../../../../(admin)/admin/products/actions'
 import { notFound } from 'next/navigation'
 
 export default async function NewCategoryPage() {
@@ -8,6 +9,7 @@ export default async function NewCategoryPage() {
   if (!tenantId) {
     notFound()
   }
+  const categories = await getCategories(tenantId)
   
   return (
     <div className="p-6">
@@ -23,6 +25,7 @@ export default async function NewCategoryPage() {
           <CategoryForm 
             mode="create"
             tenantId={tenantId}
+            allCategories={categories.map(c => ({ id: c.id, name: c.name }))}
           />
         </div>
       </div>

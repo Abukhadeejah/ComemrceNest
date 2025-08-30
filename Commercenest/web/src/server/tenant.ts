@@ -1,4 +1,4 @@
-import { headers } from 'next/headers'
+import { headers, cookies } from 'next/headers'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
 
 // Cache for tenant configurations to avoid repeated database calls
@@ -54,6 +54,18 @@ export async function resolveTenantIdFromRequest(): Promise<string | null> {
       return tenantId
     }
   }
+
+  // 2b. Fallback for API routes (middleware doesn't set headers there): use tenant cookie
+  try {
+    const cookieStore = await cookies()
+    const cookieTenant = cookieStore.get('tenant')?.value
+    if (cookieTenant) {
+      const cookieTenantId = await resolveTenantIdFromKey(cookieTenant)
+      if (cookieTenantId) {
+        return cookieTenantId
+      }
+    }
+  } catch {}
 
   // 3. Special handling for localhost development
   if (host === 'localhost') {

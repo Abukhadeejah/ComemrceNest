@@ -26,8 +26,8 @@ function extractAccessTokenFromCookie(rawValue: string): string | null {
 
   // Try JSON first
   try {
-    const parsed: any = JSON.parse(candidate)
-    const token: string | undefined = parsed?.access_token || parsed?.currentSession?.access_token
+    const parsed = JSON.parse(candidate) as { access_token?: string; currentSession?: { access_token?: string } }
+    const token: string | undefined = parsed.access_token || parsed.currentSession?.access_token
     if (token) return token
   } catch {}
 
@@ -35,8 +35,8 @@ function extractAccessTokenFromCookie(rawValue: string): string | null {
   try {
     const b64 = candidate.replace(/^\s*"?|"?\s*$/g, '')
     const jsonStr = Buffer.from(b64, 'base64').toString('utf8')
-    const parsed: any = JSON.parse(jsonStr)
-    const token: string | undefined = parsed?.access_token || parsed?.currentSession?.access_token
+    const parsed = JSON.parse(jsonStr) as { access_token?: string; currentSession?: { access_token?: string } }
+    const token: string | undefined = parsed.access_token || parsed.currentSession?.access_token
     if (token) return token
   } catch {}
 

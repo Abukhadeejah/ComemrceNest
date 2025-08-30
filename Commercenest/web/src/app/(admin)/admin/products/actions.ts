@@ -845,7 +845,7 @@ export async function getCategories(tenantIdArg?: string) {
 
     const { data, error } = await supabaseAdmin
       .from('categories')
-      .select('id, name')
+      .select('id, name, slug, parent_id, created_at')
       .eq('tenant_id', tenantId)
       .order('name', { ascending: true })
 
@@ -853,12 +853,14 @@ export async function getCategories(tenantIdArg?: string) {
       throw new Error(`Failed to fetch categories: ${error.message}`)
     }
 
-    return (data || []).map(category => ({
-    id: category.id,
-    name: category.name,
-    slug: category.name.toLowerCase().replace(/\s+/g, '-'),
-    created_at: new Date().toISOString()
-  }))
+    const rows = (data ?? []) as Array<{ id: string; name: string; slug: string; parent_id: string | null; created_at: string }>
+    return rows.map(category => ({
+      id: category.id,
+      name: category.name,
+      slug: category.slug,
+      parent_id: category.parent_id,
+      created_at: category.created_at
+    }))
   } catch (error) {
     console.error('getCategories error:', error)
     throw error
