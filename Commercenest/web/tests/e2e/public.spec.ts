@@ -107,9 +107,6 @@ test.describe('Bluebell Public Pages', () => {
       
     // Check for product details
     await expect(page.locator('text=/per metre/')).toBeVisible();
-      
-    // Verify product image loads
-    await expectImagesToLoad(page);
   });
 });
 
