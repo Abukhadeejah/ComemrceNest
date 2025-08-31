@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
 import { getRegistryEntry } from '@/registry/tenantRegistry'
 import { fetchCompanyProfileByTenantId } from '@/server/settings'
@@ -29,7 +30,7 @@ export default async function AboutPage() {
       <div className="bg-gray-50 border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <nav className="flex items-center space-x-2 text-sm">
-            <a href="/bluebell" className="text-bluebell-brown hover:text-bluebell-blue transition-colors duration-300 font-medium">Home</a>
+            <Link href="/bluebell" className="text-bluebell-brown hover:text-bluebell-blue transition-colors duration-300 font-medium">Home</Link>
             <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path>
             </svg>
@@ -70,9 +71,9 @@ export default async function AboutPage() {
             </p>
             
             <div className="mt-12 text-center">
-              <a href="/bluebell/contact" className="inline-block bg-bluebell-blue hover:bg-[#01487D] text-white font-medium py-3 px-8 rounded-lg transition-colors duration-300">
+              <Link href="/bluebell/contact" className="inline-block bg-bluebell-blue hover:bg-[#01487D] text-white font-medium py-3 px-8 rounded-lg transition-colors duration-300">
                 Get in Touch
-              </a>
+              </Link>
             </div>
           </div>
         </div>

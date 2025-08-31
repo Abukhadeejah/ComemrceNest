@@ -12,7 +12,7 @@ type HomeClientProps = {
   projects: { id: string; title: string; slug: string; hero_image_url: string | null }[]
 }
 
-export default function Home({ products, projects }: HomeClientProps) {
+export default function Home({ products, projects: _projects }: HomeClientProps) {
   const [loaded, setLoaded] = useState(false)
   useEffect(() => setLoaded(true), [])
   // Testimonials grid is static for now; slider removed for modularity
