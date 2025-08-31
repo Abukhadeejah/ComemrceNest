@@ -13,15 +13,25 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     let isMounted = true
     ;(async () => {
       try {
+        // Prefer server-verified whoami to avoid client auth race conditions
+        const res = await fetch('/api/auth/whoami', { cache: 'no-store', credentials: 'same-origin' })
+        if (!isMounted) return
+        if (res.ok) {
+          setChecking(false)
+          return
+        }
+        // Fallback to client check
         const { data: { user } } = await supabase.auth.getUser()
         if (!isMounted) return
-        if (!user) {
-          router.replace('/login')
-        } else {
-          setChecking(false)
-        }
+        if (!user) router.replace('/login')
+        else setChecking(false)
       } catch {
+        if (!isMounted) return
         router.replace('/login')
+      } finally {
+        if (!isMounted) return
+        // Ensure we don't get stuck on loader in edge cases
+        setChecking(false)
       }
     })()
     return () => { isMounted = false }

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Playfair_Display } from 'next/font/google';
 import { useCart } from '@/lib/cart';
@@ -15,6 +15,25 @@ export default function Header() {
   const wishlistCount = 0; // TODO: Implement wishlist functionality later
   const tenant = useTenant();
   const basePath = `/${tenant.key || 'bluebell'}`;
+
+  const [categories, setCategories] = useState<Array<{ id: string; name: string; slug: string; parent_id: string | null }>>([])
+
+  useEffect(() => {
+    let aborted = false
+    async function load() {
+      try {
+        const res = await fetch('/api/site/categories', { cache: 'no-store' })
+        const json = await res.json()
+        if (!aborted && Array.isArray(json.data)) {
+          setCategories(json.data)
+        }
+      } catch {
+        // ignore
+      }
+    }
+    load()
+    return () => { aborted = true }
+  }, [])
 
   return (
     <>
@@ -85,12 +104,16 @@ export default function Header() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </Link>
-                {/* Dropdown Menu */}
-                <div className="absolute top-full left-0 bg-white shadow-lg border border-gray-200 rounded-md py-2 min-w-[200px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300">
-                  <Link href={`${basePath}/products/upholstery`} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900">Upholstery Fabrics</Link>
-                  <Link href={`${basePath}/products/curtains`} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900">Curtain & Drapery</Link>
-                  <Link href={`${basePath}/products/cushions`} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900">Cushion Covers</Link>
-                  <Link href={`${basePath}/products/accessories`} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900">Accessories</Link>
+                {/* Dropdown Menu from backend categories */}
+                <div className="absolute top-full left-0 bg-white shadow-lg border border-gray-200 rounded-md py-2 min-w-[220px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300">
+                  {categories.slice(0, 8).map(cat => (
+                    <Link key={cat.id} href={`${basePath}/products?category=${encodeURIComponent(cat.slug)}`} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900">
+                      {cat.name}
+                    </Link>
+                  ))}
+                  {categories.length === 0 && (
+                    <div className="px-4 py-2 text-sm text-gray-500">No categories</div>
+                  )}
                 </div>
               </div>
               <Link href={`${basePath}/portfolio`} className="text-gray-800 hover:text-primary font-semibold text-sm uppercase tracking-wide transition-colors pb-1">
