@@ -1,14 +1,23 @@
 // Utility function to generate correct admin URLs based on tenant and environment
 export function getAdminUrl(path: string, tenant?: string): string {
-  // Always use tenant-specific routes for proper tenant isolation
+  // If middleware set host-based mode via cookie, prefer clean admin URLs
+  if (typeof document !== 'undefined') {
+    const cookies = document.cookie || '';
+    const mode = /(?:^|; )tenant_mode=([^;]+)/.exec(cookies)?.[1];
+    if (mode === 'host') {
+      return `/admin${path}`;
+    }
+  }
+
+  // Path-based fallback (staging/local)
   if (tenant) {
-    return `/${tenant}/admin${path}`
+    return `/${tenant}/admin${path}`;
   }
   
   // If no tenant provided, we can't generate a valid URL
   // This should be handled by the calling component
-  console.warn('getAdminUrl called without tenant parameter')
-  return `/admin${path}`
+  console.warn('getAdminUrl called without tenant parameter');
+  return `/admin${path}`;
 }
 
 // Common admin URL patterns
