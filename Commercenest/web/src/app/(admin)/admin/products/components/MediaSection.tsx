@@ -231,6 +231,7 @@ export function MediaSection({ images, onImagesChange, productId }: MediaSection
                 
                 return (
                   <div key={index} className="relative group">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={imageSrc}
                       alt={`Product image ${index + 1}`}

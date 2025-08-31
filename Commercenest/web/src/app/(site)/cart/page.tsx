@@ -1,7 +1,6 @@
 'use client'
 
 import { useCart, formatPrice } from '@/lib/cart'
-import { tenantPath } from '@/lib/tenantClient'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useState } from 'react'
@@ -39,7 +38,7 @@ export default function CartPage() {
             <h1 className={`${playfair.className} text-3xl font-bold text-gray-900 mb-2`}>Your cart is empty</h1>
             <p className={`${inter.className} text-gray-600 mb-8`}>Discover our premium fabric collection and start building your perfect interior.</p>
             <Link
-              href={tenantPath('/products')}
+              href="/products"
               className="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
             >
               Browse Products
@@ -178,7 +177,7 @@ export default function CartPage() {
 
               <div className="mt-4 text-center">
                 <Link
-                  href={tenantPath('/products')}
+                  href="/products"
                   className="text-sm text-blue-600 hover:text-blue-800"
                 >
                   Continue Shopping

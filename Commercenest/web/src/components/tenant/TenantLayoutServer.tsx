@@ -57,22 +57,22 @@ export default async function TenantLayoutServer({
 							<div>
 								<h4 className="font-semibold mb-4">Platform</h4>
 								<ul className="space-y-2 text-gray-300">
-									<li><a href="/senlysh" className="hover:text-white">Senlysh Fashion</a></li>
-									<li><a href="/bluebell" className="hover:text-white">Bluebell Interiors</a></li>
+									<li><Link href="/senlysh" className="hover:text-white">Senlysh Fashion</Link></li>
+									<li><Link href="/bluebell" className="hover:text-white">Bluebell Interiors</Link></li>
 								</ul>
 							</div>
 							<div>
 								<h4 className="font-semibold mb-4">Support</h4>
 								<ul className="space-y-2 text-gray-300">
-									<li><a href="/help" className="hover:text-white">Help Center</a></li>
-									<li><a href="/contact" className="hover:text-white">Contact Us</a></li>
+									<li><Link href="/help" className="hover:text-white">Help Center</Link></li>
+									<li><Link href="/contact" className="hover:text-white">Contact Us</Link></li>
 								</ul>
 							</div>
 							<div>
 								<h4 className="font-semibold mb-4">Legal</h4>
 								<ul className="space-y-2 text-gray-300">
-									<li><a href="/privacy" className="hover:text-white">Privacy Policy</a></li>
-									<li><a href="/terms" className="hover:text-white">Terms of Service</a></li>
+									<li><Link href="/privacy" className="hover:text-white">Privacy Policy</Link></li>
+									<li><Link href="/terms" className="hover:text-white">Terms of Service</Link></li>
 								</ul>
 							</div>
 						</div>

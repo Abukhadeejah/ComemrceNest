@@ -52,7 +52,7 @@ export const defaultMetadata: Metadata = {
       { url: '/apple-touch-icon.svg' },
     ],
   },
-  manifest: '/manifest.json',
+  manifest: '/manifest.webmanifest',
 }
 
 export function getPageMetadata(pageTitle?: string, pageDescription?: string): Metadata {

@@ -12,28 +12,39 @@ export function middleware(request: NextRequest) {
 
   // Basic header for downstream usage
   headers.set('x-pathname', pathname);
-
-  // Host-based detection for production custom domains (lightweight: no DB calls)
+  
+  // Host-based detection for local custom domains (bluebell.local, senlysh.local)
   const host = request.headers.get('host') || '';
   let tenantFromHost = '';
-  if (/bluebell/i.test(host)) tenantFromHost = 'bluebell';
-  else if (/senlysh/i.test(host)) tenantFromHost = 'senlysh';
+  if (/(^|\.)bluebell\.local(?::\d+)?$/i.test(host)) tenantFromHost = 'bluebell';
+  else if (/(^|\.)senlysh\.local(?::\d+)?$/i.test(host)) tenantFromHost = 'senlysh';
+  
+  // Global (non-tenant) routes that must not be rewritten
+  const globalNoRewrite = new Set(['/login', '/checkout', '/cart'])
+  const isGlobalRoute = globalNoRewrite.has(pathname)
 
-  // If we have a host-identified tenant, prefer it and mark mode as 'host'
-  if (tenantFromHost) {
-    headers.set('x-tenant-admin', tenantFromHost);
-    const response = NextResponse.next({ request: { headers } });
-    response.cookies.set('tenant', tenantFromHost, { path: '/', sameSite: 'lax' });
-    response.cookies.set('tenant_mode', 'host', { path: '/', sameSite: 'lax' });
-    return response;
+  // Static assets should never be rewritten (images, svgs, etc.)
+  const looksLikeAsset = /\.[a-zA-Z0-9]+$/.test(pathname);
+  if (looksLikeAsset) {
+    return NextResponse.next({ request: { headers } });
   }
 
+  // If host maps to a tenant and the path is not already tenant-prefixed, rewrite to tenant path
+  if (tenantFromHost && !tenantFromPath && !isGlobalRoute) {
+    headers.set('x-tenant-admin', tenantFromHost);
+    const targetPath = pathname === '/' ? `/${tenantFromHost}` : `/${tenantFromHost}${pathname}`;
+    // Ensure server components see the rewritten pathname in this request
+    headers.set('x-pathname', targetPath);
+    const response = NextResponse.rewrite(new URL(targetPath, request.url), { request: { headers } });
+    response.cookies.set('tenant', tenantFromHost, { path: '/', sameSite: 'lax' });
+    return response;
+  }
+  
   // Path-based tenancy (staging/local) with cookie fallback
   if (tenantFromPath) {
     headers.set('x-tenant-admin', tenantFromPath);
     const response = NextResponse.next({ request: { headers } });
     response.cookies.set('tenant', tenantFromPath, { path: '/', sameSite: 'lax' });
-    response.cookies.set('tenant_mode', 'path', { path: '/', sameSite: 'lax' });
     return response;
   }
 
@@ -42,9 +53,23 @@ export function middleware(request: NextRequest) {
     const inferredTenant = cookieTenant === 'bluebell' || cookieTenant === 'senlysh' ? cookieTenant : 'bluebell';
     headers.set('x-tenant-admin', inferredTenant);
     const response = NextResponse.next({ request: { headers } });
+    // Ensure cookie is set for subsequent requests
     response.cookies.set('tenant', inferredTenant, { path: '/', sameSite: 'lax' });
-    response.cookies.set('tenant_mode', 'path', { path: '/', sameSite: 'lax' });
     return response;
+  }
+
+  // If path is tenant-prefixed but points to a global page, rewrite to global
+  if (tenantFromPath) {
+    // /{tenant}/checkout -> /checkout, /{tenant}/cart -> /cart
+    if (pathname === `/${tenantFromPath}/checkout` || pathname === `/${tenantFromPath}/cart`) {
+      const globalTarget = `/${segments.slice(1).join('/')}` // e.g. /checkout
+      return NextResponse.rewrite(new URL(globalTarget, request.url), { request: { headers } })
+    }
+    // /{tenant}/orders/{id} -> /orders/{id}
+    if (segments.length >= 3 && segments[1] === 'orders') {
+      const globalTarget = `/${segments.slice(1).join('/')}` // /orders/{id}[...]
+      return NextResponse.rewrite(new URL(globalTarget, request.url), { request: { headers } })
+    }
   }
 
   return NextResponse.next({ request: { headers } });

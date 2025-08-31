@@ -42,8 +42,9 @@ export function SettingsForm({ settings }: SettingsFormProps) {
   }
 
   return (
-    <form action={handleSubmit} className="space-y-6">
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+    <div className="space-y-10">
+      <form action={handleSubmit} className="space-y-6">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <div>
           <label htmlFor="name" className="block text-sm font-medium text-gray-700">
             Store Name
@@ -148,16 +149,94 @@ export function SettingsForm({ settings }: SettingsFormProps) {
             />
           </div>
         </div>
-      </div>
+        </div>
 
-      <div className="flex justify-end">
-        <button
-          type="submit"
-          className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-        >
-          Save Settings
-        </button>
+        <div className="flex justify-end">
+          <button
+            type="submit"
+            className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            Save Settings
+          </button>
+        </div>
+      </form>
+
+      <PaymentSettingsClient />
+    </div>
+  )
+}
+
+function PaymentSettingsClient() {
+  const origin = typeof window !== 'undefined' ? window.location.origin : ''
+  const webhookUrl = origin ? `${origin}/api/webhooks/razorpay` : '/api/webhooks/razorpay'
+
+  const onCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(webhookUrl)
+      alert('Webhook URL copied')
+    } catch {
+      /* noop */
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-lg font-medium text-gray-900">Payments (Razorpay)</h2>
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-700">Webhook URL</label>
+        <div className="flex gap-2">
+          <input readOnly value={webhookUrl} className="flex-1 block w-full border rounded px-3 py-2 text-gray-600" />
+          <button type="button" onClick={onCopy} className="px-3 py-2 border rounded">Copy</button>
+        </div>
+        <ul className="text-sm text-gray-600 list-disc pl-5">
+          <li>In Razorpay Dashboard, select mode (Test or Live) at top-right.</li>
+          <li>Go to Settings → Webhooks → Add New Webhook, paste the URL above.</li>
+          <li>Set a strong Secret. Use different secrets for Test and Live.</li>
+          <li>Select events (at least payment.captured). Save.</li>
+          <li>Enter your Key ID/Secret and the same Webhook Secret below, choose Mode, Save.</li>
+        </ul>
       </div>
-    </form>
+      <form method="post" action="/api/admin/settings/payments" className="space-y-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Mode</label>
+          <select name="mode" className="mt-1 block w-full border rounded px-3 py-2">
+            <option value="test">Test</option>
+            <option value="live">Live</option>
+          </select>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Test Key ID</label>
+            <input name="test_key_id" className="mt-1 block w-full border rounded px-3 py-2" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Test Key Secret</label>
+            <input name="test_key_secret" type="password" className="mt-1 block w-full border rounded px-3 py-2" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Test Webhook Secret</label>
+            <input name="test_webhook_secret" type="password" className="mt-1 block w-full border rounded px-3 py-2" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Live Key ID</label>
+            <input name="live_key_id" className="mt-1 block w-full border rounded px-3 py-2" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Live Key Secret</label>
+            <input name="live_key_secret" type="password" className="mt-1 block w-full border rounded px-3 py-2" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Live Webhook Secret</label>
+            <input name="live_webhook_secret" type="password" className="mt-1 block w-full border rounded px-3 py-2" />
+          </div>
+        </div>
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-gray-500">If blank, CommerceNest default keys will be used.</p>
+          <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded">Save Payment Settings</button>
+        </div>
+      </form>
+    </div>
   )
 }
