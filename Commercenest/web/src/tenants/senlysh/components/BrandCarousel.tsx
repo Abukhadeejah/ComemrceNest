@@ -160,6 +160,7 @@ const BrandCarousel: React.FC<BrandCarouselProps> = ({
                 >
                   <div className="flex items-center justify-center mb-3">
                     <div className="w-20 h-20 sm:w-24 sm:h-24 relative">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={brand.logo}
                         alt={brand.name}

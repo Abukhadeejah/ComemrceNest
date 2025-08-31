@@ -232,6 +232,7 @@ export default async function ProductViewPage({ params }: ProductViewPageProps) 
                   <div className="space-y-3">
                     {sortedImages.map((image: ProductImage, index: number) => (
                       <div key={index} className="relative">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={image.url}
                           alt={image.alt || `Product image ${index + 1}`}

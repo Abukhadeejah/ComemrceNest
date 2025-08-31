@@ -23,17 +23,16 @@ export async function POST(request: Request) {
   const tenantId = await resolveTenantIdFromRequest()
   if (!tenantId) return NextResponse.json({ error: 'tenant_not_found' }, { status: 400 })
 
-  // Load tenant payment settings (test env preferred)
-  const { data: pay } = await supabaseAdmin
+  // Load tenant payment settings (prefer enabled env row)
+  const { data: rows } = await supabaseAdmin
     .from('tenant_payment_settings')
-    .select('env, enabled, razorpay_key_id, razorpay_key_secret, test_mode')
+    .select('env, enabled, razorpay_key_id, razorpay_key_secret')
     .eq('tenant_id', tenantId)
-    .eq('env', 'test')
-    .maybeSingle()
+  const active = rows?.find(r => r.enabled) || rows?.find(r => r.env === 'test')
 
   // Determine credentials: prefer enabled tenant settings, else fall back to env vars
-  let keyId = pay?.enabled ? pay.razorpay_key_id : undefined
-  let keySecret = pay?.enabled ? decodeSecret(pay.razorpay_key_secret) : undefined
+  let keyId = active?.enabled ? active.razorpay_key_id : undefined
+  let keySecret = active?.enabled ? decodeSecret(active.razorpay_key_secret) : undefined
 
   if (!keyId || !keySecret) {
     keyId = process.env.RAZORPAY_KEY_ID

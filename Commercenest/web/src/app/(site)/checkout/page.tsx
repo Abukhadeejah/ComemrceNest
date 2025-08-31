@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { useCart, formatPrice } from '@/lib/cart'
-import { tenantPath } from '@/lib/tenantClient'
 import Link from 'next/link'
 import { Playfair_Display } from 'next/font/google'
 
@@ -225,7 +224,7 @@ export default function CheckoutPage() {
             <div className="text-center mb-8">
               <p className="text-gray-600 mb-4">Your cart is empty. Add some products before checkout.</p>
               <Link 
-                href={tenantPath('/products')}
+                href="/products"
                 className="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
               >
                 Browse Products
@@ -320,7 +319,7 @@ export default function CheckoutPage() {
           
           <div className="mt-8 text-center">
             <Link
-              href={tenantPath('/products')}
+              href="/products"
               className="text-blue-600 hover:underline"
             >
               Continue Shopping

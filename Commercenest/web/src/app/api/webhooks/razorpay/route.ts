@@ -59,20 +59,21 @@ export async function POST(request: Request) {
   // Lookup order, determine tenant and webhook secret
   const orderId = e0?.payload?.order?.entity?.id
   if (!orderId) return NextResponse.json({ error: 'missing_order' }, { status: 400 })
-  const { data: order } = await supabaseAdmin.from('orders').select('tenant_id, razorpay_order_id').eq('razorpay_order_id', orderId).maybeSingle()
+  const { data: order } = await supabaseAdmin.from('orders').select('tenant_id, razorpay_order_id, payment_env').eq('razorpay_order_id', orderId).maybeSingle()
   if (!order?.tenant_id) return NextResponse.json({ error: 'order_not_found' }, { status: 404 })
 
-  const { data: pay } = await supabaseAdmin
+  const { data: rows } = await supabaseAdmin
     .from('tenant_payment_settings')
-    .select('webhook_secret')
+    .select('env, enabled, webhook_secret')
     .eq('tenant_id', order.tenant_id)
-    .eq('env', 'test')
-    .maybeSingle()
+  const active = order?.payment_env
+    ? rows?.find(r => r.env === order.payment_env)
+    : rows?.find(r => r.enabled) || rows?.find(r => r.env === 'test')
 
   // Resolve webhook secret: prefer DB value, else env fallback
   let secret = ''
-  if (pay?.webhook_secret) {
-    secret = decodeSecret(pay.webhook_secret)
+  if (active?.webhook_secret) {
+    secret = decodeSecret(active.webhook_secret)
   } else if (process.env.RAZORPAY_WEBHOOK_SECRET) {
     secret = process.env.RAZORPAY_WEBHOOK_SECRET
   }

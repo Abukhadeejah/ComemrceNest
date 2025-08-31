@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { AdminLayout } from '@/components/admin/layout/AdminLayout'
 import { CubeIcon, ShoppingCartIcon, CurrencyRupeeIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
-import { assertTenantAdmin } from '@/server/auth'
+// Server-side auth is enforced in mutations/actions; client gate handles UI redirects
 import AdminBrandingWrapper from '@/components/admin/AdminBrandingWrapper'
 import type { TenantKey } from '@/registry/types'
 
