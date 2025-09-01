@@ -78,8 +78,12 @@ export default function PdpClient({ productId, name, description, hero_image_url
   const handleAddToCart = async () => {
     setIsAddingToCart(true)
     try {
+      if (!productId) {
+        console.error('Missing productId on PDP; cannot add to cart')
+        return
+      }
       addItem({
-        productId: productId || 'current_product_id',
+        productId,
         name,
         price: price_cents,
         imageUrl: hero_image_url || images[0]?.url,

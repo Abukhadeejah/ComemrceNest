@@ -10,6 +10,9 @@ export default function Header() {
   const { state } = useCart();
   const cartCount = state.itemCount;
   const wishlistCount = 0; // TODO: Implement wishlist functionality later
+  // Feature flags (superadmin-controlled in future)
+  const showNewArrivals = false
+  const showSale = false
 
   return (
     <>
@@ -65,12 +68,16 @@ export default function Header() {
                   <Link href="/senlysh/products?category=shoes" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900">Footwear</Link>
                 </div>
               </div>
-              <Link href="/senlysh/new-arrivals" className="text-gray-800 hover:text-gray-600 font-semibold text-sm uppercase tracking-wide transition-colors pb-1">
-                NEW ARRIVALS
-              </Link>
-              <Link href="/senlysh/sale" className="text-red-600 hover:text-red-700 font-semibold text-sm uppercase tracking-wide transition-colors pb-1">
-                SALE
-              </Link>
+              {showNewArrivals ? (
+                <Link href="/senlysh/new-arrivals" className="text-gray-800 hover:text-gray-600 font-semibold text-sm uppercase tracking-wide transition-colors pb-1">
+                  NEW ARRIVALS
+                </Link>
+              ) : null}
+              {showSale ? (
+                <Link href="/senlysh/sale" className="text-red-600 hover:text-red-700 font-semibold text-sm uppercase tracking-wide transition-colors pb-1">
+                  SALE
+                </Link>
+              ) : null}
               <Link href="/senlysh/about" className="text-gray-800 hover:text-gray-600 font-semibold text-sm uppercase tracking-wide transition-colors pb-1">
                 ABOUT US
               </Link>
@@ -173,20 +180,24 @@ export default function Header() {
                     <Link href="/senlysh/products?category=accessories" className="block text-sm text-gray-600 hover:text-gray-800">Accessories</Link>
                   </div>
                 </div>
-                <Link 
-                  href="/senlysh/new-arrivals" 
-                  className="text-gray-800 hover:text-gray-600 font-semibold text-base uppercase tracking-wide transition-colors pb-2"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  NEW ARRIVALS
-                </Link>
-                <Link 
-                  href="/senlysh/sale" 
-                  className="text-red-600 hover:text-red-700 font-semibold text-base uppercase tracking-wide transition-colors pb-2"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  SALE
-                </Link>
+                {showNewArrivals ? (
+                  <Link 
+                    href="/senlysh/new-arrivals" 
+                    className="text-gray-800 hover:text-gray-600 font-semibold text-base uppercase tracking-wide transition-colors pb-2"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    NEW ARRIVALS
+                  </Link>
+                ) : null}
+                {showSale ? (
+                  <Link 
+                    href="/senlysh/sale" 
+                    className="text-red-600 hover:text-red-700 font-semibold text-base uppercase tracking-wide transition-colors pb-2"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    SALE
+                  </Link>
+                ) : null}
                 <Link 
                   href="/senlysh/about" 
                   className="text-gray-800 hover:text-gray-600 font-semibold text-base uppercase tracking-wide transition-colors pb-2"

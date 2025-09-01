@@ -99,6 +99,7 @@ export async function POST(request: Request) {
     status: 'pending',
     payment_provider: 'razorpay',
     razorpay_order_id: order.id,
+    payment_env: body.mode === 'live' ? 'live' : 'test',
   }).select('id').limit(1)
 
   if (insertErr) {

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useCart, formatPrice } from '@/lib/cart'
 import Link from 'next/link'
 import { Playfair_Display } from 'next/font/google'
+import { useTenant } from '@/hooks/useTenant'
 
 const playfair = Playfair_Display({ subsets: ['latin'], weight: ['700','800','900'] })
 
@@ -60,12 +61,11 @@ declare global {
 
 export default function CheckoutPage() {
   const { state: cart } = useCart()
+  const tenant = useTenant()
   const [orderId, setOrderId] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [scriptLoaded, setScriptLoaded] = useState(false)
-  // test | live mode toggle (defaults to test)
-  const [mode, setMode] = useState<'test' | 'live'>('test')
   const [customer, setCustomer] = useState({
     name: '',
     email: '',
@@ -77,6 +77,11 @@ export default function CheckoutPage() {
     pincode: '',
     gstin: ''
   })
+
+  // GST rate from tenant config (default 0)
+  const gstRatePercent = tenant.pricing?.gstRatePercent ?? 0
+  const gstAmount = Math.round(cart.total * (gstRatePercent / 100))
+  const grandTotal = cart.total + gstAmount
 
   // Load Razorpay script
   useEffect(() => {
@@ -101,14 +106,15 @@ export default function CheckoutPage() {
     setMessage(null)
     try {
       // Create order via API
+      const validItems = cart.items.filter(it => typeof it.productId === 'string' && it.productId.length >= 32)
       const res = await fetch('/api/checkout', { 
         method: 'POST', 
         headers: { 'content-type': 'application/json' }, 
         body: JSON.stringify({ 
           amountPaise, 
-          mode, 
+          mode: 'test', 
           customer,
-          items: cart.items.map(it => ({
+          items: validItems.map(it => ({
             productId: it.productId,
             quantity: it.quantity,
             unitPriceCents: it.price
@@ -177,14 +183,15 @@ export default function CheckoutPage() {
     setBusy(true)
     setMessage(null)
     try {
+      const validItems = cart.items.filter(it => typeof it.productId === 'string' && it.productId.length >= 32)
       const res = await fetch('/api/checkout', { 
         method: 'POST', 
         headers: { 'content-type': 'application/json' }, 
         body: JSON.stringify({ 
           amountPaise: 100, 
-          mode, 
+          mode: 'test', 
           customer,
-          items: cart.items.map(it => ({
+          items: validItems.map(it => ({
             productId: it.productId,
             quantity: it.quantity,
             unitPriceCents: it.price
@@ -245,9 +252,19 @@ export default function CheckoutPage() {
                 ))}
               </div>
               
-              <div className="mt-4 flex justify-between items-center font-bold">
-                <span>Total</span>
-                <span className="text-blue-600">{formatPrice(cart.total)}</span>
+              <div className="mt-4 space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Subtotal</span>
+                  <span>{formatPrice(cart.total)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">GST ({gstRatePercent}%)</span>
+                  <span>{formatPrice(gstAmount)}</span>
+                </div>
+                <div className="flex justify-between items-center font-bold text-[color:var(--color-primary)]">
+                  <span>Total</span>
+                  <span>{formatPrice(grandTotal)}</span>
+                </div>
               </div>
             </div>
           ) : (
@@ -303,71 +320,13 @@ export default function CheckoutPage() {
           </div>
 
           <div className="space-y-4">
-            {/* Mode selector */}
-            <div className="flex items-center gap-4 mb-2">
-              <span className="text-sm font-medium text-gray-700">Mode:</span>
-              <label className="flex items-center gap-1 text-sm text-gray-600">
-                <input
-                  type="radio"
-                  name="rzp-mode"
-                  value="test"
-                  checked={mode === 'test'}
-                  onChange={() => setMode('test')}
-                  className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                />
-                Test
-              </label>
-              <label className="flex items-center gap-1 text-sm text-gray-600">
-                <input
-                  type="radio"
-                  name="rzp-mode"
-                  value="live"
-                  checked={mode === 'live'}
-                  onChange={() => setMode('live')}
-                  className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                />
-                Live
-              </label>
-            </div>
-
             <button 
-              disabled={busy || !scriptLoaded} 
-              onClick={() => handleRazorpayPayment(100)}
-              className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={busy || !scriptLoaded || cart.total <= 0} 
+              onClick={() => handleRazorpayPayment(grandTotal)}
+              className="w-full bg-green-600 text-white py-3 rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Pay ₹1 with Razorpay
+              Pay {formatPrice(grandTotal)} with Razorpay
             </button>
-            
-            {cart.total > 0 && (
-              <button 
-                disabled={busy || !scriptLoaded} 
-                onClick={() => handleRazorpayPayment(cart.total)}
-                className="w-full bg-green-600 text-white py-3 rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Pay {formatPrice(cart.total)} with Razorpay
-              </button>
-            )}
-            
-            <div className="border-t pt-6 mt-6">
-              <p className="text-sm text-gray-500 mb-4">Development Options:</p>
-              <div className="flex flex-wrap gap-2">
-                <button 
-                  disabled={busy} 
-                  onClick={createTestOrder}
-                  className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 text-sm disabled:opacity-50"
-                >
-                  Create test order
-                </button>
-                
-                <button 
-                  disabled={busy || !orderId} 
-                  onClick={simulatePayment}
-                  className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 text-sm disabled:opacity-50"
-                >
-                  Simulate payment
-                </button>
-              </div>
-            </div>
           </div>
           
           {orderId && (

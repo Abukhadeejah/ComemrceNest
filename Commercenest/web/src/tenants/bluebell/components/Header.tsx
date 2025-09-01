@@ -15,6 +15,9 @@ export default function Header() {
   const wishlistCount = 0; // TODO: Implement wishlist functionality later
   const tenant = useTenant();
   const basePath = `/${tenant.key || 'bluebell'}`;
+  // Feature flags (to be controlled from superadmin later)
+  const showNewArrivals = false
+  const showSale = false
 
   const [categories, setCategories] = useState<Array<{ id: string; name: string; slug: string; parent_id: string | null }>>([])
 
@@ -119,12 +122,16 @@ export default function Header() {
               <Link href={`${basePath}/portfolio`} className="text-gray-800 hover:text-primary font-semibold text-sm uppercase tracking-wide transition-colors pb-1">
                 PORTFOLIO
               </Link>
-              <Link href={`${basePath}/new-arrivals`} className="text-gray-800 hover:text-primary font-semibold text-sm uppercase tracking-wide transition-colors pb-1">
-                NEW ARRIVALS
-              </Link>
-              <Link href={`${basePath}/sale`} className="text-mustard hover:text-primary font-semibold text-sm uppercase tracking-wide transition-colors pb-1">
-                SALE
-              </Link>
+              {showNewArrivals ? (
+                <Link href={`${basePath}/new-arrivals`} className="text-gray-800 hover:text-primary font-semibold text-sm uppercase tracking-wide transition-colors pb-1">
+                  NEW ARRIVALS
+                </Link>
+              ) : null}
+              {showSale ? (
+                <Link href={`${basePath}/sale`} className="text-mustard hover:text-primary font-semibold text-sm uppercase tracking-wide transition-colors pb-1">
+                  SALE
+                </Link>
+              ) : null}
               <Link href={`${basePath}/about`} className="text-gray-800 hover:text-primary font-semibold text-sm uppercase tracking-wide transition-colors pb-1">
                 ABOUT US
               </Link>
@@ -234,20 +241,24 @@ export default function Header() {
                 >
                   PORTFOLIO
                 </Link>
-                <Link 
-                  href={`${basePath}/new-arrivals`} 
-                  className="text-gray-800 hover:text-primary font-semibold text-base uppercase tracking-wide transition-colors pb-2"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  NEW ARRIVALS
-                </Link>
-                <Link 
-                  href={`${basePath}/sale`} 
-                  className="text-mustard hover:text-primary font-semibold text-base uppercase tracking-wide transition-colors pb-2"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  SALE
-                </Link>
+                {showNewArrivals ? (
+                  <Link 
+                    href={`${basePath}/new-arrivals`} 
+                    className="text-gray-800 hover:text-primary font-semibold text-base uppercase tracking-wide transition-colors pb-2"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    NEW ARRIVALS
+                  </Link>
+                ) : null}
+                {showSale ? (
+                  <Link 
+                    href={`${basePath}/sale`} 
+                    className="text-mustard hover:text-primary font-semibold text-base uppercase tracking-wide transition-colors pb-2"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    SALE
+                  </Link>
+                ) : null}
                 <Link 
                   href={`${basePath}/about`} 
                   className="text-gray-800 hover:text-primary font-semibold text-base uppercase tracking-wide transition-colors pb-2"
