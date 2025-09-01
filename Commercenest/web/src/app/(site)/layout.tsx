@@ -107,12 +107,12 @@ export default async function SiteLayout({
   }
 
   return (
-    <CartProvider>
-      <TenantProvider tenantKey={tenantKey}>
+    <TenantProvider tenantKey={tenantKey}>
+      <CartProvider>
         <TenantLayoutServer tenantKey={tenantKey}>
           {children}
         </TenantLayoutServer>
-      </TenantProvider>
-    </CartProvider>
+      </CartProvider>
+    </TenantProvider>
   )
 }
