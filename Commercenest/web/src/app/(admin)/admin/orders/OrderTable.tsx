@@ -31,6 +31,12 @@ export function OrderTable({ orders }: OrderTableProps) {
     if (res.ok) router.refresh()
     else alert('Failed to delete order')
   }
+  const onMarkPaid = async (id: string) => {
+    if (!confirm('Mark this order as paid?')) return
+    const res = await fetch(`/api/admin/orders/${id}/mark-paid`, { method: 'POST' })
+    if (res.ok) router.refresh()
+    else alert('Failed to mark order as paid')
+  }
   const formatCurrency = (cents: number, currency: string) => {
     const amount = cents / 100
     return new Intl.NumberFormat('en-IN', {
@@ -129,6 +135,14 @@ export function OrderTable({ orders }: OrderTableProps) {
                 >
                   View Details
                 </Link>
+                {order.status === 'pending' && (
+                  <button
+                    onClick={() => onMarkPaid(order.id)}
+                    className="text-green-700 hover:text-green-900"
+                  >
+                    Mark Paid
+                  </button>
+                )}
                 <button
                   onClick={() => onDelete(order.id)}
                   className="text-red-600 hover:text-red-800"

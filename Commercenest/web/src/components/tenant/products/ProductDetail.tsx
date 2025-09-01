@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useTenant } from '@/hooks/useTenant'
+import { SITE_URLS } from '@/utils/site-urls'
 import { QuestionMarkCircleIcon, GiftIcon } from '@heroicons/react/24/outline'
 import { StarIcon } from '@heroicons/react/24/solid'
 import { Product } from '@/types/product'
@@ -23,6 +25,7 @@ interface ProductDetailProps {
 
 export function ProductDetail({ product, images }: ProductDetailProps) {
   const { addItem } = useCart()
+  const tenant = useTenant()
   const [selectedSize, setSelectedSize] = useState('')
   const [quantity, setQuantity] = useState(1)
   const [activeImage, setActiveImage] = useState(0)
@@ -62,9 +65,9 @@ export function ProductDetail({ product, images }: ProductDetailProps) {
       {/* Breadcrumb */}
       <div className="px-6 py-4 border-b border-gray-200">
         <nav className="flex items-center space-x-2 text-sm text-gray-500">
-          <Link href="/" className="hover:text-gray-700">Home</Link>
+          <Link href={SITE_URLS.home(tenant.key)} className="hover:text-gray-700">Home</Link>
           <span>»</span>
-          <Link href="/products" className="hover:text-gray-700">Products</Link>
+          <Link href={SITE_URLS.products(tenant.key)} className="hover:text-gray-700">Products</Link>
           <span>»</span>
           <span className="text-gray-900">{product.name}</span>
         </nav>

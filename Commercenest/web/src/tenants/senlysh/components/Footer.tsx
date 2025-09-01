@@ -1,8 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useTenant } from '@/hooks/useTenant'
+import { getSiteUrl } from '@/utils/site-urls'
 
 export default function Footer() {
+  const tenant = useTenant()
   return (
     <footer className="bg-gray-900 text-white">
       {/* Main Footer Content */}
@@ -173,13 +176,13 @@ export default function Footer() {
               © 2024 Senlysh. All rights reserved.
             </div>
             <div className="flex space-x-6 text-sm">
-              <Link href="/privacy" className="text-gray-400 hover:text-cyan-400 transition-colors">
+              <Link href={getSiteUrl('/privacy', tenant.key)} className="text-gray-400 hover:text-cyan-400 transition-colors">
                 Privacy Policy
               </Link>
-              <Link href="/terms" className="text-gray-400 hover:text-cyan-400 transition-colors">
+              <Link href={getSiteUrl('/terms', tenant.key)} className="text-gray-400 hover:text-cyan-400 transition-colors">
                 Terms of Service
               </Link>
-              <Link href="/cookies" className="text-gray-400 hover:text-cyan-400 transition-colors">
+              <Link href={getSiteUrl('/cookies', tenant.key)} className="text-gray-400 hover:text-cyan-400 transition-colors">
                 Cookie Policy
               </Link>
             </div>

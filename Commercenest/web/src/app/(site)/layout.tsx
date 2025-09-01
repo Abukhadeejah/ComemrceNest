@@ -57,6 +57,11 @@ export async function generateMetadata(): Promise<Metadata> {
       default: `${brand} - ${tagline}`,
       template: `%s | ${brand}`,
     },
+    icons: {
+      icon: '/icon.svg',
+      shortcut: '/icon.svg',
+      apple: '/icon.svg'
+    },
     description: cfg.brand?.tagline || 'Premium multi-tenant storefront',
     openGraph: {
       title: `${brand} - ${tagline}`,
