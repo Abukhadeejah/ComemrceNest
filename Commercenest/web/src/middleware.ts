@@ -29,9 +29,19 @@ export function middleware(request: NextRequest) {
     return NextResponse.next({ request: { headers } });
   }
 
-  // If host maps to a tenant and the path is not already tenant-prefixed, rewrite to tenant path
+  // If host maps to a tenant and the path is not already tenant-prefixed
   if (tenantFromHost && !tenantFromPath && !isGlobalRoute) {
     headers.set('x-tenant-admin', tenantFromHost);
+
+    // Special-case: Senlysh PDP should use global route `/products/[slug]`
+    const isProductsDetail = pathname.startsWith('/products/');
+    if (tenantFromHost === 'senlysh' && isProductsDetail) {
+      headers.set('x-pathname', pathname);
+      const response = NextResponse.next({ request: { headers } });
+      response.cookies.set('tenant', tenantFromHost, { path: '/', sameSite: 'lax' });
+      return response;
+    }
+
     const targetPath = pathname === '/' ? `/${tenantFromHost}` : `/${tenantFromHost}${pathname}`;
     // Ensure server components see the rewritten pathname in this request
     headers.set('x-pathname', targetPath);
@@ -63,12 +73,30 @@ export function middleware(request: NextRequest) {
     // /{tenant}/checkout -> /checkout, /{tenant}/cart -> /cart
     if (pathname === `/${tenantFromPath}/checkout` || pathname === `/${tenantFromPath}/cart`) {
       const globalTarget = `/${segments.slice(1).join('/')}` // e.g. /checkout
-      return NextResponse.rewrite(new URL(globalTarget, request.url), { request: { headers } })
+      headers.set('x-pathname', globalTarget)
+      headers.set('x-tenant-admin', tenantFromPath)
+      const response = NextResponse.rewrite(new URL(globalTarget, request.url), { request: { headers } })
+      response.cookies.set('tenant', tenantFromPath, { path: '/', sameSite: 'lax' })
+      return response
     }
     // /{tenant}/orders/{id} -> /orders/{id}
     if (segments.length >= 3 && segments[1] === 'orders') {
       const globalTarget = `/${segments.slice(1).join('/')}` // /orders/{id}[...]
-      return NextResponse.rewrite(new URL(globalTarget, request.url), { request: { headers } })
+      headers.set('x-pathname', globalTarget)
+      headers.set('x-tenant-admin', tenantFromPath)
+      const response = NextResponse.rewrite(new URL(globalTarget, request.url), { request: { headers } })
+      response.cookies.set('tenant', tenantFromPath, { path: '/', sameSite: 'lax' })
+      return response
+    }
+
+    // Senlysh PDP: /senlysh/products/{slug} -> /products/{slug}
+    if (tenantFromPath === 'senlysh' && segments.length >= 3 && segments[1] === 'products') {
+      const globalTarget = `/${segments.slice(1).join('/')}` // /products/{slug}[...]
+      headers.set('x-pathname', globalTarget)
+      headers.set('x-tenant-admin', tenantFromPath)
+      const response = NextResponse.rewrite(new URL(globalTarget, request.url), { request: { headers } })
+      response.cookies.set('tenant', tenantFromPath, { path: '/', sameSite: 'lax' })
+      return response
     }
   }
 

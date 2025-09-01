@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { QuestionMarkCircleIcon, GiftIcon } from '@heroicons/react/24/outline'
 import { StarIcon } from '@heroicons/react/24/solid'
 import { Product } from '@/types/product'
+import { useCart } from '@/lib/cart'
 
 // Type for server response which may be partial
 type ProductServerResponse = Partial<Product> & {
@@ -21,6 +22,7 @@ interface ProductDetailProps {
 }
 
 export function ProductDetail({ product, images }: ProductDetailProps) {
+  const { addItem } = useCart()
   const [selectedSize, setSelectedSize] = useState('')
   const [quantity, setQuantity] = useState(1)
   const [activeImage, setActiveImage] = useState(0)
@@ -37,6 +39,23 @@ export function ProductDetail({ product, images }: ProductDetailProps) {
   const hasDiscount = product.compare_at_price_cents && product.compare_at_price_cents > product.price_cents
 
   const allImages = product.hero_image_url ? [product.hero_image_url, ...images.map((img: Record<string, unknown>) => img.url as string)] : images.map((img: Record<string, unknown>) => img.url as string)
+
+  const handleAddToCart = () => {
+    try {
+      addItem({
+        productId: String(product.id),
+        name: String(product.name),
+        price: Number(product.price_cents || 0),
+        imageUrl: allImages[0] as string | undefined,
+        quantity,
+        variant: selectedSize
+          ? { id: `size_${selectedSize}`, name: 'Size', options: { size: selectedSize } }
+          : undefined,
+      })
+    } catch (e) {
+      console.error('Failed to add to cart', e)
+    }
+  }
 
   return (
     <div className="bg-white rounded-lg shadow-sm">
@@ -176,7 +195,7 @@ export function ProductDetail({ product, images }: ProductDetailProps) {
             </div>
 
             <div className="flex space-x-3">
-              <button className="flex-1 bg-orange-500 text-white py-3 px-6 rounded-md font-medium hover:bg-orange-600 transition-colors">
+              <button onClick={handleAddToCart} className="flex-1 bg-orange-500 text-white py-3 px-6 rounded-md font-medium hover:bg-orange-600 transition-colors">
                 ADD TO CART
               </button>
               <button className="flex-1 bg-green-600 text-white py-3 px-6 rounded-md font-medium hover:bg-green-700 transition-colors">
@@ -297,11 +316,7 @@ export function ProductDetail({ product, images }: ProductDetailProps) {
         </div>
       </div>
 
-      {/* My Rewards Floating Button */}
-      <button className="fixed bottom-6 right-6 bg-purple-600 text-white px-4 py-3 rounded-full shadow-lg hover:bg-purple-700 transition-colors flex items-center space-x-2 z-50">
-        <GiftIcon className="w-5 h-5" />
-        <span className="font-medium">My Rewards</span>
-      </button>
+      
     </div>
   )
 }

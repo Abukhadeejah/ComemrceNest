@@ -62,6 +62,7 @@ declare global {
 export default function CheckoutPage() {
   const { state: cart } = useCart()
   const tenant = useTenant()
+  const [hydrated, setHydrated] = useState(false)
   const [orderId, setOrderId] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
@@ -85,6 +86,7 @@ export default function CheckoutPage() {
 
   // Load Razorpay script
   useEffect(() => {
+    setHydrated(true)
     if (window.Razorpay) {
       setScriptLoaded(true)
       return
@@ -229,6 +231,24 @@ export default function CheckoutPage() {
     } finally {
       setBusy(false)
     }
+  }
+
+  if (!hydrated) {
+    return (
+      <main className="min-h-screen bg-gray-50">
+        <div className="mx-auto max-w-3xl px-4 py-12">
+          <h1 className={`${playfair.className} text-3xl font-bold text-gray-900 mb-2 text-center`}>Checkout</h1>
+          <div className="bg-white rounded-lg shadow-sm border p-8 mt-8">
+            <div className="animate-pulse space-y-4">
+              <div className="h-6 bg-gray-200 rounded w-1/3" />
+              <div className="h-4 bg-gray-100 rounded w-full" />
+              <div className="h-4 bg-gray-100 rounded w-5/6" />
+              <div className="h-4 bg-gray-100 rounded w-2/3" />
+            </div>
+          </div>
+        </div>
+      </main>
+    )
   }
 
   return (
