@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useContext, useReducer, useEffect, ReactNode } from 'react'
+import { useTenant } from '@/hooks/useTenant'
 
 export interface CartItem {
   id: string
@@ -128,14 +129,20 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined)
 
-const CART_STORAGE_KEY = 'commerce_cart'
+// Cart storage is tenant-scoped to avoid cross-tenant mixing in the same browser
+function getCartStorageKey(tenantKey: string | undefined) {
+  const key = tenantKey && tenantKey.length > 0 ? tenantKey : 'default'
+  return `commerce_cart_${key}`
+}
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(cartReducer, initialState)
+  const tenant = useTenant()
+  const storageKey = getCartStorageKey(tenant.key)
 
   // Load cart from localStorage on mount
   useEffect(() => {
-    const savedCart = localStorage.getItem(CART_STORAGE_KEY)
+    const savedCart = localStorage.getItem(storageKey)
     if (savedCart) {
       try {
         const cartItems = JSON.parse(savedCart)
@@ -144,12 +151,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
         console.error('Failed to load cart from localStorage:', error)
       }
     }
-  }, [])
+  }, [storageKey])
 
   // Save cart to localStorage whenever it changes
   useEffect(() => {
-    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(state.items))
-  }, [state.items])
+    localStorage.setItem(storageKey, JSON.stringify(state.items))
+  }, [state.items, storageKey])
 
   const addItem = (item: Omit<CartItem, 'id'>) => {
     dispatch({ type: 'ADD_ITEM', payload: item })

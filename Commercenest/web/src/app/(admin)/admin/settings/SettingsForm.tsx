@@ -10,6 +10,7 @@ interface Settings {
   email: string
   gstin: string
   brand_accent_hex: string
+  gst_rate_percent?: number | string
 }
 
 interface SettingsFormProps {
@@ -127,6 +128,23 @@ export function SettingsForm({ settings }: SettingsFormProps) {
             className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
             placeholder="Enter store address"
           />
+        </div>
+
+        <div>
+          <label htmlFor="gst_rate_percent" className="block text-sm font-medium text-gray-700">
+            GST Rate (%)
+          </label>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            name="gst_rate_percent"
+            id="gst_rate_percent"
+            defaultValue={settings.gst_rate_percent ?? ''}
+            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            placeholder="e.g. 18"
+          />
+          <p className="text-xs text-gray-500 mt-1">Admin-configurable GST rate applied at checkout totals.</p>
         </div>
 
         <div>
