@@ -66,6 +66,17 @@ export default function CheckoutPage() {
   const [scriptLoaded, setScriptLoaded] = useState(false)
   // test | live mode toggle (defaults to test)
   const [mode, setMode] = useState<'test' | 'live'>('test')
+  const [customer, setCustomer] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    address1: '',
+    address2: '',
+    city: '',
+    state: '',
+    pincode: '',
+    gstin: ''
+  })
 
   // Load Razorpay script
   useEffect(() => {
@@ -93,7 +104,16 @@ export default function CheckoutPage() {
       const res = await fetch('/api/checkout', { 
         method: 'POST', 
         headers: { 'content-type': 'application/json' }, 
-        body: JSON.stringify({ amountPaise, mode }) 
+        body: JSON.stringify({ 
+          amountPaise, 
+          mode, 
+          customer,
+          items: cart.items.map(it => ({
+            productId: it.productId,
+            quantity: it.quantity,
+            unitPriceCents: it.price
+          }))
+        }) 
       })
       
       if (!res.ok) {
@@ -122,8 +142,9 @@ export default function CheckoutPage() {
         description: `Order #${order.id}`,
         order_id: order.id,
         prefill: {
-          name: "Customer",
-          email: "customer@example.com",
+          name: customer.name || "Customer",
+          email: customer.email || "customer@example.com",
+          contact: customer.phone || undefined,
         },
         theme: {
           color: "#3399cc"
@@ -159,7 +180,16 @@ export default function CheckoutPage() {
       const res = await fetch('/api/checkout', { 
         method: 'POST', 
         headers: { 'content-type': 'application/json' }, 
-        body: JSON.stringify({ amountPaise: 100, mode }) 
+        body: JSON.stringify({ 
+          amountPaise: 100, 
+          mode, 
+          customer,
+          items: cart.items.map(it => ({
+            productId: it.productId,
+            quantity: it.quantity,
+            unitPriceCents: it.price
+          }))
+        }) 
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json?.error || 'checkout_failed')
@@ -232,6 +262,46 @@ export default function CheckoutPage() {
             </div>
           )}
           
+          {/* Customer details */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+            <div>
+              <label className="block text-sm text-gray-700 mb-1">Full Name</label>
+              <input className="w-full border rounded px-3 py-2" value={customer.name} onChange={e => setCustomer({ ...customer, name: e.target.value })} placeholder="Your name" />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-700 mb-1">Email</label>
+              <input className="w-full border rounded px-3 py-2" type="email" value={customer.email} onChange={e => setCustomer({ ...customer, email: e.target.value })} placeholder="you@example.com" />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-700 mb-1">Phone</label>
+              <input className="w-full border rounded px-3 py-2" value={customer.phone} onChange={e => setCustomer({ ...customer, phone: e.target.value })} placeholder="10-digit mobile" />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-700 mb-1">GSTIN (optional)</label>
+              <input className="w-full border rounded px-3 py-2" value={customer.gstin} onChange={e => setCustomer({ ...customer, gstin: e.target.value })} placeholder="22AAAAA0000A1Z5" />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm text-gray-700 mb-1">Address line 1</label>
+              <input className="w-full border rounded px-3 py-2" value={customer.address1} onChange={e => setCustomer({ ...customer, address1: e.target.value })} placeholder="House, street" />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm text-gray-700 mb-1">Address line 2</label>
+              <input className="w-full border rounded px-3 py-2" value={customer.address2} onChange={e => setCustomer({ ...customer, address2: e.target.value })} placeholder="Area, landmark (optional)" />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-700 mb-1">City</label>
+              <input className="w-full border rounded px-3 py-2" value={customer.city} onChange={e => setCustomer({ ...customer, city: e.target.value })} placeholder="City" />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-700 mb-1">State</label>
+              <input className="w-full border rounded px-3 py-2" value={customer.state} onChange={e => setCustomer({ ...customer, state: e.target.value })} placeholder="State" />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-700 mb-1">Pincode</label>
+              <input className="w-full border rounded px-3 py-2" value={customer.pincode} onChange={e => setCustomer({ ...customer, pincode: e.target.value })} placeholder="6-digit PIN" />
+            </div>
+          </div>
+
           <div className="space-y-4">
             {/* Mode selector */}
             <div className="flex items-center gap-4 mb-2">

@@ -2,7 +2,7 @@
 import { useMemo, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-// import { useRouter } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { Playfair_Display, Inter } from 'next/font/google'
 import { useCart } from '@/lib/cart'
 
@@ -23,7 +23,7 @@ type Props = {
 
 export default function PdpClient({ productId, name, description, hero_image_url, images, price_cents, tenantKey }: Props) {
   const { addItem } = useCart()
-  // const router = useRouter()
+  const router = useRouter()
   const [isAddingToCart, setIsAddingToCart] = useState(false)
 
   // Safe URL normalizer:
@@ -88,9 +88,8 @@ export default function PdpClient({ productId, name, description, hero_image_url
 
       // Show success feedback
       // You could add a toast notification here
-
-      // Optionally redirect to cart
-      // router.push('/cart')
+      // Redirect to cart for clear confirmation and to proceed to checkout
+      router.push('/cart')
     } catch (error) {
       console.error('Failed to add to cart:', error)
     } finally {
@@ -228,6 +227,7 @@ export default function PdpClient({ productId, name, description, hero_image_url
             t.classList.remove('active'); void t.offsetWidth; t.classList.add('active')
           }}>
             <button
+              type="button"
               onClick={handleAddToCart}
               disabled={isAddingToCart}
               className="inline-flex items-center justify-center gap-2 rounded-full bg-[color:var(--color-mustard)] text-[color:var(--color-brown)] px-8 py-4 font-semibold shadow-[0_12px_40px_rgba(253,206,89,0.35)] transition-all hover:shadow-[0_16px_50px_rgba(253,206,89,0.55)] hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"

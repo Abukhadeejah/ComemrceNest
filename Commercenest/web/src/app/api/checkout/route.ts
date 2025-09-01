@@ -44,7 +44,26 @@ export async function POST(request: Request) {
   }
 
   const client = new Razorpay({ key_id: keyId, key_secret: keySecret })
-  const body = (await request.json().catch(() => ({}))) as { amountPaise?: number }
+  const body = (await request.json().catch(() => ({}))) as {
+    amountPaise?: number
+    mode?: 'test' | 'live'
+    customer?: {
+      name?: string
+      email?: string
+      phone?: string
+      address1?: string
+      address2?: string
+      city?: string
+      state?: string
+      pincode?: string
+      gstin?: string
+    }
+    items?: Array<{
+      productId: string
+      quantity: number
+      unitPriceCents: number
+    }>
+  }
   const amountPaise = typeof body.amountPaise === 'number' ? body.amountPaise : 100 // minimal default
 
   // Razorpay requires receipt length <= 40
@@ -56,20 +75,54 @@ export async function POST(request: Request) {
     amount: amountPaise,
     currency: 'INR',
     receipt,
-    notes: { tenant_id: tenantId },
+    notes: {
+      tenant_id: tenantId,
+      name: body.customer?.name || '',
+      phone: body.customer?.phone || '',
+      email: body.customer?.email || '',
+      address1: body.customer?.address1 || '',
+      address2: body.customer?.address2 || '',
+      city: body.customer?.city || '',
+      state: body.customer?.state || '',
+      pincode: body.customer?.pincode || '',
+      gstin: body.customer?.gstin || '',
+    },
   })
 
-  // Persist order shell
-  await supabaseAdmin.from('orders').insert({
+  // Persist order shell and retrieve ID
+  const { data: insertedOrders, error: insertErr } = await supabaseAdmin.from('orders').insert({
     tenant_id: tenantId,
     order_number: order.id,
-    email: 'guest@example.com',
+    email: body.customer?.email || 'guest@example.com',
     total_cents: amountPaise,
     currency: 'INR',
     status: 'pending',
     payment_provider: 'razorpay',
     razorpay_order_id: order.id,
-  })
+  }).select('id').limit(1)
+
+  if (insertErr) {
+    return NextResponse.json({ error: insertErr.message }, { status: 500 })
+  }
+
+  const orderRow = insertedOrders?.[0]
+  const orderId = orderRow?.id as string | undefined
+
+  // Persist order items if provided
+  if (orderId && Array.isArray(body.items) && body.items.length > 0) {
+    const itemsPayload = body.items.map(it => ({
+      tenant_id: tenantId,
+      order_id: orderId,
+      product_id: it.productId,
+      quantity: it.quantity,
+      unit_price_cents: it.unitPriceCents,
+      subtotal_cents: it.unitPriceCents * it.quantity,
+    }))
+    const { error: itemsErr } = await supabaseAdmin.from('order_items').insert(itemsPayload)
+    if (itemsErr) {
+      return NextResponse.json({ error: itemsErr.message }, { status: 500 })
+    }
+  }
 
   return NextResponse.json({ order, keyId })
 }
