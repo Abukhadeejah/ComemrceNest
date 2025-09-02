@@ -12,6 +12,7 @@ interface Project {
   location?: string
   hero_image_url?: string
   featured?: boolean
+  slug?: string
 }
 
 interface TenantConfig {
@@ -38,9 +39,10 @@ interface TenantConfig {
 interface TenantPortfolioProps {
   projects: Project[]
   tenantConfig: TenantConfig
+  basePath?: string
 }
 
-export function TenantPortfolio({ projects, tenantConfig }: TenantPortfolioProps) {
+export function TenantPortfolio({ projects, tenantConfig, basePath = '' }: TenantPortfolioProps) {
   const isInteriorDesign = tenantConfig.name.toLowerCase().includes('interior')
   const projectType = isInteriorDesign ? 'Interior Design' : 'Project'
   
@@ -77,6 +79,7 @@ export function TenantPortfolio({ projects, tenantConfig }: TenantPortfolioProps
                   project={project} 
                   index={index}
                   projectType={projectType}
+                  basePath={basePath}
                 />
               ))}
             </div>
@@ -92,9 +95,13 @@ export function TenantPortfolio({ projects, tenantConfig }: TenantPortfolioProps
   )
 }
 
-function ProjectCard({ project, index, projectType }: { project: Project; index: number; projectType: string }) {
+function ProjectCard({ project, index, projectType, basePath = '' }: { project: Project; index: number; projectType: string; basePath?: string }) {
   return (
-    <div 
+    <Link href={project.slug ? `${basePath}/portfolio/${project.slug}` : '#'}
+      className="group bg-white rounded-2xl overflow-hidden border border-primary/10 hover:border-mustard/40 shadow-md hover:shadow-xl transition-all duration-700 ease-out hover:-translate-y-1 block"
+      style={{ animationDelay: `${index * 120}ms` }}
+    >
+      <div 
       className="group bg-white rounded-2xl overflow-hidden border border-primary/10 hover:border-mustard/40 shadow-md hover:shadow-xl transition-all duration-700 ease-out hover:-translate-y-1"
       style={{ animationDelay: `${index * 120}ms` }}
     >
@@ -164,7 +171,8 @@ function ProjectCard({ project, index, projectType }: { project: Project; index:
           </svg>
         </div>
       </div>
-    </div>
+      </div>
+    </Link>
   )
 }
 

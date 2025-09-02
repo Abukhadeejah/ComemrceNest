@@ -5,6 +5,7 @@ import { headers, cookies } from 'next/headers'
 import { AdminSidebar } from '@/components/admin/layout/AdminSidebar'
 import AdminBrandingWrapper from '@/components/admin/AdminBrandingWrapper'
 import type { TenantKey } from '@/registry/types'
+import { getEnabledModules } from '@/server/adminModules'
 
 export async function generateMetadata(): Promise<Metadata> {
   const hdrs = await headers()
@@ -47,9 +48,12 @@ export default async function AdminLayout({
   }
   if (!tenantKey) tenantKey = 'bluebell'
 
+  // Fetch enabled modules server-side and pass to client via data attribute
+  const enabledModules = await getEnabledModules(tenantId)
+
   return (
     <AdminBrandingWrapper tenantKey={tenantKey}>
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50" data-enabled-modules={JSON.stringify(Array.from(enabledModules))}>
         <AdminSidebar />
         <div className="lg:pl-64">
           <main className="py-6">

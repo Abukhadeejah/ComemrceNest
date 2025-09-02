@@ -17,6 +17,7 @@ export default async function BluebellPortfolioPage() {
   
   const { data: projects } = await fetchPublishedProjects(tenantId)
   const tenantConfig = await getTenantConfig(tenantId)
+  const basePath = '/bluebell'
   
   if (!tenantConfig) {
     return (
@@ -27,7 +28,7 @@ export default async function BluebellPortfolioPage() {
     )
   }
 
-  return <TenantPortfolio projects={projects || []} tenantConfig={tenantConfig} />
+  return <TenantPortfolio projects={projects || []} tenantConfig={tenantConfig} basePath={basePath} />
 }
 
 export async function generateMetadata(): Promise<Metadata> {

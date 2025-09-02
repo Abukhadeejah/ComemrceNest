@@ -13,6 +13,19 @@ interface CustomersPageProps {
 
 export default async function CustomersPage({ searchParams }: CustomersPageProps) {
   const params = await searchParams
+  // Gate route by module
+  const { resolveTenantIdFromRequest } = await import('@/server/tenant')
+  const { isModuleEnabled } = await import('@/server/adminModules')
+  const tenantId = await resolveTenantIdFromRequest()
+  const allowed = tenantId ? await isModuleEnabled(tenantId, 'customers') : false
+  if (!allowed) {
+    return (
+      <div className="p-6">
+        <h1 className="text-lg font-semibold">Module unavailable</h1>
+        <p className="text-sm text-neutral-600">This module is not enabled for your plan. Contact support to upgrade.</p>
+      </div>
+    )
+  }
   
   return (
     <div className="space-y-6">
@@ -21,9 +34,19 @@ export default async function CustomersPage({ searchParams }: CustomersPageProps
           <h1 className="text-2xl font-semibold text-gray-900">Customers</h1>
           <p className="text-sm text-gray-600">Manage your customer database</p>
         </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50"
+            title="Export CSV (coming soon)"
+            disabled
+          >
+            Export CSV
+          </button>
+        </div>
       </div>
 
-      <Suspense fallback={<div>Loading customers...</div>}>
+      <Suspense fallback={<div className="p-6 text-sm text-gray-600">Loading customers...</div>}>
         <CustomersContent params={params} />
       </Suspense>
     </div>

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Playfair_Display } from 'next/font/google';
 import { useCart } from '@/lib/cart';
 import { useTenant } from '@/hooks/useTenant';
@@ -18,6 +19,17 @@ export default function Header() {
   // Feature flags (to be controlled from superadmin later)
   const showNewArrivals = false
   const showSale = false
+
+  const pathname = usePathname()
+  const isActive = (href: string) => {
+    if (!pathname) return false
+    if (href === basePath) {
+      return pathname === basePath || pathname === `${basePath}/`
+    }
+    return pathname.startsWith(href)
+  }
+  const navClass = (href: string) => `text-gray-800 hover:text-primary font-semibold text-sm uppercase tracking-wide transition-colors pb-1 border-b-2 ${isActive(href) ? 'border-primary' : 'border-transparent'}`
+  const mobileNavClass = (href: string) => `text-gray-800 hover:text-primary font-semibold text-base uppercase tracking-wide transition-colors pb-2 border-b-2 ${isActive(href) ? 'border-primary' : 'border-transparent'}`
 
   const [categories, setCategories] = useState<Array<{ id: string; name: string; slug: string; parent_id: string | null }>>([])
 
@@ -97,11 +109,11 @@ export default function Header() {
 
             {/* Navigation Menu - Desktop */}
             <nav className="hidden lg:flex space-x-8">
-              <Link href={basePath} className="text-gray-800 hover:text-primary font-semibold text-sm uppercase tracking-wide transition-colors border-b-2 border-primary pb-1">
+              <Link href={basePath} className={navClass(basePath)}>
                 HOME
               </Link>
               <div className="relative group">
-                <Link href={`${basePath}/products`} className="text-gray-800 hover:text-primary font-semibold text-sm uppercase tracking-wide transition-colors pb-1 flex items-center gap-1">
+                <Link href={`${basePath}/products`} className={`${navClass(`${basePath}/products`)} flex items-center gap-1`}>
                   FABRICS
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -119,25 +131,26 @@ export default function Header() {
                   )}
                 </div>
               </div>
-              <Link href={`${basePath}/portfolio`} className="text-gray-800 hover:text-primary font-semibold text-sm uppercase tracking-wide transition-colors pb-1">
+              <Link href={`${basePath}/portfolio`} className={navClass(`${basePath}/portfolio`)}>
                 PORTFOLIO
               </Link>
               {showNewArrivals ? (
-                <Link href={`${basePath}/new-arrivals`} className="text-gray-800 hover:text-primary font-semibold text-sm uppercase tracking-wide transition-colors pb-1">
+                <Link href={`${basePath}/new-arrivals`} className={navClass(`${basePath}/new-arrivals`)}>
                   NEW ARRIVALS
                 </Link>
               ) : null}
               {showSale ? (
-                <Link href={`${basePath}/sale`} className="text-mustard hover:text-primary font-semibold text-sm uppercase tracking-wide transition-colors pb-1">
+                <Link href={`${basePath}/sale`} className={navClass(`${basePath}/sale`)}>
                   SALE
                 </Link>
               ) : null}
-              <Link href={`${basePath}/about`} className="text-gray-800 hover:text-primary font-semibold text-sm uppercase tracking-wide transition-colors pb-1">
+              <Link href={`${basePath}/about`} className={navClass(`${basePath}/about`)}>
                 ABOUT US
               </Link>
-              <Link href={`${basePath}/contact`} className="text-gray-800 hover:text-primary font-semibold text-sm uppercase tracking-wide transition-colors pb-1">
+              <Link href={`${basePath}/contact`} className={navClass(`${basePath}/contact`)}>
                 CONTACT
               </Link>
+              
             </nav>
 
             {/* Hamburger Menu Button - Mobile/Tablet */}
@@ -214,7 +227,7 @@ export default function Header() {
               <div className="flex flex-col space-y-4">
                 <Link 
                   href={basePath} 
-                  className="text-gray-800 hover:text-primary font-semibold text-base uppercase tracking-wide transition-colors border-b-2 border-primary pb-2"
+                  className={mobileNavClass(basePath)}
                   onClick={() => setIsMenuOpen(false)}
                 >
                   HOME
@@ -222,7 +235,7 @@ export default function Header() {
                 <div className="space-y-2">
                   <Link 
                     href={`${basePath}/products`} 
-                    className="text-gray-800 hover:text-primary font-semibold text-base uppercase tracking-wide transition-colors pb-2 block"
+                    className={`${mobileNavClass(`${basePath}/products`)} block`}
                     onClick={() => setIsMenuOpen(false)}
                   >
                     FABRICS
@@ -236,7 +249,7 @@ export default function Header() {
                 </div>
                 <Link 
                   href={`${basePath}/portfolio`} 
-                  className="text-gray-800 hover:text-primary font-semibold text-base uppercase tracking-wide transition-colors pb-2"
+                  className={mobileNavClass(`${basePath}/portfolio`)}
                   onClick={() => setIsMenuOpen(false)}
                 >
                   PORTFOLIO
@@ -244,7 +257,7 @@ export default function Header() {
                 {showNewArrivals ? (
                   <Link 
                     href={`${basePath}/new-arrivals`} 
-                    className="text-gray-800 hover:text-primary font-semibold text-base uppercase tracking-wide transition-colors pb-2"
+                    className={mobileNavClass(`${basePath}/new-arrivals`)}
                     onClick={() => setIsMenuOpen(false)}
                   >
                     NEW ARRIVALS
@@ -253,7 +266,7 @@ export default function Header() {
                 {showSale ? (
                   <Link 
                     href={`${basePath}/sale`} 
-                    className="text-mustard hover:text-primary font-semibold text-base uppercase tracking-wide transition-colors pb-2"
+                    className={mobileNavClass(`${basePath}/sale`)}
                     onClick={() => setIsMenuOpen(false)}
                   >
                     SALE
@@ -261,18 +274,19 @@ export default function Header() {
                 ) : null}
                 <Link 
                   href={`${basePath}/about`} 
-                  className="text-gray-800 hover:text-primary font-semibold text-base uppercase tracking-wide transition-colors pb-2"
+                  className={mobileNavClass(`${basePath}/about`)}
                   onClick={() => setIsMenuOpen(false)}
                 >
                   ABOUT US
                 </Link>
                 <Link 
                   href={`${basePath}/contact`} 
-                  className="text-gray-800 hover:text-primary font-semibold text-base uppercase tracking-wide transition-colors pb-2"
+                  className={mobileNavClass(`${basePath}/contact`)}
                   onClick={() => setIsMenuOpen(false)}
                 >
                   CONTACT
                 </Link>
+                
               </div>
             </nav>
           </div>

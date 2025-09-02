@@ -14,17 +14,25 @@ import {
 } from '@heroicons/react/24/outline'
 import { ADMIN_URLS } from '@/utils/admin-urls'
 import { useAdminBranding, useAdminTenantKey } from '@/components/admin/AdminBrandingWrapper'
+import { BriefcaseIcon } from '@heroicons/react/24/outline'
 
-function buildNavigation(tenant?: string) {
-  return [
-    { name: 'Dashboard', href: ADMIN_URLS.dashboard(tenant), icon: HomeIcon },
-    { name: 'Products', href: ADMIN_URLS.products(tenant), icon: CubeIcon },
-    { name: 'Categories', href: ADMIN_URLS.categories(tenant), icon: TagIcon },
-    { name: 'Orders', href: ADMIN_URLS.orders(tenant), icon: ShoppingCartIcon },
-    { name: 'Customers', href: ADMIN_URLS.customers(tenant), icon: UsersIcon },
-    { name: 'Analytics', href: ADMIN_URLS.analytics(tenant), icon: ChartBarIcon },
-    { name: 'Settings', href: ADMIN_URLS.settings(tenant), icon: Cog6ToothIcon },
-  ]
+function buildNavigation(tenant?: string, enabledModules?: Set<string>) {
+  const base = [
+    { key: 'dashboard', name: 'Dashboard', href: ADMIN_URLS.dashboard(tenant), icon: HomeIcon },
+    { key: 'products', name: 'Products', href: ADMIN_URLS.products(tenant), icon: CubeIcon },
+    { key: 'categories', name: 'Categories', href: ADMIN_URLS.categories(tenant), icon: TagIcon },
+    { key: 'orders', name: 'Orders', href: ADMIN_URLS.orders(tenant), icon: ShoppingCartIcon },
+    { key: 'customers', name: 'Customers', href: ADMIN_URLS.customers(tenant), icon: UsersIcon },
+    { key: 'portfolio', name: 'Portfolio', href: ADMIN_URLS.portfolio(tenant), icon: BriefcaseIcon },
+    { key: 'analytics', name: 'Analytics', href: ADMIN_URLS.analytics(tenant), icon: ChartBarIcon },
+    { key: 'settings', name: 'Settings', href: ADMIN_URLS.settings(tenant), icon: Cog6ToothIcon },
+  ] as const
+
+  if (!enabledModules) return base
+
+  // Always show dashboard, settings; gate others by enabled modules
+  const always = new Set(['dashboard', 'settings'])
+  return base.filter(item => always.has(item.key) || enabledModules.has(item.key))
 }
 
 interface AdminSidebarProps {
@@ -36,7 +44,18 @@ export function AdminSidebar({ open = false, setOpen }: AdminSidebarProps) {
   const pathname = usePathname()
   const brandingConfig = useAdminBranding()
   const tenantKey = useAdminTenantKey()
-  const navigation = buildNavigation(tenantKey)
+  // Enabled modules are injected by parent layout via data-* attribute on body for simplicity (SSR safe)
+  // Fallback to show all if not provided.
+  let enabledModules: Set<string> | undefined
+  if (typeof document !== 'undefined') {
+    const data = document.body?.getAttribute('data-enabled-modules')
+    if (data) {
+      try {
+        enabledModules = new Set(JSON.parse(data))
+      } catch {}
+    }
+  }
+  const navigation = buildNavigation(tenantKey, enabledModules)
 
   return (
     <>
