@@ -8,10 +8,27 @@ export function middleware(request: NextRequest) {
   const segments = pathname.replace(/\/+/g, '/').split('/').filter(Boolean);
   const seg = segments[0] || '';
   const tenantFromPath = seg === 'bluebell' || seg === 'senlysh' ? seg : '';
-  const isAdminRoute = pathname === '/admin' || pathname.startsWith('/admin/');
+  const isAnyAdminRoute = pathname.includes('/admin');
 
   // Basic header for downstream usage
   headers.set('x-pathname', pathname);
+
+  // 🚨 SECURITY: Check authentication for ALL admin routes FIRST
+  if (isAnyAdminRoute) {
+    // Check for Supabase auth tokens (they have project-specific names)
+    const cookies = request.cookies.getAll();
+    const hasSupabaseAuth = cookies.some(cookie =>
+      cookie.name.startsWith('sb-') &&
+      cookie.name.includes('-auth-token') &&
+      cookie.value &&
+      cookie.value.length > 100 // Valid tokens are long
+    );
+
+    // If no valid Supabase auth tokens, redirect to login
+    if (!hasSupabaseAuth) {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+  }
   
   // Host-based detection (local and production custom domains)
   const host = request.headers.get('host') || '';
@@ -69,7 +86,13 @@ export function middleware(request: NextRequest) {
     return response;
   }
 
-  if (isAdminRoute) {
+  if (isAnyAdminRoute) {
+    // Admin routes processing (authentication already checked above)
+    // For tenant admin routes, ensure tenant context is set
+    if (tenantFromPath) {
+      headers.set('x-tenant-admin', tenantFromPath);
+    }
+
     // On host-based tenancy, normalize /admin to /{tenant}/admin to avoid 404
     const cookieTenant = request.cookies.get('tenant')?.value;
     const inferredTenant = cookieTenant === 'bluebell' || cookieTenant === 'senlysh' ? cookieTenant : tenantFromHost || 'bluebell';

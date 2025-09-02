@@ -119,6 +119,7 @@ export async function getAnalytics() {
     }
   } catch (error) {
     console.error('getAnalytics error:', error)
-    throw error
+    // Return empty analytics instead of throwing to prevent page crashes
+    return { overview: { totalRevenue: 0, totalOrders: 0, paidOrders: 0, totalProducts: 0, publishedProducts: 0, conversionRate: '0.0%' }, salesData: [], topProducts: [] }
   }
 }

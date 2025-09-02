@@ -67,7 +67,7 @@ export function AdminSidebar({ open = false, setOpen }: AdminSidebarProps) {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               className="h-8 w-auto"
-              src={brandingConfig?.brandLogo || "/images/senlysh/logo.png"}
+              src={brandingConfig?.brandLogo || "/logo.svg"}
               alt={brandingConfig?.brandName || "Logo"}
             />
             <button
@@ -113,7 +113,7 @@ export function AdminSidebar({ open = false, setOpen }: AdminSidebarProps) {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               className="h-8 w-auto"
-              src={brandingConfig?.brandLogo || "/images/senlysh/logo.png"}
+              src={brandingConfig?.brandLogo || "/logo.svg"}
               alt={brandingConfig?.brandName || "Logo"}
             />
           </div>

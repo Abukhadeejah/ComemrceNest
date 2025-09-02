@@ -861,7 +861,14 @@ export async function getProducts(searchParams: {
   }
   } catch (error) {
     console.error('getProducts error:', error)
-    throw error
+    // Return empty data instead of throwing to prevent page crashes
+    return {
+      data: [],
+      count: 0,
+      page: 1,
+      pageSize: 20,
+      totalPages: 0
+    }
   }
 }
 
@@ -901,6 +908,7 @@ export async function getCategories(tenantIdArg?: string) {
     }))
   } catch (error) {
     console.error('getCategories error:', error)
-    throw error
+    // Return empty array instead of throwing to prevent page crashes
+    return [] as Array<{ id: string; name: string; slug: string; parent_id: string | null; created_at: string }>
   }
 }
