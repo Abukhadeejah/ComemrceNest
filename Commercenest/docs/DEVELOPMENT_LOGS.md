@@ -514,3 +514,48 @@ type RegistryEntry = {
 3) Cart + Checkout: finalize add-to-cart; implement checkout form with name, contact, address, optional GSTIN, totals with/without GST; ensure `orders.payment_env` tagging and webhook verify in test.
 4) Full E2E on staging across both tenants (public and admin flows) and report.
 
+## Session: 2025-08-31 – Senlysh pages/nav, Bluebell category nav, checkout guest form + order items
+
+### Overview
+- Tenant public UX alignment for Senlysh (tenant-aware links and missing pages).
+- Bluebell header “Shop” menu wired to live categories from backend (tenant-aware links).
+- Checkout upgraded to standard e‑commerce flow: guest details form and API persistence; add-to-cart UX improved.
+- Minor admin auth reliability improvement with server `whoami` endpoint.
+
+### Changes
+- Senlysh public navigation
+  - Updated tenant-aware links in `web/src/tenants/senlysh/components/Header.tsx` and `Footer.tsx` to keep URLs under `/senlysh/...` on staging.
+  - Added pages with tenant-branded layouts:
+    - `web/src/app/(site)/senlysh/new-arrivals/page.tsx`
+    - `web/src/app/(site)/senlysh/sale/page.tsx`
+    - `web/src/app/(site)/senlysh/about/page.tsx`
+    - `web/src/app/(site)/senlysh/contact/page.tsx`
+- Bluebell category-driven nav
+  - New API: `web/src/app/api/site/categories/route.ts` returns tenant categories.
+  - Bluebell header loads categories client-side and links to `/{tenant}/products?category=...`:
+    - `web/src/tenants/bluebell/components/Header.tsx`.
+- Cart / PDP UX
+  - PDP Add to Cart now routes to `/cart` after adding for clear feedback:
+    - `web/src/app/(site)/products/[slug]/PdpClient.tsx`.
+- Checkout (guest form + API persistence)
+  - Checkout page includes guest details (name, email, phone, address lines, city, state, pincode, GSTIN) and prefills Razorpay:
+    - `web/src/app/(site)/checkout/page.tsx`.
+  - Checkout API now accepts `customer` + `items` payloads, stores email on `orders`, passes details into Razorpay `notes`, and persists `order_items`:
+    - `web/src/app/api/checkout/route.ts`.
+- Admin auth resiliency
+  - Server `whoami` endpoint and `AuthGate` check path to reduce client race conditions:
+    - `web/src/app/api/auth/whoami/route.ts`
+    - `web/src/components/admin/AuthGate.tsx`.
+
+### Testing
+- Local (bluebell.local):
+  - Public: Home → PLP → PDP → Add to Cart → Cart → Checkout form → Create test order → Simulate payment.
+  - Admin: Login → `/bluebell/admin` sections render; no blocking errors observed.
+- Staging: pending full pass after deploy; Senlysh pages/links verified earlier.
+
+### Notes / Next
+- Extend checkout totals to include GST (with/without GST) and show a clear summary.
+- Ensure `orders.payment_env` tagging and webhook verification remain correct across test/live.
+- Persist full customer details on orders (JSON) if needed for invoicing and address book.
+- Full E2E on staging for both tenants (public + admin) and close gaps, then push to production.
+
