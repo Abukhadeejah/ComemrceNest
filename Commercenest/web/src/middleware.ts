@@ -70,11 +70,14 @@ export function middleware(request: NextRequest) {
   }
 
   if (isAdminRoute) {
+    // On host-based tenancy, normalize /admin to /{tenant}/admin to avoid 404
     const cookieTenant = request.cookies.get('tenant')?.value;
-    const inferredTenant = cookieTenant === 'bluebell' || cookieTenant === 'senlysh' ? cookieTenant : 'bluebell';
+    const inferredTenant = cookieTenant === 'bluebell' || cookieTenant === 'senlysh' ? cookieTenant : tenantFromHost || 'bluebell';
     headers.set('x-tenant-admin', inferredTenant);
-    const response = NextResponse.next({ request: { headers } });
-    // Ensure cookie is set for subsequent requests
+    const target = pathname === '/admin' ? `/${inferredTenant}/admin` : pathname
+    const response = pathname === '/admin'
+      ? NextResponse.rewrite(new URL(target, request.url), { request: { headers } })
+      : NextResponse.next({ request: { headers } });
     response.cookies.set('tenant', inferredTenant, { path: '/', sameSite: 'lax' });
     return response;
   }
