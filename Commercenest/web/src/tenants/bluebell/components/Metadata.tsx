@@ -61,7 +61,7 @@ export const defaultMetadata: Metadata = {
       { url: '/favicon-bluebell.svg' },
     ],
   },
-  manifest: '/manifest.json',
+  manifest: '/manifest.webmanifest',
 }
 
 export function getPageMetadata(pageTitle?: string, pageDescription?: string): Metadata {

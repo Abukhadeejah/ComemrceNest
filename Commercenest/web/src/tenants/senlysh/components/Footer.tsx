@@ -1,8 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useTenant } from '@/hooks/useTenant'
+import { getSiteUrl } from '@/utils/site-urls'
 
 export default function Footer() {
+  const tenant = useTenant()
   return (
     <footer className="bg-gray-900 text-white">
       {/* Main Footer Content */}
@@ -48,27 +51,27 @@ export default function Footer() {
             <h4 className="text-lg font-semibold text-cyan-400 mb-6">Quick Links</h4>
             <ul className="space-y-3">
               <li>
-                <Link href="/" className="text-gray-300 hover:text-cyan-400 transition-colors">
+                <Link href="/senlysh" className="text-gray-300 hover:text-cyan-400 transition-colors">
                   Home
                 </Link>
               </li>
               <li>
-                <Link href="/products" className="text-gray-300 hover:text-cyan-400 transition-colors">
+                <Link href="/senlysh/products" className="text-gray-300 hover:text-cyan-400 transition-colors">
                   Shop All
                 </Link>
               </li>
               <li>
-                <Link href="/sale" className="text-gray-300 hover:text-cyan-400 transition-colors">
+                <Link href="/senlysh/sale" className="text-gray-300 hover:text-cyan-400 transition-colors">
                   Sale Items
                 </Link>
               </li>
               <li>
-                <Link href="/new-arrivals" className="text-gray-300 hover:text-cyan-400 transition-colors">
+                <Link href="/senlysh/new-arrivals" className="text-gray-300 hover:text-cyan-400 transition-colors">
                   New Arrivals
                 </Link>
               </li>
               <li>
-                <Link href="/trending" className="text-gray-300 hover:text-cyan-400 transition-colors">
+                <Link href="/senlysh/products?sort=popularity" className="text-gray-300 hover:text-cyan-400 transition-colors">
                   Trending
                 </Link>
               </li>
@@ -80,27 +83,27 @@ export default function Footer() {
             <h4 className="text-lg font-semibold text-cyan-400 mb-6">Categories</h4>
             <ul className="space-y-3">
               <li>
-                <Link href="/category/dresses" className="text-gray-300 hover:text-cyan-400 transition-colors">
+                <Link href="/senlysh/products?category=dresses" className="text-gray-300 hover:text-cyan-400 transition-colors">
                   Dresses
                 </Link>
               </li>
               <li>
-                <Link href="/category/tops" className="text-gray-300 hover:text-cyan-400 transition-colors">
+                <Link href="/senlysh/products?category=tops" className="text-gray-300 hover:text-cyan-400 transition-colors">
                   Tops & Blouses
                 </Link>
               </li>
               <li>
-                <Link href="/category/bottoms" className="text-gray-300 hover:text-cyan-400 transition-colors">
+                <Link href="/senlysh/products?category=bottoms" className="text-gray-300 hover:text-cyan-400 transition-colors">
                   Bottoms
                 </Link>
               </li>
               <li>
-                <Link href="/category/accessories" className="text-gray-300 hover:text-cyan-400 transition-colors">
+                <Link href="/senlysh/products?category=accessories" className="text-gray-300 hover:text-cyan-400 transition-colors">
                   Accessories
                 </Link>
               </li>
               <li>
-                <Link href="/category/shoes" className="text-gray-300 hover:text-cyan-400 transition-colors">
+                <Link href="/senlysh/products?category=shoes" className="text-gray-300 hover:text-cyan-400 transition-colors">
                   Shoes
                 </Link>
               </li>
@@ -173,13 +176,13 @@ export default function Footer() {
               © 2024 Senlysh. All rights reserved.
             </div>
             <div className="flex space-x-6 text-sm">
-              <Link href="/privacy" className="text-gray-400 hover:text-cyan-400 transition-colors">
+              <Link href={getSiteUrl('/privacy', tenant.key)} className="text-gray-400 hover:text-cyan-400 transition-colors">
                 Privacy Policy
               </Link>
-              <Link href="/terms" className="text-gray-400 hover:text-cyan-400 transition-colors">
+              <Link href={getSiteUrl('/terms', tenant.key)} className="text-gray-400 hover:text-cyan-400 transition-colors">
                 Terms of Service
               </Link>
-              <Link href="/cookies" className="text-gray-400 hover:text-cyan-400 transition-colors">
+              <Link href={getSiteUrl('/cookies', tenant.key)} className="text-gray-400 hover:text-cyan-400 transition-colors">
                 Cookie Policy
               </Link>
             </div>

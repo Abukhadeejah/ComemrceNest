@@ -69,6 +69,19 @@ export default function Footer() {
                 <span className="w-2 h-2 bg-red-500 rounded-full mr-3 group-hover:bg-yellow-400 transition-colors"></span>
                 Contact
               </Link></li>
+              <li><Link href="/bluebell/shipping" className="text-white/80 hover:text-yellow-400 transition-all duration-300 flex items-center group">
+                <span className="w-2 h-2 bg-red-500 rounded-full mr-3 group-hover:bg-yellow-400 transition-colors"></span>
+                Shipping
+              </Link></li>
+              <li><Link href="/bluebell/returns" className="text-white/80 hover:text-yellow-400 transition-all duration-300 flex items-center group">
+                <span className="w-2 h-2 bg-red-500 rounded-full mr-3 group-hover:bg-yellow-400 transition-colors"></span>
+                Returns
+              </Link></li>
+              
+              <li><Link href="/bluebell/faq" className="text-white/80 hover:text-yellow-400 transition-all duration-300 flex items-center group">
+                <span className="w-2 h-2 bg-red-500 rounded-full mr-3 group-hover:bg-yellow-400 transition-colors"></span>
+                FAQ
+              </Link></li>
             </ul>
           </div>
           

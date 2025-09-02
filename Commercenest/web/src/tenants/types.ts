@@ -48,6 +48,10 @@ export type TenantConfig = {
     enabledModules: string[]
     customComponents?: Record<string, React.ComponentType<unknown>>
   }
+  // Pricing and taxation (tenant-specific)
+  pricing?: {
+    gstRatePercent?: number
+  }
 }
 
 

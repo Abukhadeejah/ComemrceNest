@@ -56,6 +56,9 @@ export const bluebellConfig: TenantConfig = {
   features: {
     enabledModules: ['products','portfolio'],
   },
+  pricing: {
+    gstRatePercent: 18,
+  },
 }
 
 

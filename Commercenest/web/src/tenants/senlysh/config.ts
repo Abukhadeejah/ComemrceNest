@@ -68,4 +68,7 @@ export const senlyshConfig: TenantConfig = {
   features: {
     enabledModules: ['products', 'categories', 'reviews'],
   },
+  pricing: {
+    gstRatePercent: 12,
+  },
 }

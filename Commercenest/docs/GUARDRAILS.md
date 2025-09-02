@@ -192,7 +192,7 @@ These rules codify tenant safety and SSR/auth behavior. They complement, not rep
 3) Routing
    - Site pages live under `/(site)/[tenant]/...`
    - Admin pages live under `/(tenant-admin)/[tenant]/admin/...`
-   - Use `ADMIN_URLS` helpers for links; avoid raw strings
+   - Use `ADMIN_URLS`/`SITE_URLS` helpers for links; avoid raw strings
 
 4) Cookies & SSR
    - `getAuthenticatedUserId()` derives from the Supabase auth cookie first, then falls back to SSR `getUser()`
@@ -209,3 +209,40 @@ These rules codify tenant safety and SSR/auth behavior. They complement, not rep
 
 7) ADR for foundational changes
    - No architectural shifts without a short ADR and explicit approval
+
+---
+
+## 🌐 Host-based Tenancy Routing Model (Production) – Canonical
+
+This section defines how routing, links, and tenancy resolution work across environments.
+
+1) Resolution source of truth
+   - Middleware resolves tenant exactly once per request.
+   - Production: derive from `Host` (e.g., `bluebell.in` → `bluebell`).
+   - Staging/local: support `/{tenant}/...` path fallback and a `tenant` cookie; header set for server.
+
+2) URL model
+   - Production: clean paths without tenant segment (e.g., `/products`, `/admin`).
+   - Staging/local: path-based tenancy (`/{tenant}/...`) stays supported for QA.
+   - UI must generate links via `SITE_URLS`/`ADMIN_URLS` so host/path differences are abstracted.
+
+3) API shape
+   - Keep `/api/...` tenant-agnostic; resolve tenant in handler from headers/cookies.
+   - Never duplicate API trees per tenant.
+
+4) Caching & data safety
+   - Include `tenantId`/host in cache/revalidation keys to prevent cross-tenant data bleed.
+   - All queries must filter by `tenantId`; never trust session alone for scoping.
+
+5) SEO & sitemaps
+   - Generate canonical URLs per domain; per-tenant sitemap/robots.
+   - Mark path-based staging routes as `noindex`.
+
+6) Admin exposure
+   - Prod: `/admin` on custom domains (plus children) with UI gating and server mutation checks.
+   - Staging/local: also support `/{tenant}/admin/...`.
+
+7) Enforcement guardrails
+   - No hardcoded route strings in UI. Use URL helpers only.
+   - Middleware must remain lightweight (no DB calls). Unknown hosts: return 404 or landing, per config.
+   - Payments/webhooks include `tenantId` in metadata; do not rely on Host in webhook handlers.

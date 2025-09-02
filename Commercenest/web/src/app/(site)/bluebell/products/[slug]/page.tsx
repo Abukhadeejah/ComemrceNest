@@ -23,7 +23,7 @@ export default async function BluebellProductPage({ params }: BluebellProductPag
     notFound()
   }
 
-  const { data: images } = await fetchProductImages(tenantId, product.id)
+  const images = await fetchProductImages(tenantId, product.id)
 
   return (
     <PdpClient

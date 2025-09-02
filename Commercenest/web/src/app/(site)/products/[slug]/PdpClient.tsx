@@ -2,7 +2,7 @@
 import { useMemo, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-// import { useRouter } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { Playfair_Display, Inter } from 'next/font/google'
 import { useCart } from '@/lib/cart'
 
@@ -23,27 +23,49 @@ type Props = {
 
 export default function PdpClient({ productId, name, description, hero_image_url, images, price_cents, tenantKey }: Props) {
   const { addItem } = useCart()
-  // const router = useRouter()
+  const router = useRouter()
   const [isAddingToCart, setIsAddingToCart] = useState(false)
 
-  const normalizeUrl = (url?: string | null): string => {
+  // Safe URL normalizer:
+  // 1. trim & fix single-slash protocol
+  // 2. if quotes/brackets present, extract first http(s) substring
+  // 3. strip trailing slashes
+  const safeUrl = (url?: string | null): string => {
     if (!url) return ''
-    return url.replace(/^(https?:)\/(?!\/)/, '$1//')
+    let str = url.trim().replace(/^(https?:)\/(?!\/)/, '$1//')
+    if (/["'%\[\]]/.test(str)) {
+      const m = str.match(/https?:\/\/[^\s'"\]\)]+/)
+      if (m) str = m[0]
+    }
+    return str.replace(/\/+$/, '')
   }
 
   const gallery = useMemo(() => {
-    const base = hero_image_url ? [{ id: 'hero', url: normalizeUrl(hero_image_url), alt: name }] : []
-    const normalizedImages = images.map(img => ({ ...img, url: normalizeUrl(img.url) }))
+    const allowedExt = /\.(png|jpe?g|webp|gif|avif|svg)$/i
+    const folderPrefix = productId
+      ? `/storage/v1/object/public/product-images/${productId}/`
+      : null
+
+    const base = hero_image_url ? [{ id: 'hero', url: safeUrl(hero_image_url), alt: name }] : []
+    const normalizedImages = images.map(img => ({ ...img, url: safeUrl(img.url) }))
     const merged = [...base, ...normalizedImages]
     const seen = new Set<string>()
+
     return merged.filter(img => {
-      const key = img.url
-      if (!key) return false
-      if (seen.has(key)) return false
-      seen.add(key)
+      const url = img.url
+      if (!url) return false
+      if (seen.has(url)) return false
+      if (folderPrefix && !url.includes(folderPrefix)) return false
+      try {
+        const { pathname } = new URL(url)
+        if (!allowedExt.test(pathname)) return false
+      } catch {
+        return false
+      }
+      seen.add(url)
       return true
     })
-  }, [hero_image_url, images, name])
+  }, [hero_image_url, images, name, productId])
   const [index, setIndex] = useState(0)
   const [zoom, setZoom] = useState(false)
   const [origin, setOrigin] = useState<{x:number;y:number}>({ x: 50, y: 50 })
@@ -56,8 +78,12 @@ export default function PdpClient({ productId, name, description, hero_image_url
   const handleAddToCart = async () => {
     setIsAddingToCart(true)
     try {
+      if (!productId) {
+        console.error('Missing productId on PDP; cannot add to cart')
+        return
+      }
       addItem({
-        productId: productId || 'current_product_id',
+        productId,
         name,
         price: price_cents,
         imageUrl: hero_image_url || images[0]?.url,
@@ -66,9 +92,8 @@ export default function PdpClient({ productId, name, description, hero_image_url
 
       // Show success feedback
       // You could add a toast notification here
-
-      // Optionally redirect to cart
-      // router.push('/cart')
+      // Redirect to cart for clear confirmation and to proceed to checkout
+      router.push('/cart')
     } catch (error) {
       console.error('Failed to add to cart:', error)
     } finally {
@@ -206,6 +231,7 @@ export default function PdpClient({ productId, name, description, hero_image_url
             t.classList.remove('active'); void t.offsetWidth; t.classList.add('active')
           }}>
             <button
+              type="button"
               onClick={handleAddToCart}
               disabled={isAddingToCart}
               className="inline-flex items-center justify-center gap-2 rounded-full bg-[color:var(--color-mustard)] text-[color:var(--color-brown)] px-8 py-4 font-semibold shadow-[0_12px_40px_rgba(253,206,89,0.35)] transition-all hover:shadow-[0_16px_50px_rgba(253,206,89,0.55)] hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"

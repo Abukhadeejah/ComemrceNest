@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useTenant } from '@/hooks/useTenant'
+import { getSiteUrl } from '@/utils/site-urls'
 
 interface HeroSlide {
   id: number;
@@ -93,6 +95,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({
   autoPlayInterval = 8000
 }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const tenant = useTenant()
   const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number; seconds: number }>({
     days: 0,
     hours: 0,
@@ -152,7 +155,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({
           >
             {/* Background Image */}
             <div 
-              className="absolute inset-0 bg-cover bg-center"
+              className="absolute inset-0 bg-cover bg-center pointer-events-none"
               style={{
                 backgroundImage: `url(${slide.image})`,
                 backgroundSize: 'cover',
@@ -173,10 +176,10 @@ const HeroSection: React.FC<HeroSectionProps> = ({
             />
             
             {/* Overlay */}
-            <div className={`absolute inset-0 ${slide.bgColor}`}></div>
+            <div className={`absolute inset-0 ${slide.bgColor} pointer-events-none`}></div>
             
             {/* Content */}
-            <div className="absolute inset-0 flex items-center">
+            <div className="absolute inset-0 flex items-center z-10">
               <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="max-w-2xl">
                   {/* Badge */}
@@ -274,7 +277,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({
                   {/* CTA Button */}
                   {slide.ctaText && (
                     <Link
-                      href={slide.ctaLink}
+                      href={getSiteUrl(slide.ctaLink, tenant.key)}
                       className="inline-flex items-center gap-2 bg-white text-gray-900 px-8 sm:px-10 py-4 sm:py-5 text-lg sm:text-xl font-semibold rounded-full hover:bg-gray-100 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
                     >
                       {slide.ctaText}

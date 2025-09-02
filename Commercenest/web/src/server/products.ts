@@ -97,6 +97,7 @@ export async function getProducts(params: GetProductsParams): Promise<ProductLis
         id: product.id,
         name: product.name,
         slug: product.slug,
+        description: product.description || null,
         price_cents: product.price_cents,
         currency: product.currency,
         hero_image_url: product.hero_image_url,

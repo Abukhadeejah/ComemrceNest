@@ -21,7 +21,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
     notFound()
   }
 
-  const { data: images } = await fetchProductImages(tenantId, product.id)
+  const images = await fetchProductImages(tenantId, product.id)
 
   return (
     <div className="bg-gray-50">

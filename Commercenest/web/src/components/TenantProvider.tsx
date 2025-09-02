@@ -26,18 +26,33 @@ export default async function TenantProvider({
   
   let accent: string | undefined
   
+  let gstRatePercent: number | undefined
   if (tenantId) {
     const { data: settings } = await supabaseAdmin
-      .from('settings_company_profile').select('brand_accent_hex').eq('tenant_id', tenantId).maybeSingle()
+      .from('settings_company_profile')
+      .select('brand_accent_hex, gst_rate_percent')
+      .eq('tenant_id', tenantId)
+      .maybeSingle()
     accent = settings?.brand_accent_hex || undefined
+    if (typeof settings?.gst_rate_percent === 'number') {
+      gstRatePercent = settings.gst_rate_percent
+    } else if (typeof settings?.gst_rate_percent === 'string') {
+      const parsed = Number(settings.gst_rate_percent)
+      gstRatePercent = Number.isFinite(parsed) ? parsed : undefined
+    }
   }
   
   const cfg = getTenantConfig(finalTenantKey)
   const colors = cfg.theme.colors
   const brandAccent = accent || colors.accent || colors.primary
+  // Prefer DB configuration for GST if available
+  const pricing = {
+    ...cfg.pricing,
+    ...(typeof gstRatePercent === 'number' ? { gstRatePercent } : {})
+  }
 
   return (
-    <TenantContextProvider config={cfg}>
+    <TenantContextProvider config={{ ...cfg, pricing }}>
       <div style={{
         ['--color-accent' as string]: brandAccent,
         ['--color-primary' as string]: colors.primary,

@@ -28,6 +28,13 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  ...(process.env.NODE_ENV === 'production'
+    ? {
+        compiler: {
+          removeConsole: { exclude: ['error', 'warn'] },
+        },
+      }
+    : {}),
   // Production optimizations
   experimental: {
     optimizePackageImports: ['lucide-react', 'framer-motion'],

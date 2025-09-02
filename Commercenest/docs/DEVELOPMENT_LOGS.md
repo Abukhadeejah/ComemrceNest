@@ -30,6 +30,7 @@
 - Add “Add Category” page + button on categories (tenant-aware; server-gated)
 - Align manifest requests (json vs webmanifest)
 - Continue beginner training plan (App Router, SSR vs Client, Server Actions)
+ - Document Host-based Tenancy Routing Model in guardrails and align helpers
 
 ## Session: 11-BLUEBELL PRODUCT MANAGEMENT TESTING & ROUTING FIX (December 2024)
 
@@ -485,3 +486,76 @@ type RegistryEntry = {
 ### Notes
 - Keep database changes via Supabase MCP only; no hardcoded tenant IDs
 - Test each page element as a real user; use Browser MCP; no dev-server commands
+
+## Session: 2025-08-31 – Routing slug fix, hydration alignment, lint cleanup, manifest, admin smoke
+
+### Overview
+- Fixed dev server startup blocker from duplicate dynamic route slugs under `(site)/orders`.
+- Resolved hydration mismatch on checkout/cart by unifying SSR/client hrefs.
+- Cleaned ESLint issues (anchors → `Link`, targeted `no-img-element` disables where safe).
+- Improved SSR tenant detection on host-based rewrites by setting `x-pathname` to target.
+- Switched metadata to use `/manifest.webmanifest` to avoid `/manifest.json` 404s.
+
+### Changes
+- Orders public route: kept `[orderId]` and removed `[id]` duplicate.
+- Checkout/Cart links: literal `"/products"` for SSR parity; removed unused `tenantPath` imports.
+- Lint: replaced `<a>` with `Link` in default/tenant server components; added scoped `eslint-disable` on `<img>` where refactor is non-trivial.
+- Middleware: when rewriting `/{tenant}{pathname}`, also set `x-pathname` so SSR sees the tenant immediately.
+- Metadata: tenant/default metadata reference `manifest: '/manifest.webmanifest'`.
+
+### Browser E2E (smoke)
+- Bluebell public: branding/nav/sections OK; product links OK; manifest reference OK.
+- Senlysh public: branding/nav/sections OK; manifest reference OK.
+- Bluebell admin: login OK; dashboard and Categories OK. One run showed `forbidden` on Orders; Supabase shows user has `tenant_admin` role—treated as transient during local test. User confirmed Orders works.
+
+### Next (staging push, then delivery items)
+1) Wire Bluebell home header nav to backend categories (tenant-aware, hierarchical if needed).
+2) Ensure public nav routes align with admin-managed resources; unify URL helpers.
+3) Cart + Checkout: finalize add-to-cart; implement checkout form with name, contact, address, optional GSTIN, totals with/without GST; ensure `orders.payment_env` tagging and webhook verify in test.
+4) Full E2E on staging across both tenants (public and admin flows) and report.
+
+## Session: 2025-08-31 – Senlysh pages/nav, Bluebell category nav, checkout guest form + order items
+
+### Overview
+- Tenant public UX alignment for Senlysh (tenant-aware links and missing pages).
+- Bluebell header “Shop” menu wired to live categories from backend (tenant-aware links).
+- Checkout upgraded to standard e‑commerce flow: guest details form and API persistence; add-to-cart UX improved.
+- Minor admin auth reliability improvement with server `whoami` endpoint.
+
+### Changes
+- Senlysh public navigation
+  - Updated tenant-aware links in `web/src/tenants/senlysh/components/Header.tsx` and `Footer.tsx` to keep URLs under `/senlysh/...` on staging.
+  - Added pages with tenant-branded layouts:
+    - `web/src/app/(site)/senlysh/new-arrivals/page.tsx`
+    - `web/src/app/(site)/senlysh/sale/page.tsx`
+    - `web/src/app/(site)/senlysh/about/page.tsx`
+    - `web/src/app/(site)/senlysh/contact/page.tsx`
+- Bluebell category-driven nav
+  - New API: `web/src/app/api/site/categories/route.ts` returns tenant categories.
+  - Bluebell header loads categories client-side and links to `/{tenant}/products?category=...`:
+    - `web/src/tenants/bluebell/components/Header.tsx`.
+- Cart / PDP UX
+  - PDP Add to Cart now routes to `/cart` after adding for clear feedback:
+    - `web/src/app/(site)/products/[slug]/PdpClient.tsx`.
+- Checkout (guest form + API persistence)
+  - Checkout page includes guest details (name, email, phone, address lines, city, state, pincode, GSTIN) and prefills Razorpay:
+    - `web/src/app/(site)/checkout/page.tsx`.
+  - Checkout API now accepts `customer` + `items` payloads, stores email on `orders`, passes details into Razorpay `notes`, and persists `order_items`:
+    - `web/src/app/api/checkout/route.ts`.
+- Admin auth resiliency
+  - Server `whoami` endpoint and `AuthGate` check path to reduce client race conditions:
+    - `web/src/app/api/auth/whoami/route.ts`
+    - `web/src/components/admin/AuthGate.tsx`.
+
+### Testing
+- Local (bluebell.local):
+  - Public: Home → PLP → PDP → Add to Cart → Cart → Checkout form → Create test order → Simulate payment.
+  - Admin: Login → `/bluebell/admin` sections render; no blocking errors observed.
+- Staging: pending full pass after deploy; Senlysh pages/links verified earlier.
+
+### Notes / Next
+- Extend checkout totals to include GST (with/without GST) and show a clear summary.
+- Ensure `orders.payment_env` tagging and webhook verification remain correct across test/live.
+- Persist full customer details on orders (JSON) if needed for invoicing and address book.
+- Full E2E on staging for both tenants (public + admin) and close gaps, then push to production.
+

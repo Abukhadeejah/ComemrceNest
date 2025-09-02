@@ -10,6 +10,9 @@ export default function Header() {
   const { state } = useCart();
   const cartCount = state.itemCount;
   const wishlistCount = 0; // TODO: Implement wishlist functionality later
+  // Feature flags (superadmin-controlled in future)
+  const showNewArrivals = false
+  const showSale = false
 
   return (
     <>
@@ -34,7 +37,7 @@ export default function Header() {
         <div className="container mx-auto px-2 sm:px-4 py-2 sm:py-3 md:py-4">
           <div className="flex items-center justify-between">
             {/* Logo */}
-            <Link href="/" className="flex items-center gap-1 sm:gap-2 transition-transform hover:scale-[1.02]">
+            <Link href="/senlysh" className="flex items-center gap-1 sm:gap-2 transition-transform hover:scale-[1.02]">
               <Image 
                 src="/images/senlysh/logo.png" 
                 alt="Senlysh" 
@@ -46,11 +49,11 @@ export default function Header() {
 
             {/* Navigation Menu - Desktop */}
             <nav className="hidden lg:flex space-x-8">
-              <Link href="/" className="text-gray-800 hover:text-gray-600 font-semibold text-sm uppercase tracking-wide transition-colors border-b-2 border-gray-800 pb-1">
+              <Link href="/senlysh" className="text-gray-800 hover:text-gray-600 font-semibold text-sm uppercase tracking-wide transition-colors border-b-2 border-gray-800 pb-1">
                 HOME
               </Link>
               <div className="relative group">
-                <Link href="/shop" className="text-gray-800 hover:text-gray-600 font-semibold text-sm uppercase tracking-wide transition-colors pb-1 flex items-center gap-1">
+                <Link href="/senlysh/products" className="text-gray-800 hover:text-gray-600 font-semibold text-sm uppercase tracking-wide transition-colors pb-1 flex items-center gap-1">
                   SHOP
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -58,23 +61,27 @@ export default function Header() {
                 </Link>
                 {/* Dropdown Menu */}
                 <div className="absolute top-full left-0 bg-white shadow-lg border border-gray-200 rounded-md py-2 min-w-[200px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300">
-                  <Link href="/shop/men" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900">Men&apos;s Fashion</Link>
-                  <Link href="/shop/women" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900">Women&apos;s Fashion</Link>
-                  <Link href="/shop/kids" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900">Kids & Teens</Link>
-                  <Link href="/shop/accessories" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900">Accessories</Link>
-                  <Link href="/shop/shoes" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900">Footwear</Link>
+                  <Link href="/senlysh/products?category=men" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900">Men&apos;s Fashion</Link>
+                  <Link href="/senlysh/products?category=women" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900">Women&apos;s Fashion</Link>
+                  <Link href="/senlysh/products?category=kids-baby" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900">Kids & Teens</Link>
+                  <Link href="/senlysh/products?category=accessories" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900">Accessories</Link>
+                  <Link href="/senlysh/products?category=shoes" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900">Footwear</Link>
                 </div>
               </div>
-              <Link href="/new-arrivals" className="text-gray-800 hover:text-gray-600 font-semibold text-sm uppercase tracking-wide transition-colors pb-1">
-                NEW ARRIVALS
-              </Link>
-              <Link href="/sale" className="text-red-600 hover:text-red-700 font-semibold text-sm uppercase tracking-wide transition-colors pb-1">
-                SALE
-              </Link>
-              <Link href="/about" className="text-gray-800 hover:text-gray-600 font-semibold text-sm uppercase tracking-wide transition-colors pb-1">
+              {showNewArrivals ? (
+                <Link href="/senlysh/new-arrivals" className="text-gray-800 hover:text-gray-600 font-semibold text-sm uppercase tracking-wide transition-colors pb-1">
+                  NEW ARRIVALS
+                </Link>
+              ) : null}
+              {showSale ? (
+                <Link href="/senlysh/sale" className="text-red-600 hover:text-red-700 font-semibold text-sm uppercase tracking-wide transition-colors pb-1">
+                  SALE
+                </Link>
+              ) : null}
+              <Link href="/senlysh/about" className="text-gray-800 hover:text-gray-600 font-semibold text-sm uppercase tracking-wide transition-colors pb-1">
                 ABOUT US
               </Link>
-              <Link href="/contact" className="text-gray-800 hover:text-gray-600 font-semibold text-sm uppercase tracking-wide transition-colors pb-1">
+              <Link href="/senlysh/contact" className="text-gray-800 hover:text-gray-600 font-semibold text-sm uppercase tracking-wide transition-colors pb-1">
                 CONTACT US
               </Link>
             </nav>
@@ -152,7 +159,7 @@ export default function Header() {
             <nav className="container mx-auto px-4 py-4">
               <div className="flex flex-col space-y-4">
                 <Link 
-                  href="/" 
+                  href="/senlysh" 
                   className="text-gray-800 hover:text-gray-600 font-semibold text-base uppercase tracking-wide transition-colors border-b-2 border-gray-800 pb-2"
                   onClick={() => setIsMenuOpen(false)}
                 >
@@ -160,42 +167,46 @@ export default function Header() {
                 </Link>
                 <div className="space-y-2">
                   <Link 
-                    href="/shop" 
+                    href="/senlysh/products" 
                     className="text-gray-800 hover:text-gray-600 font-semibold text-base uppercase tracking-wide transition-colors pb-2 block"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     SHOP
                   </Link>
                   <div className="ml-4 space-y-1">
-                    <Link href="/shop/men" className="block text-sm text-gray-600 hover:text-gray-800">Men&apos;s Fashion</Link>
-                    <Link href="/shop/women" className="block text-sm text-gray-600 hover:text-gray-800">Women&apos;s Fashion</Link>
-                    <Link href="/shop/kids" className="block text-sm text-gray-600 hover:text-gray-800">Kids & Teens</Link>
-                    <Link href="/shop/accessories" className="block text-sm text-gray-600 hover:text-gray-800">Accessories</Link>
+                    <Link href="/senlysh/products?category=men" className="block text-sm text-gray-600 hover:text-gray-800">Men&apos;s Fashion</Link>
+                    <Link href="/senlysh/products?category=women" className="block text-sm text-gray-600 hover:text-gray-800">Women&apos;s Fashion</Link>
+                    <Link href="/senlysh/products?category=kids-baby" className="block text-sm text-gray-600 hover:text-gray-800">Kids & Teens</Link>
+                    <Link href="/senlysh/products?category=accessories" className="block text-sm text-gray-600 hover:text-gray-800">Accessories</Link>
                   </div>
                 </div>
+                {showNewArrivals ? (
+                  <Link 
+                    href="/senlysh/new-arrivals" 
+                    className="text-gray-800 hover:text-gray-600 font-semibold text-base uppercase tracking-wide transition-colors pb-2"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    NEW ARRIVALS
+                  </Link>
+                ) : null}
+                {showSale ? (
+                  <Link 
+                    href="/senlysh/sale" 
+                    className="text-red-600 hover:text-red-700 font-semibold text-base uppercase tracking-wide transition-colors pb-2"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    SALE
+                  </Link>
+                ) : null}
                 <Link 
-                  href="/new-arrivals" 
-                  className="text-gray-800 hover:text-gray-600 font-semibold text-base uppercase tracking-wide transition-colors pb-2"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  NEW ARRIVALS
-                </Link>
-                <Link 
-                  href="/sale" 
-                  className="text-red-600 hover:text-red-700 font-semibold text-base uppercase tracking-wide transition-colors pb-2"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  SALE
-                </Link>
-                <Link 
-                  href="/about" 
+                  href="/senlysh/about" 
                   className="text-gray-800 hover:text-gray-600 font-semibold text-base uppercase tracking-wide transition-colors pb-2"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   ABOUT US
                 </Link>
                 <Link 
-                  href="/contact" 
+                  href="/senlysh/contact" 
                   className="text-gray-800 hover:text-gray-600 font-semibold text-base uppercase tracking-wide transition-colors pb-2"
                   onClick={() => setIsMenuOpen(false)}
                 >

@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 interface Order {
   id: string
@@ -23,6 +24,19 @@ interface OrderTableProps {
 }
 
 export function OrderTable({ orders }: OrderTableProps) {
+  const router = useRouter()
+  const onDelete = async (id: string) => {
+    if (!confirm('Delete this order?')) return
+    const res = await fetch(`/api/admin/orders/${id}`, { method: 'DELETE' })
+    if (res.ok) router.refresh()
+    else alert('Failed to delete order')
+  }
+  const onMarkPaid = async (id: string) => {
+    if (!confirm('Mark this order as paid?')) return
+    const res = await fetch(`/api/admin/orders/${id}/mark-paid`, { method: 'POST' })
+    if (res.ok) router.refresh()
+    else alert('Failed to mark order as paid')
+  }
   const formatCurrency = (cents: number, currency: string) => {
     const amount = cents / 100
     return new Intl.NumberFormat('en-IN', {
@@ -114,13 +128,27 @@ export function OrderTable({ orders }: OrderTableProps) {
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                 {formatDate(order.created_at)}
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+              <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
                 <Link
                   href={`/admin/orders/${order.id}`}
                   className="text-blue-600 hover:text-blue-900"
                 >
                   View Details
                 </Link>
+                {order.status === 'pending' && (
+                  <button
+                    onClick={() => onMarkPaid(order.id)}
+                    className="text-green-700 hover:text-green-900"
+                  >
+                    Mark Paid
+                  </button>
+                )}
+                <button
+                  onClick={() => onDelete(order.id)}
+                  className="text-red-600 hover:text-red-800"
+                >
+                  Delete
+                </button>
               </td>
             </tr>
           ))}
@@ -168,6 +196,9 @@ export function OrderTable({ orders }: OrderTableProps) {
     </div>
   )
 }
+
+
+
 
 
 

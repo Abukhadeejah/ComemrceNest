@@ -12,18 +12,48 @@ type HomeClientProps = {
   projects: { id: string; title: string; slug: string; hero_image_url: string | null }[]
 }
 
-export default function Home({ products, projects }: HomeClientProps) {
+export default function Home({ products, projects: _projects }: HomeClientProps) {
   const [loaded, setLoaded] = useState(false)
   useEffect(() => setLoaded(true), [])
   // Testimonials grid is static for now; slider removed for modularity
+
+  const heroSlides = [
+    {
+      url: "https://images.pexels.com/photos/7545787/pexels-photo-7545787.jpeg",
+      alt: "Luxury bedroom with premium textiles",
+    },
+    {
+      url: "https://images.pexels.com/photos/6933776/pexels-photo-6933776.jpeg",
+      alt: "Dining space with elegant fabric accents",
+    },
+    {
+      url: "https://images.pexels.com/photos/6800942/pexels-photo-6800942.jpeg",
+      alt: "Minimal living room with textured upholstery",
+    },
+  ]
+
+  const [slideIndex, setSlideIndex] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => setSlideIndex((i) => (i + 1) % heroSlides.length), 4500)
+    return () => clearInterval(id)
+  }, [])
 
   return (
     <main className="p-0">
       {/* Header is provided by layout; remove local navbar duplication */}
       {/* Hero Section */}
       <section id="home" className="hero-gradient min-h-[90vh] flex items-center justify-center relative overflow-hidden">
-        {/* Hero photo (ensure file exists at /public/bluebell-hero.jpg) */}
-        <div className="absolute inset-0 bg-[url('/bluebell-hero.jpg')] bg-cover bg-center opacity-90" />
+        {/* Hero carousel */}
+        <div className="absolute inset-0">
+          {heroSlides.map((s, idx) => (
+            <div
+              key={s.url}
+              className={`absolute inset-0 bg-cover bg-center transition-opacity duration-700 ${slideIndex === idx ? 'opacity-90' : 'opacity-0'}`}
+              style={{ backgroundImage: `url('${s.url}')` }}
+              aria-label={s.alt}
+            />
+          ))}
+        </div>
         {/* Blue tint overlay for brand cohesion */}
         <div className="pointer-events-none absolute inset-0 [background:linear-gradient(135deg,rgba(1,88,157,0.35),rgba(255,255,255,0)_60%)]" />
         {/* Subtle diagonal texture */}
@@ -74,6 +104,17 @@ export default function Home({ products, projects }: HomeClientProps) {
             Explore Collection
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/></svg>
           </a>
+        </div>
+        {/* Dots */}
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex gap-2">
+          {heroSlides.map((_, idx) => (
+            <button
+              key={idx}
+              onClick={() => setSlideIndex(idx)}
+              aria-label={`Go to slide ${idx + 1}`}
+              className={`h-2.5 w-2.5 rounded-full transition-all duration-300 ${slideIndex === idx ? 'bg-white scale-110' : 'bg-white/60 hover:bg-white/80'}`}
+            />
+          ))}
         </div>
         <div className="absolute top-20 right-20 opacity-20 animate-pulse">
           <svg width="120" height="120" viewBox="0 0 120 120">
