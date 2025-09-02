@@ -128,7 +128,7 @@ export function CustomerTable({ customers }: CustomerTableProps) {
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 <Link
-                  href={`/admin/customers/${customer.id}`}
+                  href={`/admin/customers/${encodeURIComponent(customer.id)}`}
                   className="text-blue-600 hover:text-blue-900"
                 >
                   View Details

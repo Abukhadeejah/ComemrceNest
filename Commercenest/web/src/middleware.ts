@@ -13,11 +13,11 @@ export function middleware(request: NextRequest) {
   // Basic header for downstream usage
   headers.set('x-pathname', pathname);
   
-  // Host-based detection for local custom domains (bluebell.local, senlysh.local)
+  // Host-based detection (local and production custom domains)
   const host = request.headers.get('host') || '';
   let tenantFromHost = '';
-  if (/(^|\.)bluebell\.local(?::\d+)?$/i.test(host)) tenantFromHost = 'bluebell';
-  else if (/(^|\.)senlysh\.local(?::\d+)?$/i.test(host)) tenantFromHost = 'senlysh';
+  if (/(^|\.)bluebell\.local(?::\d+)?$/i.test(host) || /(^|\.)bluebellstudio\.in(?::\d+)?$/i.test(host)) tenantFromHost = 'bluebell';
+  else if (/(^|\.)senlysh\.local(?::\d+)?$/i.test(host) || /(^|\.)senlysh\.in(?::\d+)?$/i.test(host)) tenantFromHost = 'senlysh';
   
   // Global (non-tenant) routes that must not be rewritten
   const globalNoRewrite = new Set(['/login', '/checkout', '/cart'])
@@ -47,6 +47,7 @@ export function middleware(request: NextRequest) {
     headers.set('x-pathname', targetPath);
     const response = NextResponse.rewrite(new URL(targetPath, request.url), { request: { headers } });
     response.cookies.set('tenant', tenantFromHost, { path: '/', sameSite: 'lax' });
+    response.cookies.set('tenant_mode', 'host', { path: '/', sameSite: 'lax' });
     return response;
   }
   
