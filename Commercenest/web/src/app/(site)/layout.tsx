@@ -15,8 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
   let tenantKey: string | undefined = isTenant ? first : undefined
 
   // Fallback to cookie when path does not include tenant prefix
-  // BUT ONLY if we're not on the root path - root path should never inherit tenant branding
-  if (!tenantKey && pathname !== '/') {
+  if (!tenantKey) {
     try {
       const cookieStore = await cookies()
       const cookieTenant = cookieStore.get('tenant')?.value?.toLowerCase()
@@ -100,8 +99,7 @@ export default async function SiteLayout({
   }
 
   // Fallback to cookie if still undefined
-  // BUT ONLY if we're not on the root path - root path should never inherit tenant branding
-  if (!tenantKey && pathname !== '/') {
+  if (!tenantKey) {
     try {
       const cookieStore = await cookies()
       const cookieTenant = cookieStore.get('tenant')?.value?.toLowerCase()

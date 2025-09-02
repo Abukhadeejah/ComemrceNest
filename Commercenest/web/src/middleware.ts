@@ -8,27 +8,11 @@ export function middleware(request: NextRequest) {
   const segments = pathname.replace(/\/+/g, '/').split('/').filter(Boolean);
   const seg = segments[0] || '';
   const tenantFromPath = seg === 'bluebell' || seg === 'senlysh' ? seg : '';
-  const isAnyAdminRoute = pathname.includes('/admin');
+  const isAdminRoute = pathname === '/admin' || pathname.startsWith('/admin/');
+  const isTenantAdminRoute = tenantFromPath && (segments[1] === 'admin' || pathname === `/${tenantFromPath}/admin`);
 
   // Basic header for downstream usage
   headers.set('x-pathname', pathname);
-
-  // 🚨 SECURITY: Check authentication for ALL admin routes FIRST
-  if (isAnyAdminRoute) {
-    // Check for Supabase auth tokens (they have project-specific names)
-    const cookies = request.cookies.getAll();
-    const hasSupabaseAuth = cookies.some(cookie =>
-      cookie.name.startsWith('sb-') &&
-      cookie.name.includes('-auth-token') &&
-      cookie.value &&
-      cookie.value.length > 100 // Valid tokens are long
-    );
-
-    // If no valid Supabase auth tokens, redirect to login
-    if (!hasSupabaseAuth) {
-      return NextResponse.redirect(new URL('/login', request.url));
-    }
-  }
   
   // Host-based detection (local and production custom domains)
   const host = request.headers.get('host') || '';
@@ -86,23 +70,37 @@ export function middleware(request: NextRequest) {
     return response;
   }
 
-  if (isAnyAdminRoute) {
-    // Admin routes processing (authentication already checked above)
-    // For tenant admin routes, ensure tenant context is set
-    if (tenantFromPath) {
-      headers.set('x-tenant-admin', tenantFromPath);
-    }
+  // Check Supabase auth cookie presence once
+  const cookieHeader = request.headers.get('cookie') || '';
+  const hasAuthCookie = /sb-.*-auth-token/.test(cookieHeader);
 
+  if (isAdminRoute) {
     // On host-based tenancy, normalize /admin to /{tenant}/admin to avoid 404
     const cookieTenant = request.cookies.get('tenant')?.value;
     const inferredTenant = cookieTenant === 'bluebell' || cookieTenant === 'senlysh' ? cookieTenant : tenantFromHost || 'bluebell';
     headers.set('x-tenant-admin', inferredTenant);
+    if (!hasAuthCookie) {
+      const redirectResp = NextResponse.redirect(new URL('/login', request.url));
+      redirectResp.cookies.set('tenant', inferredTenant, { path: '/', sameSite: 'lax' });
+      return redirectResp;
+    }
     const target = pathname === '/admin' ? `/${inferredTenant}/admin` : pathname
     const response = pathname === '/admin'
       ? NextResponse.rewrite(new URL(target, request.url), { request: { headers } })
       : NextResponse.next({ request: { headers } });
     response.cookies.set('tenant', inferredTenant, { path: '/', sameSite: 'lax' });
     return response;
+  }
+
+  // Guard tenant-prefixed admin routes as well
+  if (isTenantAdminRoute) {
+    headers.set('x-tenant-admin', tenantFromPath);
+    if (!hasAuthCookie) {
+      const redirectResp = NextResponse.redirect(new URL('/login', request.url));
+      redirectResp.cookies.set('tenant', tenantFromPath, { path: '/', sameSite: 'lax' });
+      return redirectResp;
+    }
+    return NextResponse.next({ request: { headers } });
   }
 
   // If path is tenant-prefixed but points to a global page, rewrite to global

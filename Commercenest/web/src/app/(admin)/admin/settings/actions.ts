@@ -42,7 +42,18 @@ export async function getSettings() {
       .maybeSingle()
 
     if (error) {
-      throw new Error(`Failed to fetch settings: ${error.message}`)
+      // Return safe defaults on database error to avoid crashing the page
+      return {
+        name: '',
+        logo_url: '',
+        address: '',
+        phone: '',
+        email: '',
+        gstin: '',
+        social: {},
+        brand_accent_hex: '#C9A227',
+        brand_neutrals: []
+      }
     }
 
     return settings || {
@@ -58,7 +69,18 @@ export async function getSettings() {
     }
   } catch (error) {
     console.error('getSettings error:', error)
-    throw error
+    // Final safety: return defaults rather than throwing to keep UI functional
+    return {
+      name: '',
+      logo_url: '',
+      address: '',
+      phone: '',
+      email: '',
+      gstin: '',
+      social: {},
+      brand_accent_hex: '#C9A227',
+      brand_neutrals: []
+    }
   }
 }
 
