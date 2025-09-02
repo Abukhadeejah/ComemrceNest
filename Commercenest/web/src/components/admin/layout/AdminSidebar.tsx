@@ -107,7 +107,7 @@ export function AdminSidebar({ open = false, setOpen }: AdminSidebarProps) {
       </div>
 
       {/* Desktop sidebar */}
-      <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
+      <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col z-40">
         <div className={`flex flex-col flex-grow border-r border-gray-200 ${brandingConfig?.sidebarBg || 'bg-white'}`}>
           <div className="flex h-16 items-center px-4">
             {/* eslint-disable-next-line @next/next/no-img-element */}

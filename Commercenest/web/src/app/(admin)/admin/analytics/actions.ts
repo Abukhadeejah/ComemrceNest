@@ -12,8 +12,15 @@ interface OrderItemWithProduct {
 export async function getAnalytics() {
   try {
     const tenantId = await resolveTenantIdFromRequest()
-    if (!tenantId) { throw new Error('Tenant not found') }
-    await assertTenantAdmin(tenantId)
+    if (!tenantId) {
+      return { overview: { totalRevenue: 0, totalOrders: 0, paidOrders: 0, totalProducts: 0, publishedProducts: 0, conversionRate: '0.0%' }, salesData: [], topProducts: [] }
+    }
+    try {
+      await assertTenantAdmin(tenantId)
+    } catch {
+      // Graceful empty analytics when not authenticated as tenant admin
+      return { overview: { totalRevenue: 0, totalOrders: 0, paidOrders: 0, totalProducts: 0, publishedProducts: 0, conversionRate: '0.0%' }, salesData: [], topProducts: [] }
+    }
 
     // Get overview statistics
     const { data: orders } = await supabaseAdmin
