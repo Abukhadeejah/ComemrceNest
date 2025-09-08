@@ -13,7 +13,7 @@ export interface ValidationResult {
   test: string
   message: string
   severity: 'critical' | 'high' | 'medium' | 'low'
-  details?: any
+  details?: unknown
 }
 
 /**
@@ -85,7 +85,7 @@ async function validateTenantIsolation(): Promise<ValidationResult[]> {
       passed: false,
       category: 'Tenant Isolation',
       test: 'Cross-tenant data access',
-      message: `Validation failed: ${error.message}`,
+      message: `Validation failed: ${error instanceof Error ? error.message : String(error)}`,
       severity: 'critical',
       details: error
     })
@@ -129,7 +129,7 @@ async function validateTenantIsolation(): Promise<ValidationResult[]> {
       passed: false,
       category: 'Tenant Isolation',
       test: 'Tenant existence validation',
-      message: `Validation failed: ${error.message}`,
+      message: `Validation failed: ${error instanceof Error ? error.message : String(error)}`,
       severity: 'critical',
       details: error
     })
@@ -160,7 +160,7 @@ async function validateAuthentication(): Promise<ValidationResult[]> {
       passed: false,
       category: 'Authentication',
       test: 'Admin route protection',
-      message: `Authentication validation failed: ${error.message}`,
+      message: `Authentication validation failed: ${error instanceof Error ? error.message : String(error)}`,
       severity: 'high',
       details: error
     })
@@ -206,7 +206,7 @@ async function validateAuthorization(): Promise<ValidationResult[]> {
       passed: false,
       category: 'Authorization',
       test: 'Tenant admin role validation',
-      message: `Validation failed: ${error.message}`,
+      message: `Validation failed: ${error instanceof Error ? error.message : String(error)}`,
       severity: 'high',
       details: error
     })
@@ -252,7 +252,7 @@ async function validateDatabaseConstraints(): Promise<ValidationResult[]> {
       passed: false,
       category: 'Database Integrity',
       test: 'Foreign key constraints',
-      message: `Validation failed: ${error.message}`,
+      message: `Validation failed: ${error instanceof Error ? error.message : String(error)}`,
       severity: 'high',
       details: error
     })
@@ -302,7 +302,7 @@ async function validateRLSPolicies(): Promise<ValidationResult[]> {
         passed: false,
         category: 'RLS Policies',
         test: `RLS on ${table}`,
-        message: `RLS validation failed for ${table}: ${error.message}`,
+        message: `RLS validation failed for ${table}: ${error instanceof Error ? error.message : String(error)}`,
         severity: 'critical',
         details: error
       })
@@ -349,7 +349,7 @@ async function validateModuleSystem(): Promise<ValidationResult[]> {
       passed: false,
       category: 'Module System',
       test: 'Module registry integrity',
-      message: `Validation failed: ${error.message}`,
+      message: `Validation failed: ${error instanceof Error ? error.message : String(error)}`,
       severity: 'high',
       details: error
     })
@@ -409,7 +409,7 @@ async function validatePerformance(): Promise<ValidationResult[]> {
       passed: false,
       category: 'Performance',
       test: 'Query performance',
-      message: `Performance validation failed: ${error.message}`,
+      message: `Performance validation failed: ${error instanceof Error ? error.message : String(error)}`,
       severity: 'high',
       details: error
     })

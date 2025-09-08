@@ -14,7 +14,12 @@ import { validateTenantContext, logSecurityEvent, enforceTenantFilter } from './
 export class SafeDatabaseQuery {
   private tableName: string
   private tenantId: string
-  private query: any = {}
+  private query: {
+    where?: Record<string, unknown>
+    columns?: string
+    limit?: number
+    orderBy?: { column: string; ascending: boolean }
+  } = {}
   private hasTenantFilter = false
 
   constructor(tableName: string, tenantId: string) {
@@ -25,7 +30,7 @@ export class SafeDatabaseQuery {
   /**
    * GUARDRAIL: Enforces tenant filtering on all queries
    */
-  where(field: string, value: any): SafeDatabaseQuery {
+  where(field: string, value: unknown): SafeDatabaseQuery {
     if (field === 'tenant_id') {
       if (value !== this.tenantId) {
         throw new Error(`TENANT ISOLATION VIOLATION: Attempted to query ${this.tableName} with tenant_id ${value}, but context requires ${this.tenantId}`)
@@ -40,7 +45,7 @@ export class SafeDatabaseQuery {
   /**
    * GUARDRAIL: Safe select with automatic tenant filtering
    */
-  select(columns: string = '*'): SafeSelectQuery {
+  select(_columns: string = '*'): SafeSelectQuery {
     // Automatically add tenant_id filter if not explicitly provided
     if (!this.hasTenantFilter && this.tableName !== 'tenants') {
       this.query.where = this.query.where || {}
@@ -54,7 +59,7 @@ export class SafeDatabaseQuery {
   /**
    * GUARDRAIL: Safe insert with automatic tenant assignment
    */
-  insert(data: any): SafeInsertQuery {
+  insert(data: Record<string, unknown>): SafeInsertQuery {
     // Automatically add tenant_id if not provided and table requires it
     if (!data.tenant_id && this.tableName !== 'tenants') {
       data.tenant_id = this.tenantId
@@ -71,7 +76,7 @@ export class SafeDatabaseQuery {
   /**
    * GUARDRAIL: Safe update with tenant validation
    */
-  update(data: any): SafeUpdateQuery {
+  update(data: Record<string, unknown>): SafeUpdateQuery {
     if (!this.hasTenantFilter) {
       throw new Error(`TENANT ISOLATION VIOLATION: Update operations on ${this.tableName} require explicit tenant_id filter`)
     }
@@ -98,11 +103,16 @@ export class SafeDatabaseQuery {
 export class SafeSelectQuery {
   constructor(
     private tableName: string,
-    private query: any,
+    private query: {
+      where?: Record<string, unknown>
+      columns?: string
+      limit?: number
+      orderBy?: { column: string; ascending: boolean }
+    },
     private tenantId: string
   ) {}
 
-  async execute(): Promise<any> {
+  async execute(): Promise<unknown> {
     try {
       let dbQuery = supabaseAdmin.from(this.tableName).select(this.query.columns || '*')
 
@@ -115,7 +125,7 @@ export class SafeSelectQuery {
 
       // Apply other conditions
       if (this.query.limit) dbQuery = dbQuery.limit(this.query.limit)
-      if (this.query.orderBy) dbQuery = dbQuery.order(this.query.orderBy)
+      if (this.query.orderBy) dbQuery = dbQuery.order(this.query.orderBy.column, { ascending: this.query.orderBy.ascending })
 
       const { data, error } = await dbQuery
 
@@ -135,7 +145,7 @@ export class SafeSelectQuery {
         operation: 'select',
         table: this.tableName,
         tenantId: this.tenantId,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       })
       throw error
     }
@@ -155,11 +165,11 @@ export class SafeSelectQuery {
 export class SafeInsertQuery {
   constructor(
     private tableName: string,
-    private data: any,
+    private data: Record<string, unknown>,
     private tenantId: string
   ) {}
 
-  async execute(): Promise<any> {
+  async execute(): Promise<unknown> {
     try {
       const { data, error } = await supabaseAdmin
         .from(this.tableName)
@@ -188,7 +198,7 @@ export class SafeInsertQuery {
         operation: 'insert',
         table: this.tableName,
         tenantId: this.tenantId,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       })
       throw error
     }
@@ -198,12 +208,12 @@ export class SafeInsertQuery {
 export class SafeUpdateQuery {
   constructor(
     private tableName: string,
-    private data: any,
-    private conditions: any,
+    private data: Record<string, unknown>,
+    private conditions: Record<string, unknown>,
     private tenantId: string
   ) {}
 
-  async execute(): Promise<any> {
+  async execute(): Promise<unknown> {
     try {
       let dbQuery = supabaseAdmin.from(this.tableName).update(this.data)
 
@@ -239,7 +249,7 @@ export class SafeUpdateQuery {
         operation: 'update',
         table: this.tableName,
         tenantId: this.tenantId,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       })
       throw error
     }
@@ -249,11 +259,11 @@ export class SafeUpdateQuery {
 export class SafeDeleteQuery {
   constructor(
     private tableName: string,
-    private conditions: any,
+    private conditions: Record<string, unknown>,
     private tenantId: string
   ) {}
 
-  async execute(): Promise<any> {
+  async execute(): Promise<unknown> {
     try {
       let dbQuery = supabaseAdmin.from(this.tableName).delete()
 
@@ -288,7 +298,7 @@ export class SafeDeleteQuery {
         operation: 'delete',
         table: this.tableName,
         tenantId: this.tenantId,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       })
       throw error
     }
@@ -343,7 +353,7 @@ export class SafeDatabaseFactory {
   /**
    * GUARDRAIL: Safe raw SQL execution (with restrictions)
    */
-  async executeSafeSQL(sql: string, params: any[] = []): Promise<any> {
+  async executeSafeSQL(sql: string, _params: unknown[] = []): Promise<unknown> {
     // Validate SQL doesn't contain dangerous operations
     const dangerousPatterns = [
       /drop/i,
@@ -381,7 +391,7 @@ export const safeDatabaseOperations = {
   /**
    * Safe product creation with full validation
    */
-  async createProduct(productData: any) {
+  async createProduct(productData: Record<string, unknown>) {
     const db = await createSafeDatabase('createProduct')
 
     // Validate required fields
@@ -390,15 +400,15 @@ export const safeDatabaseOperations = {
     }
 
     // Validate price is reasonable
-    if (productData.price_cents < 0 || productData.price_cents > 10000000) { // Max 100k INR
+    const priceCents = typeof productData.price_cents === 'number' ? productData.price_cents : 0
+    if (priceCents < 0 || priceCents > 10000000) { // Max 100k INR
       throw new Error('VALIDATION ERROR: Invalid product price')
     }
 
     const result = await db.table('products').insert(productData).execute()
 
     await logSecurityEvent('product_created_safely', {
-      productId: result[0]?.id,
-      tenantId: (await createSafeDatabase('')).tenantId
+      productId: Array.isArray(result) && result.length > 0 ? (result[0] as { id?: string })?.id : undefined
     })
 
     return result
@@ -407,27 +417,29 @@ export const safeDatabaseOperations = {
   /**
    * Safe product query with automatic filtering
    */
-  async getProducts(filters: any = {}) {
+  async getProducts(filters: Record<string, unknown> = {}) {
     const db = await createSafeDatabase('getProducts')
 
-    let query = db.table('products').select()
+    // Start with a tenant-scoped query builder
+    let qb = db.table('products')
 
     // Apply filters safely
     if (filters.category_id) {
-      query = query.where('category_id', filters.category_id)
+      qb = qb.where('category_id', filters.category_id)
     }
 
     if (filters.status) {
-      query = query.where('status', filters.status)
+      qb = qb.where('status', filters.status)
     }
 
-    return await query.limit(100).execute()
+    // Now select and execute
+    return await qb.select().limit(100).execute()
   },
 
   /**
    * Safe settings update
    */
-  async updateCompanySettings(settingsData: any) {
+  async updateCompanySettings(settingsData: Record<string, unknown>) {
     const db = await createSafeDatabase('updateCompanySettings')
 
     // Only allow specific fields to be updated
@@ -437,19 +449,13 @@ export const safeDatabaseOperations = {
       .reduce((obj, key) => {
         obj[key] = settingsData[key]
         return obj
-      }, {} as any)
+      }, {} as Record<string, unknown>)
 
     return await db.table('settings_company_profile').update(filteredData).execute()
   }
 }
 
-export {
-  SafeDatabaseQuery,
-  SafeSelectQuery,
-  SafeInsertQuery,
-  SafeUpdateQuery,
-  SafeDeleteQuery
-}
+// Classes are exported above; avoid duplicate re-exports that confuse TS
 
 
 

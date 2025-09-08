@@ -10,6 +10,8 @@ interface Category {
   id: string
   name: string
   slug: string
+  image_url?: string | null
+  image_alt?: string | null
   parent_id?: string | null
   created_at: string
 }
@@ -180,6 +182,17 @@ export function CategoryTable({ categories }: CategoryTableProps) {
                     checked={selectedCategories.includes(category.id)}
                     onChange={(e) => handleSelectCategory(category.id, e.target.checked)}
                   />
+                  {category.image_url ? (
+                    <img
+                      src={category.image_url}
+                      alt={category.image_alt || category.name}
+                      className="h-10 w-10 rounded object-cover border border-gray-200 mr-3"
+                    />
+                  ) : (
+                    <div className="h-10 w-10 mr-3 rounded bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-400 text-xs">
+                      IMG
+                    </div>
+                  )}
                   <div className="text-sm font-medium text-gray-900" style={{ marginLeft: depth * 16 }}>
                     {category.name}
                   </div>

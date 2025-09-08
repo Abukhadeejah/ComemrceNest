@@ -1,9 +1,9 @@
 import { AdminLoadingSpinner } from '@/components/admin/AdminLoadingSpinner'
 
-export default function AdminLoading() {
+export default function CategoriesLoading() {
   return (
     <AdminLoadingSpinner 
-      message="Loading admin dashboard..." 
+      message="Loading categories..." 
       size="lg"
       fullScreen={false}
     />

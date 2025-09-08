@@ -7,8 +7,6 @@ import { revalidateTag } from 'next/cache'
 import { tenantProductsTag } from '@/server/cacheTags'
 // GUARDRAIL: Import comprehensive guardrail system
 import {
-  validateTenantContext,
-  validateTenantAdminAccess,
   validateModuleAccess,
   logSecurityEvent,
   createSafeErrorResponse,
@@ -124,7 +122,7 @@ export async function createProduct(formData: FormData) {
         throw new Error('Tenant not found')
       }
       
-      const userId = await assertTenantAdmin(tenantId)
+      await assertTenantAdmin(tenantId)
 
       // GUARDRAIL: Validate module access
       await validateModuleAccess(tenantId, 'products', 'create')
@@ -929,7 +927,7 @@ export async function getCategories(tenantIdArg?: string) {
 
     const { data, error } = await supabaseAdmin
       .from('categories')
-      .select('id, name, slug, parent_id, created_at')
+      .select('id, name, slug, parent_id, image_url, image_alt, created_at')
       .eq('tenant_id', tenantId)
       .order('name', { ascending: true })
 
@@ -937,12 +935,14 @@ export async function getCategories(tenantIdArg?: string) {
       throw new Error(`Failed to fetch categories: ${error.message}`)
     }
 
-    const rows = (data ?? []) as Array<{ id: string; name: string; slug: string; parent_id: string | null; created_at: string }>
+    const rows = (data ?? []) as Array<{ id: string; name: string; slug: string; parent_id: string | null; image_url?: string | null; image_alt?: string | null; created_at: string }>
     return rows.map(category => ({
       id: category.id,
       name: category.name,
       slug: category.slug,
       parent_id: category.parent_id,
+      image_url: category.image_url ?? null,
+      image_alt: category.image_alt ?? null,
       created_at: category.created_at
     }))
   } catch (error) {

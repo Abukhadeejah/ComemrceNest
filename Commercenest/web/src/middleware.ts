@@ -55,15 +55,8 @@ export function middleware(request: NextRequest) {
   if (tenantFromPath) {
     headers.set('x-tenant-admin', tenantFromPath);
 
-    // Rewrite tenant-prefixed admin routes to global admin routes while preserving tenant context
-    if (pathname.startsWith(`/${tenantFromPath}/admin`)) {
-      const globalTarget = `/${segments.slice(1).join('/')}` // strip the tenant segment
-      headers.set('x-pathname', globalTarget)
-      const response = NextResponse.rewrite(new URL(globalTarget, request.url), { request: { headers } })
-      response.cookies.set('tenant', tenantFromPath, { path: '/', sameSite: 'lax' })
-      return response
-    }
-
+    // Do NOT rewrite tenant-prefixed admin routes; let them resolve to tenant-admin tree
+    // Still set cookies/headers for server-side tenant resolution
     const response = NextResponse.next({ request: { headers } });
     response.cookies.set('tenant', tenantFromPath, { path: '/', sameSite: 'lax' });
     return response;

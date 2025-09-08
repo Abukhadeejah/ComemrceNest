@@ -331,7 +331,7 @@ export async function testGuardrailBreakAttempts() {
 export async function testAdvancedBreakAttempts() {
   console.log('🔬 TESTING ADVANCED GUARDRAIL BREAK ATTEMPTS...\n')
 
-  const advancedResults: any[] = []
+  const advancedResults: unknown[] = []
 
   // ============================================================================
   // ADVANCED ATTEMPT 1: Race condition exploitation
@@ -398,7 +398,7 @@ export async function testAdvancedBreakAttempts() {
     advancedResults.push({
       attempt: 'Memory exhaustion',
       result: 'BLOCKED',
-      details: `✅ Memory protection working: ${error.message}`
+      details: `✅ Memory protection working: ${error instanceof Error ? error.message : String(error)}`
     })
   }
 
@@ -417,7 +417,7 @@ if (require.main === module) {
 
       console.log('\n🎯 FINAL SUMMARY:')
       console.log(`Basic Tests: ${results.summary.successRate.toFixed(1)}% success rate`)
-      console.log(`Advanced Tests: ${advanced.filter(r => r.result === 'BLOCKED').length}/${advanced.length} blocked`)
+      console.log(`Advanced Tests: ${advanced.filter((r: any) => r.result === 'BLOCKED').length}/${advanced.length} blocked`)
 
       process.exit(results.summary.successRate >= 75 ? 0 : 1)
     })

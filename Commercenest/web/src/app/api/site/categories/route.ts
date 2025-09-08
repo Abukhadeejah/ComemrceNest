@@ -11,7 +11,7 @@ export async function GET() {
 
     const { data, error } = await supabaseAdmin
       .from('categories')
-      .select('id, name, slug, parent_id')
+      .select('id, name, slug, parent_id, image_url, image_alt')
       .eq('tenant_id', tenantId)
       .order('name', { ascending: true })
 

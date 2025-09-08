@@ -5,7 +5,7 @@ import { resolveTenantIdFromRequest } from '@/server/tenant'
 
 export async function POST(request: NextRequest) {
     try {
-      const { name, slug, parentId } = await request.json();
+      const { name, slug, parentId, imageUrl, imageAlt } = await request.json();
   
       if (!name || !slug) {
         return NextResponse.json({ error: 'name and slug are required' }, { status: 400 });
@@ -40,8 +40,8 @@ export async function POST(request: NextRequest) {
   
       const { data, error } = await supabaseAdmin
         .from('categories')
-        .insert({ tenant_id: tenantId, name, slug, parent_id })
-        .select('id, name, slug, parent_id, created_at')
+        .insert({ tenant_id: tenantId, name, slug, parent_id, image_url: imageUrl ?? null, image_alt: imageAlt ?? null })
+        .select('id, name, slug, parent_id, image_url, image_alt, created_at')
         .maybeSingle();
   
       if (error) {
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
 
   export async function PUT(request: NextRequest) {
     try {
-      const { id, name, slug, parentId } = await request.json();
+      const { id, name, slug, parentId, imageUrl, imageAlt } = await request.json();
   
       if (!id || !name || !slug) {
         return NextResponse.json({ error: 'id, name and slug are required' }, { status: 400 });
@@ -96,10 +96,10 @@ export async function POST(request: NextRequest) {
   
       const { data, error } = await supabaseAdmin
         .from('categories')
-        .update({ name, slug, parent_id })
+        .update({ name, slug, parent_id, image_url: imageUrl ?? null, image_alt: imageAlt ?? null })
         .eq('id', id)
         .eq('tenant_id', tenantId)
-        .select('id, name, slug, parent_id, created_at')
+        .select('id, name, slug, parent_id, image_url, image_alt, created_at')
         .maybeSingle();
   
       if (error) {

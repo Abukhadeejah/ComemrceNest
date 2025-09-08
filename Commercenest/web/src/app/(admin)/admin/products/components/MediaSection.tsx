@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useId } from 'react'
+import { useRef, useId } from 'react'
 import { PhotoIcon, XMarkIcon } from '@heroicons/react/24/outline'
 
 interface MediaSectionProps {
@@ -9,7 +9,7 @@ interface MediaSectionProps {
   productId?: string
 }
 
-export function MediaSection({ images, onImagesChange, productId }: MediaSectionProps) {
+export function MediaSection({ images, onImagesChange }: MediaSectionProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const inputId = useId()
 
