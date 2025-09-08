@@ -13,7 +13,13 @@
     "validate:imports": "node scripts/validate-imports.js",
     "validate:contracts": "node scripts/validate-contracts.js",
     "ci:validate": "npm run validate:registry && npm run validate:imports && npm run validate:contracts",
-    "scaffold:tenant": "node scripts/scaffold-tenant.js"
+    "scaffold:tenant": "node scripts/scaffold-tenant.js",
+    "guardrail:test": "node scripts/guardrail-test.js test",
+    "guardrail:watch": "node scripts/guardrail-test.js watch",
+    "guardrail:deploy-check": "node scripts/guardrail-test.js deploy-check",
+    "guardrail:validate": "npx ts-node src/server/guardrail-validator.ts",
+    "guardrail:security-test": "npx ts-node src/test/guardrail-break-test.ts",
+    "test:performance": "npx playwright test tests/performance/"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.7",

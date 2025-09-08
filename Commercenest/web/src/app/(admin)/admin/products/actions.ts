@@ -5,6 +5,15 @@ import { supabaseAdmin } from '@/server/supabaseAdmin'
 import { assertTenantAdmin, getAuthenticatedUserId, hasAuthCookie } from '@/server/auth'
 import { revalidateTag } from 'next/cache'
 import { tenantProductsTag } from '@/server/cacheTags'
+// GUARDRAIL: Import comprehensive guardrail system
+import {
+  validateTenantContext,
+  validateTenantAdminAccess,
+  validateModuleAccess,
+  logSecurityEvent,
+  createSafeErrorResponse,
+  withPerformanceMonitoring
+} from '@/server/guardrails'
 
 interface ProductData {
   name: string
@@ -104,10 +113,21 @@ export async function checkSlugExists(slug: string, tenantId: string, excludeId?
   return !!data
 }
 
+// GUARDRAIL-ENHANCED: Product creation with comprehensive security and validation
 export async function createProduct(formData: FormData) {
-  const tenantId = await resolveTenantIdFromRequest()
-  if (!tenantId) { throw new Error('Tenant not found') }
-  await assertTenantAdmin(tenantId)
+  return await withPerformanceMonitoring('createProduct', async () => {
+    let tenantId: string | null = null
+    try {
+      // GUARDRAIL: Validate tenant context and admin access
+      tenantId = await resolveTenantIdFromRequest()
+      if (!tenantId) {
+        throw new Error('Tenant not found')
+      }
+      
+      const userId = await assertTenantAdmin(tenantId)
+
+      // GUARDRAIL: Validate module access
+      await validateModuleAccess(tenantId, 'products', 'create')
 
   const productData: ProductData = {
     name: formData.get('name') as string,
@@ -332,8 +352,34 @@ export async function createProduct(formData: FormData) {
     await Promise.all(combinationPromises)
   }
 
-  revalidateTag(tenantProductsTag(tenantId))
-  return product
+      // GUARDRAIL: Success logging and cache invalidation
+      revalidateTag(tenantProductsTag(tenantId))
+
+      await logSecurityEvent('product_created_success', {
+        productId: product.id,
+        tenantId,
+        productName: productData.name
+      })
+
+      return product
+
+    } catch (error) {
+      // GUARDRAIL: Comprehensive error handling
+      console.error('Product creation failed:', error)
+
+      await logSecurityEvent('product_creation_failed', {
+        tenantId: tenantId || 'unknown',
+        error: error instanceof Error ? error.message : String(error),
+        productData: {
+          name: formData.get('name') as string || 'unknown',
+          slug: formData.get('slug') as string || 'unknown'
+        }
+      })
+
+      // GUARDRAIL: Return safe error response
+      return createSafeErrorResponse(error, 'createProduct')
+    }
+  })
 }
 
 export async function updateProduct(productId: string, formData: FormData) {

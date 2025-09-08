@@ -218,21 +218,27 @@ export function VariantsSection({
         <div className="space-y-6">
           {/* Variant Options Section */}
           <div className="border border-gray-200 rounded-lg">
-            <button
-              type="button"
-              onClick={() => toggleSection('options')}
-              className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-t-lg"
-            >
-              <div className="flex items-center space-x-2">
+            <div className="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-t-lg">
+              <button
+                type="button"
+                onClick={() => toggleSection('options')}
+                className="flex items-center space-x-2 flex-1"
+              >
                 <span className="font-medium text-gray-900">Variant Options</span>
                 <span className="text-sm text-gray-500">({variantOptions.length})</span>
-              </div>
-              {expandedSections.has('options') ? (
-                <ChevronUpIcon className="h-5 w-5 text-gray-500" />
-              ) : (
-                <ChevronDownIcon className="h-5 w-5 text-gray-500" />
-              )}
-            </button>
+              </button>
+              <button
+                type="button"
+                onClick={() => toggleSection('options')}
+                className="p-1 text-gray-500 hover:text-gray-700"
+              >
+                {expandedSections.has('options') ? (
+                  <ChevronUpIcon className="h-5 w-5" />
+                ) : (
+                  <ChevronDownIcon className="h-5 w-5" />
+                )}
+              </button>
+            </div>
 
             {expandedSections.has('options') && (
               <div className="p-4 space-y-4">
@@ -318,15 +324,15 @@ export function VariantsSection({
           {/* Variant Combinations Section */}
           {variantOptions.length > 0 && (
             <div className="border border-gray-200 rounded-lg">
-              <button
-                type="button"
-                onClick={() => toggleSection('combinations')}
-                className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100"
-              >
-                <div className="flex items-center space-x-2">
+              <div className="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-t-lg">
+                <button
+                  type="button"
+                  onClick={() => toggleSection('combinations')}
+                  className="flex items-center space-x-2 flex-1"
+                >
                   <span className="font-medium text-gray-900">Variant Combinations</span>
                   <span className="text-sm text-gray-500">({variantCombinations.length})</span>
-                </div>
+                </button>
                 <div className="flex items-center space-x-2">
                   <button
                     type="button"
@@ -335,13 +341,19 @@ export function VariantsSection({
                   >
                     Generate
                   </button>
-                  {expandedSections.has('combinations') ? (
-                    <ChevronUpIcon className="h-5 w-5 text-gray-500" />
-                  ) : (
-                    <ChevronDownIcon className="h-5 w-5 text-gray-500" />
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => toggleSection('combinations')}
+                    className="p-1 text-gray-500 hover:text-gray-700"
+                  >
+                    {expandedSections.has('combinations') ? (
+                      <ChevronUpIcon className="h-5 w-5" />
+                    ) : (
+                      <ChevronDownIcon className="h-5 w-5" />
+                    )}
+                  </button>
                 </div>
-              </button>
+              </div>
 
               {expandedSections.has('combinations') && (
                 <div className="p-4">
