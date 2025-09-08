@@ -417,7 +417,7 @@ if (require.main === module) {
 
       console.log('\n🎯 FINAL SUMMARY:')
       console.log(`Basic Tests: ${results.summary.successRate.toFixed(1)}% success rate`)
-      console.log(`Advanced Tests: ${advanced.filter((r: any) => r.result === 'BLOCKED').length}/${advanced.length} blocked`)
+      console.log(`Advanced Tests: ${advanced.filter((r: unknown) => (r as { result: string }).result === 'BLOCKED').length}/${advanced.length} blocked`)
 
       process.exit(results.summary.successRate >= 75 ? 0 : 1)
     })
