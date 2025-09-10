@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { generateProductBadges, getBadgeClassName, getBadgeStyle } from '@/utils/badges';
 
 interface Product {
   name: string;
@@ -13,12 +14,40 @@ interface Product {
   isNew?: boolean;
   isTrending?: boolean;
   discount?: number;
+  // New badge system fields
+  allBadges?: Array<{ text: string; className: string; priority: number; icon?: string }>;
+  badgeColor?: string;
+}
+
+interface ApiProduct {
+  id: string;
+  name: string;
+  slug: string;
+  price_cents: number;
+  compare_at_price_cents?: number;
+  images: string[];
+  status: string;
+  stock: number;
+  low_stock_threshold?: number;
+  // Badge System
+  is_featured?: boolean;
+  is_bestseller?: boolean;
+  is_new_arrival?: boolean;
+  is_on_sale?: boolean;
+  is_limited_edition?: boolean;
+  is_sold_out?: boolean;
+  custom_badge_text?: string;
+  badge_color?: string;
+  badge_priority?: number;
+  badge_display_until?: string;
+  badge_display_from?: string;
 }
 
 interface LatestProductsProps {
   title?: string;
   products?: Product[];
   bgColor?: string;
+  apiProducts?: ApiProduct[];
 }
 
 const defaultProducts: Product[] = [
@@ -81,11 +110,69 @@ const defaultProducts: Product[] = [
 
 const LatestProducts: React.FC<LatestProductsProps> = ({
   title = "Latest Products",
-  products = defaultProducts,
-  bgColor = "bg-white"
+  products: propProducts,
+  bgColor = "bg-white",
+  apiProducts: propApiProducts
 }) => {
+  const [products, setProducts] = useState<Product[]>(propProducts || defaultProducts);
   const [hoveredProduct, setHoveredProduct] = useState<string | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState<{ [key: string]: number }>({});
+
+  useEffect(() => {
+    if (propApiProducts && Array.isArray(propApiProducts) && propApiProducts.length > 0) {
+      const transformedProducts = propApiProducts.slice(0, 8).map(product => {
+        if (!product || typeof product !== 'object') {
+          return null;
+        }
+        
+        const price = (product.price_cents || 0) / 100;
+        const originalPrice = product.compare_at_price_cents ? product.compare_at_price_cents / 100 : price;
+        const discount = originalPrice > price ? Math.round(((originalPrice - price) / originalPrice) * 100) : 0;
+        
+        // Generate badges using the new badge system
+        const badges = generateProductBadges({
+          is_featured: product.is_featured,
+          is_bestseller: product.is_bestseller,
+          is_new_arrival: product.is_new_arrival,
+          is_on_sale: product.is_on_sale,
+          is_limited_edition: product.is_limited_edition,
+          is_sold_out: product.is_sold_out,
+          custom_badge_text: product.custom_badge_text,
+          badge_color: product.badge_color,
+          badge_priority: product.badge_priority,
+          badge_display_until: product.badge_display_until,
+          badge_display_from: product.badge_display_from,
+          compare_at_price_cents: product.compare_at_price_cents,
+          price_cents: product.price_cents,
+          stock: product.stock,
+          low_stock_threshold: product.low_stock_threshold
+        });
+
+        // Get the primary badge (first one) for backward compatibility
+        const primaryBadge = badges.length > 0 ? badges[0] : { text: 'New', className: 'bg-green-500 text-white' };
+
+        return {
+          name: product.name || 'Unnamed Product',
+          images: (product.images && Array.isArray(product.images) && product.images.length > 0) ? product.images : [
+            'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400&h=400&fit=crop'
+          ],
+          price: price,
+          originalPrice: originalPrice,
+          badge: primaryBadge.text,
+          url: `/senlysh/products/${product.slug || 'unknown'}`,
+          sizes: ['M-38', 'L-40', 'XL-42'],
+          isNew: product.is_new_arrival || (product.status === 'published' && Math.random() > 0.7),
+          isTrending: product.is_bestseller || Math.random() > 0.8,
+          discount: discount,
+          // Store all badges for rendering
+          allBadges: badges,
+          badgeColor: product.badge_color
+        };
+      }).filter(product => product !== null) as Product[]; // Remove any null entries
+      
+      setProducts(transformedProducts);
+    }
+  }, [propApiProducts]);
 
 
   // Auto-cycle images on hover
@@ -117,6 +204,7 @@ const LatestProducts: React.FC<LatestProductsProps> = ({
   const handleImageClick = (productName: string, index: number) => {
     setCurrentImageIndex(prev => ({ ...prev, [productName]: index }));
   };
+
 
   return (
     <section className={`py-8 sm:py-12 md:py-16 ${bgColor}`}>
@@ -176,25 +264,43 @@ const LatestProducts: React.FC<LatestProductsProps> = ({
 
                       {/* Badge with enhanced animations */}
                       <div className="absolute top-2 left-2 flex flex-col gap-1">
-                        {product.isNew && (
-                          <span className="bg-green-500 text-white text-xs px-2 py-1 rounded-full font-semibold
-                            animate-bounce hover:animate-pulse transition-all duration-200
-                            hover:scale-110 hover:shadow-lg motion-reduce:animate-none">
-                            ✨ New
-                          </span>
+                        {product.allBadges && product.allBadges.length > 0 ? (
+                          product.allBadges.map((badge, badgeIndex) => (
+                            <span 
+                              key={badgeIndex}
+                              className={`text-xs px-2 py-1 rounded-full font-semibold
+                                transition-all duration-200 hover:scale-110 hover:shadow-lg
+                                motion-reduce:animate-none ${getBadgeClassName(badge, product.badgeColor)}`}
+                              style={getBadgeStyle(badge, product.badgeColor)}
+                            >
+                              {badge.icon && <span className="mr-1">{badge.icon}</span>}
+                              {badge.text}
+                            </span>
+                          ))
+                        ) : (
+                          // Fallback to old badge system for backward compatibility
+                          <>
+                            {product.isNew && (
+                              <span className="bg-green-500 text-white text-xs px-2 py-1 rounded-full font-semibold
+                                animate-bounce hover:animate-pulse transition-all duration-200
+                                hover:scale-110 hover:shadow-lg motion-reduce:animate-none">
+                                ✨ New
+                              </span>
+                            )}
+                            {product.isTrending && (
+                              <span className="bg-orange-500 text-white text-xs px-2 py-1 rounded-full font-semibold 
+                                animate-pulse hover:animate-bounce transition-all duration-200
+                                hover:scale-110 hover:shadow-lg motion-reduce:animate-none">
+                                🔥 Trending
+                              </span>
+                            )}
+                            <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-semibold
+                              transition-all duration-200 hover:scale-110 hover:shadow-lg
+                              group-hover:bg-red-400">
+                              {product.badge}
+                            </span>
+                          </>
                         )}
-                        {product.isTrending && (
-                          <span className="bg-orange-500 text-white text-xs px-2 py-1 rounded-full font-semibold 
-                            animate-pulse hover:animate-bounce transition-all duration-200
-                            hover:scale-110 hover:shadow-lg motion-reduce:animate-none">
-                            🔥 Trending
-                          </span>
-                        )}
-                        <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-semibold
-                          transition-all duration-200 hover:scale-110 hover:shadow-lg
-                          group-hover:bg-red-400">
-                          {product.badge}
-                        </span>
                       </div>
 
                       {/* Wishlist Button with enhanced hover */}

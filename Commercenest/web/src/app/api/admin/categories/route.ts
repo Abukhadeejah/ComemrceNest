@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
 import { assertTenantAdmin } from '@/server/auth'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
+import { revalidateTag } from 'next/cache'
+import { tenantProductsTag } from '@/server/cacheTags'
 
 export async function POST(request: NextRequest) {
     try {
@@ -49,6 +51,9 @@ export async function POST(request: NextRequest) {
         // if (error.code === '23505') return NextResponse.json({ error: 'Slug already exists' }, { status: 409 });
         return NextResponse.json({ error: error.message }, { status: 500 });
       }
+  
+      // Invalidate cache after successful creation
+      revalidateTag(tenantProductsTag(tenantId))
   
       return NextResponse.json({ data }, { status: 201 });
     } catch (err: unknown) {
@@ -110,6 +115,9 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: error.message }, { status: 500 });
       }
   
+      // Invalidate cache after successful update
+      revalidateTag(tenantProductsTag(tenantId))
+  
       return NextResponse.json({ data });
     } catch (err: unknown) {
       console.error('Update category error:', err);
@@ -169,6 +177,9 @@ export async function POST(request: NextRequest) {
       if (!deletedRows || deletedRows.length === 0) {
         return NextResponse.json({ error: 'Category not found' }, { status: 404 });
       }
+  
+      // Invalidate cache after successful deletion
+      revalidateTag(tenantProductsTag(tenantId))
   
       // Children auto-set parent_id = null via FK ON DELETE SET NULL (ensure constraint exists)
       return NextResponse.json({ success: true });

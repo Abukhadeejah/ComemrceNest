@@ -19,6 +19,7 @@ import { MediaSection } from './components/MediaSection'
 import { SeoSection } from './components/SeoSection'
 import { ProductPreview } from './components/ProductPreview'
 import { VariantsSection } from './components/VariantsSection'
+import { BadgeSection } from './components/BadgeSection'
 import { ProductFormData } from '@/types/product'
 
 interface ProductFormProps {
@@ -64,7 +65,19 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
     images: [],
     variantOptions: [],
     sizeGuides: [],
-    sizeGuideId: ''
+    sizeGuideId: '',
+    // Badge System
+    is_featured: false,
+    is_bestseller: false,
+    is_new_arrival: false,
+    is_on_sale: false,
+    is_limited_edition: false,
+    is_sold_out: false,
+    custom_badge_text: '',
+    badge_color: '#ef4444',
+    badge_priority: 0,
+    badge_display_until: '',
+    badge_display_from: ''
   })
 
   // State for images (can be File objects for new uploads or URL strings for existing images)
@@ -94,6 +107,7 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
   // Populate form data when initialData is provided (edit mode)
   useEffect(() => {
     if (initialData && mode === 'edit') {
+      console.log('ProductForm: Loading initial data for edit mode:', initialData)
       setFormData(prev => ({
         ...prev,
         ...initialData
@@ -197,6 +211,9 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
             }
           }
         }
+        
+        // Small delay to ensure cache invalidation completes
+        await new Promise(resolve => setTimeout(resolve, 100))
         
         router.push(ADMIN_URLS.products(tenantKey))
         router.refresh()
@@ -306,6 +323,12 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
             }))
           }}
           productId={data?.id as string}
+        />
+        
+        <BadgeSection 
+          formData={formData} 
+          errors={errors}
+          onInputChange={handleInputChange}
         />
         
         <SeoSection 

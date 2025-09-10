@@ -3,7 +3,7 @@
 import { resolveTenantIdFromRequest } from '@/server/tenant'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
 import { assertTenantAdmin, getAuthenticatedUserId, hasAuthCookie } from '@/server/auth'
-import { revalidateTag } from 'next/cache'
+import { revalidateTag, unstable_cache } from 'next/cache'
 import { tenantProductsTag } from '@/server/cacheTags'
 // GUARDRAIL: Import comprehensive guardrail system
 import {
@@ -53,6 +53,18 @@ interface ProductData {
   sizeGuides?: Record<string, unknown>[]
   sizeGuideId?: string
   images?: string[]
+  // Badge System
+  is_featured?: boolean
+  is_bestseller?: boolean
+  is_new_arrival?: boolean
+  is_on_sale?: boolean
+  is_limited_edition?: boolean
+  is_sold_out?: boolean
+  custom_badge_text?: string | null
+  badge_color?: string | null
+  badge_priority?: number | null
+  badge_display_until?: string | null
+  badge_display_from?: string | null
 }
 
 function normalizeImageInputs(imageInputs: string[]): string[] {
@@ -164,7 +176,19 @@ export async function createProduct(formData: FormData) {
     variantOptions: JSON.parse(formData.get('variantOptions') as string || '[]'),
     variantCombinations: JSON.parse(formData.get('variantCombinations') as string || '[]'),
     sizeGuides: JSON.parse(formData.get('sizeGuides') as string || '[]'),
-    sizeGuideId: formData.get('sizeGuideId') as string
+    sizeGuideId: formData.get('sizeGuideId') as string,
+    // Badge System
+    is_featured: formData.get('is_featured') === 'true',
+    is_bestseller: formData.get('is_bestseller') === 'true',
+    is_new_arrival: formData.get('is_new_arrival') === 'true',
+    is_on_sale: formData.get('is_on_sale') === 'true',
+    is_limited_edition: formData.get('is_limited_edition') === 'true',
+    is_sold_out: formData.get('is_sold_out') === 'true',
+    custom_badge_text: formData.get('custom_badge_text') as string,
+    badge_color: formData.get('badge_color') as string,
+    badge_priority: formData.get('badge_priority') ? parseInt(formData.get('badge_priority') as string) : null,
+    badge_display_until: formData.get('badge_display_until') as string,
+    badge_display_from: formData.get('badge_display_from') as string
   }
 
   // Process numeric fields - convert empty strings to null
@@ -179,6 +203,12 @@ export async function createProduct(formData: FormData) {
   if (productData.material_composition === '') productData.material_composition = null
   if (productData.care_instructions === '') productData.care_instructions = null
   if (productData.model_wearing_size === '') productData.model_wearing_size = null
+  
+  // Process badge fields - convert empty strings to null
+  if (productData.custom_badge_text === '') productData.custom_badge_text = null
+  if (productData.badge_color === '') productData.badge_color = null
+  if (productData.badge_display_until === '') productData.badge_display_until = null
+  if (productData.badge_display_from === '') productData.badge_display_from = null
 
   const { data: product, error } = await supabaseAdmin
     .from('products')
@@ -213,7 +243,19 @@ export async function createProduct(formData: FormData) {
       is_gift_card: productData.is_gift_card,
       gift_card_amount_cents: productData.gift_card_amount_cents,
       gift_card_expiry_days: productData.gift_card_expiry_days,
-      status: productData.status
+      status: productData.status,
+      // Badge System
+      is_featured: productData.is_featured,
+      is_bestseller: productData.is_bestseller,
+      is_new_arrival: productData.is_new_arrival,
+      is_on_sale: productData.is_on_sale,
+      is_limited_edition: productData.is_limited_edition,
+      is_sold_out: productData.is_sold_out,
+      custom_badge_text: productData.custom_badge_text,
+      badge_color: productData.badge_color,
+      badge_priority: productData.badge_priority,
+      badge_display_until: productData.badge_display_until,
+      badge_display_from: productData.badge_display_from
     })
     .select()
     .single()
@@ -422,7 +464,19 @@ export async function updateProduct(productId: string, formData: FormData) {
     variantOptions: JSON.parse(formData.get('variantOptions') as string || '[]'),
     variantCombinations: JSON.parse(formData.get('variantCombinations') as string || '[]'),
     sizeGuides: JSON.parse(formData.get('sizeGuides') as string || '[]'),
-    sizeGuideId: formData.get('sizeGuideId') as string
+    sizeGuideId: formData.get('sizeGuideId') as string,
+    // Badge System
+    is_featured: formData.get('is_featured') === 'true',
+    is_bestseller: formData.get('is_bestseller') === 'true',
+    is_new_arrival: formData.get('is_new_arrival') === 'true',
+    is_on_sale: formData.get('is_on_sale') === 'true',
+    is_limited_edition: formData.get('is_limited_edition') === 'true',
+    is_sold_out: formData.get('is_sold_out') === 'true',
+    custom_badge_text: formData.get('custom_badge_text') as string,
+    badge_color: formData.get('badge_color') as string,
+    badge_priority: formData.get('badge_priority') ? parseInt(formData.get('badge_priority') as string) : null,
+    badge_display_until: formData.get('badge_display_until') as string,
+    badge_display_from: formData.get('badge_display_from') as string
   }
 
   // Process numeric fields - convert empty strings to null
@@ -437,6 +491,12 @@ export async function updateProduct(productId: string, formData: FormData) {
   if (productData.material_composition === '') productData.material_composition = null
   if (productData.care_instructions === '') productData.care_instructions = null
   if (productData.model_wearing_size === '') productData.model_wearing_size = null
+  
+  // Process badge fields - convert empty strings to null
+  if (productData.custom_badge_text === '') productData.custom_badge_text = null
+  if (productData.badge_color === '') productData.badge_color = null
+  if (productData.badge_display_until === '') productData.badge_display_until = null
+  if (productData.badge_display_from === '') productData.badge_display_from = null
 
   const { data: product, error } = await supabaseAdmin
     .from('products')
@@ -470,7 +530,19 @@ export async function updateProduct(productId: string, formData: FormData) {
       is_gift_card: productData.is_gift_card,
       gift_card_amount_cents: productData.gift_card_amount_cents,
       gift_card_expiry_days: productData.gift_card_expiry_days,
-      status: productData.status
+      status: productData.status,
+      // Badge System
+      is_featured: productData.is_featured,
+      is_bestseller: productData.is_bestseller,
+      is_new_arrival: productData.is_new_arrival,
+      is_on_sale: productData.is_on_sale,
+      is_limited_edition: productData.is_limited_edition,
+      is_sold_out: productData.is_sold_out,
+      custom_badge_text: productData.custom_badge_text,
+      badge_color: productData.badge_color,
+      badge_priority: productData.badge_priority,
+      badge_display_until: productData.badge_display_until,
+      badge_display_from: productData.badge_display_from
     })
     .eq('id', productId)
     .eq('tenant_id', tenantId)
@@ -800,6 +872,15 @@ export async function uploadProductImage(file: File, productId: string) {
     .from('product-images')
     .getPublicUrl(fileName)
 
+  // Check if this is the first image for this product
+  const { data: existingImages } = await supabaseAdmin
+    .from('product_images')
+    .select('id')
+    .eq('product_id', productId)
+    .eq('tenant_id', tenantId)
+
+  const isFirstImage = !existingImages || existingImages.length === 0
+
   // Insert image record
   const { error: imageError } = await supabaseAdmin
     .from('product_images')
@@ -815,39 +896,36 @@ export async function uploadProductImage(file: File, productId: string) {
     throw new Error(`Failed to save image record: ${imageError.message}`)
   }
 
+  // If this is the first image, update the hero_image_url in the products table
+  if (isFirstImage) {
+    const { error: updateError } = await supabaseAdmin
+      .from('products')
+      .update({ hero_image_url: urlData.publicUrl })
+      .eq('id', productId)
+      .eq('tenant_id', tenantId)
+
+    if (updateError) {
+      console.error('Failed to update hero_image_url:', updateError)
+      // Don't throw error here as the image upload was successful
+    }
+  }
+
   revalidateTag(tenantProductsTag(tenantId))
   return urlData.publicUrl
 }
 
-export async function getProducts(searchParams: {
+// Internal function for actual database query
+async function _getProductsFromDB(searchParams: {
   search?: string
   status?: string
   category?: string
   page?: string
   sort?: string
-}, tenantIdArg?: string) {
-  try {
-    const tenantId = tenantIdArg || await resolveTenantIdFromRequest()
-    if (!tenantId) { throw new Error('Tenant not found') }
-    // During initial server render, the user session may not yet be resolvable in RSC.
-    // To avoid crashing the page, return an empty dataset when unauthenticated.
-    // All mutations remain strictly server-gated via assertTenantAdmin.
-    const userId = await getAuthenticatedUserId()
-    const hasCookie = await hasAuthCookie()
-    if (!userId && !hasCookie) {
-      return {
-        data: [],
-        count: 0,
-        page: 1,
-        pageSize: 20,
-        totalPages: 0
-      }
-    }
-
-    // Check if Supabase is configured
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      throw new Error('Supabase configuration missing')
-    }
+}, tenantId: string) {
+  // Check if Supabase is configured
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error('Supabase configuration missing')
+  }
 
   let query = supabaseAdmin
     .from('products')
@@ -903,16 +981,106 @@ export async function getProducts(searchParams: {
     pageSize,
     totalPages: Math.ceil((count || 0) / pageSize)
   }
+}
+
+// Cached version of getProducts
+const getCachedProducts = unstable_cache(
+  async (searchParams: {
+    search?: string
+    status?: string
+    category?: string
+    page?: string
+    sort?: string
+  }, tenantId: string) => {
+    return await _getProductsFromDB(searchParams, tenantId)
+  },
+  ['products'],
+  {
+    tags: ['products'],
+    revalidate: 60 // Cache for 60 seconds
+  }
+)
+
+export async function getProducts(searchParams: {
+  search?: string
+  status?: string
+  category?: string
+  page?: string
+  sort?: string
+}, tenantIdArg?: string) {
+  try {
+    const tenantId = tenantIdArg || await resolveTenantIdFromRequest()
+    if (!tenantId) { throw new Error('Tenant not found') }
+    
+    // During initial server render, the user session may not yet be resolvable in RSC.
+    // To avoid crashing the page, return an empty dataset when unauthenticated.
+    // All mutations remain strictly server-gated via assertTenantAdmin.
+    const userId = await getAuthenticatedUserId()
+    const hasCookie = await hasAuthCookie()
+    if (!userId && !hasCookie) {
+      return {
+        data: [],
+        count: 0,
+        page: 1,
+        pageSize: 20,
+        totalPages: 0
+      }
+    }
+
+    // Use cached version for better performance and proper cache invalidation
+    return await getCachedProducts(searchParams, tenantId)
   } catch (error) {
     console.error('getProducts error:', error)
     throw error
   }
 }
 
+// Internal function for actual database query
+async function _getCategoriesFromDB(tenantId: string) {
+  // Check if Supabase is configured
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error('Supabase configuration missing')
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('categories')
+    .select('id, name, slug, parent_id, image_url, image_alt, created_at')
+    .eq('tenant_id', tenantId)
+    .order('name', { ascending: true })
+
+  if (error) {
+    throw new Error(`Failed to fetch categories: ${error.message}`)
+  }
+
+  const rows = (data ?? []) as Array<{ id: string; name: string; slug: string; parent_id: string | null; image_url?: string | null; image_alt?: string | null; created_at: string }>
+  return rows.map(category => ({
+    id: category.id,
+    name: category.name,
+    slug: category.slug,
+    parent_id: category.parent_id,
+    image_url: category.image_url ?? null,
+    image_alt: category.image_alt ?? null,
+    created_at: category.created_at
+  }))
+}
+
+// Cached version of getCategories
+const getCachedCategories = unstable_cache(
+  async (tenantId: string) => {
+    return await _getCategoriesFromDB(tenantId)
+  },
+  ['categories'],
+  {
+    tags: ['categories'],
+    revalidate: 60 // Cache for 60 seconds
+  }
+)
+
 export async function getCategories(tenantIdArg?: string) {
   try {
     const tenantId = tenantIdArg || await resolveTenantIdFromRequest()
     if (!tenantId) { throw new Error('Tenant not found') }
+    
     // See note in getProducts: avoid SSR crash; return empty when unauthenticated.
     const userId = await getAuthenticatedUserId()
     const hasCookie = await hasAuthCookie()
@@ -920,31 +1088,8 @@ export async function getCategories(tenantIdArg?: string) {
       return [] as Array<{ id: string; name: string; slug: string; created_at: string }>
     }
 
-    // Check if Supabase is configured
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      throw new Error('Supabase configuration missing')
-    }
-
-    const { data, error } = await supabaseAdmin
-      .from('categories')
-      .select('id, name, slug, parent_id, image_url, image_alt, created_at')
-      .eq('tenant_id', tenantId)
-      .order('name', { ascending: true })
-
-    if (error) {
-      throw new Error(`Failed to fetch categories: ${error.message}`)
-    }
-
-    const rows = (data ?? []) as Array<{ id: string; name: string; slug: string; parent_id: string | null; image_url?: string | null; image_alt?: string | null; created_at: string }>
-    return rows.map(category => ({
-      id: category.id,
-      name: category.name,
-      slug: category.slug,
-      parent_id: category.parent_id,
-      image_url: category.image_url ?? null,
-      image_alt: category.image_alt ?? null,
-      created_at: category.created_at
-    }))
+    // Use cached version for better performance and proper cache invalidation
+    return await getCachedCategories(tenantId)
   } catch (error) {
     console.error('getCategories error:', error)
     throw error

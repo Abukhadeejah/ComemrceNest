@@ -4,6 +4,13 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { ChevronDownIcon, FunnelIcon } from '@heroicons/react/24/outline'
 
+interface Category {
+  id: string
+  name: string
+  slug: string
+  parent_id?: string
+}
+
 export function ProductFilters() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -14,6 +21,27 @@ export function ProductFilters() {
   const [color, setColor] = useState(searchParams.get('color') || '')
   const [size, setSize] = useState(searchParams.get('size') || '')
   const [fabric, setFabric] = useState(searchParams.get('fabric') || '')
+  const [categories, setCategories] = useState<Category[]>([])
+  const [loading, setLoading] = useState(true)
+
+  // Fetch categories from API
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch('/api/site/categories')
+        if (response.ok) {
+          const data = await response.json()
+          setCategories(data.categories || [])
+        }
+      } catch (error) {
+        console.error('Failed to fetch categories:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchCategories()
+  }, [])
 
   // Update URL when filters change
   useEffect(() => {
@@ -100,20 +128,14 @@ export function ProductFilters() {
             value={category}
             onChange={(e) => setCategory(e.target.value)}
             className="text-sm border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+            disabled={loading}
           >
             <option value="">All Categories</option>
-            <option value="men">Men</option>
-            <option value="women">Women</option>
-            <option value="accessories">Accessories</option>
-            <option value="footwear">Footwear</option>
-            <option value="bags-wallets">Bags & Wallets</option>
-            <option value="jewelry">Jewelry</option>
-            <option value="watches">Watches</option>
-            <option value="home-living">Home & Living</option>
-            <option value="beauty-personal-care">Beauty & Personal Care</option>
-            <option value="sports-activewear">Sports & Activewear</option>
-            <option value="kids-baby">Kids & Baby</option>
-            <option value="gifts">Gifts</option>
+            {categories.map((cat) => (
+              <option key={cat.id} value={cat.slug}>
+                {cat.name}
+              </option>
+            ))}
           </select>
         </div>
 

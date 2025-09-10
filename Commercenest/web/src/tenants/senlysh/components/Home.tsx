@@ -13,7 +13,35 @@ import BrandCarousel from './BrandCarousel';
 import FeaturedProducts from './FeaturedProducts';
 import CustomerReviews from './CustomerReviews';
 
-export default function Home() {
+interface Product {
+  id: string
+  name: string
+  slug: string
+  description?: string
+  price_cents: number
+  compare_at_price_cents?: number
+  currency: string
+  hero_image_url?: string
+  images: string[]
+  stock: number
+  status: string
+}
+
+interface Category {
+  id: string
+  name: string
+  slug: string
+  parent_id?: string
+  image_url?: string
+  image_alt?: string
+}
+
+interface HomeProps {
+  products: Product[]
+  categories: Category[]
+}
+
+export default function Home({ products, categories }: HomeProps) {
   const [countdown, setCountdown] = useState({
     days: 129,
     hours: 6,
@@ -47,10 +75,10 @@ export default function Home() {
         <HeroSection autoPlay={true} autoPlayInterval={8000} />
 
         {/* Categories Section */}
-        <CategoriesSection />
+        <CategoriesSection categories={categories} />
 
         {/* Latest Products Section */}
-        <LatestProducts />
+        <LatestProducts apiProducts={products} />
 
         {/* Feature Icons Section */}
         <FeatureIcons />

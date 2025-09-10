@@ -133,6 +133,19 @@ export interface ProductFormData {
   
   // Media
   images: string[]
+  
+  // Badge System
+  is_featured: boolean
+  is_bestseller: boolean
+  is_new_arrival: boolean
+  is_on_sale: boolean
+  is_limited_edition: boolean
+  is_sold_out: boolean
+  custom_badge_text: string
+  badge_color: string
+  badge_priority: number
+  badge_display_until?: string
+  badge_display_from?: string
 }
 
 export interface VariantOption {

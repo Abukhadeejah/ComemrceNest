@@ -8,8 +8,6 @@ import { ProductFilters } from '@/components/tenant/products/ProductFilters'
 import { ProductSearch } from '@/components/tenant/products/ProductSearch'
 import { getProducts } from '@/server/products'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
-import { getRegistryEntry } from '@/registry/tenantRegistry'
-import type { Metadata } from 'next'
 
 interface ProductsPageProps {
   searchParams: Promise<{
@@ -19,12 +17,6 @@ interface ProductsPageProps {
     sort?: string
     page?: string
   }>
-}
-
-export async function generateMetadata(): Promise<Metadata> {
-  const registryEntry = getRegistryEntry('senlysh')
-  const { getPageMetadata } = await registryEntry.metadata()
-  return getPageMetadata('Shop', 'Explore our latest fashion trends and styles')
 }
 
 export default async function SenlyshProductsPage({ searchParams }: ProductsPageProps) {
