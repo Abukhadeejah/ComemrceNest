@@ -30,6 +30,7 @@ export function ProductDetail({ product, images }: ProductDetailProps) {
   const [quantity, setQuantity] = useState(1)
   const [activeImage, setActiveImage] = useState(0)
 
+
   const formatPrice = (priceCents: number) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',

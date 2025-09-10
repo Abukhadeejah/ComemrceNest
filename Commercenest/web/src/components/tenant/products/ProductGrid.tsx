@@ -7,6 +7,7 @@ import { HeartIcon, ShoppingBagIcon, EyeIcon } from '@heroicons/react/24/outline
 import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid'
 import { useState } from 'react'
 import { QuickViewModal } from './QuickViewModal'
+import { generateProductBadges, getBadgeClassName, getBadgeStyle } from '@/utils/badges'
 
 interface ProductGridProps {
   products: ProductListItem[]
@@ -16,8 +17,6 @@ export function ProductGrid({ products }: ProductGridProps) {
   const [quickViewProduct, setQuickViewProduct] = useState<ProductListItem | null>(null)
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false)
 
-  // Debug logging
-  console.log('[PRODUCT_GRID] Received products:', products.length, products.map(p => p.name))
 
   if (products.length === 0) {
     return (
@@ -49,11 +48,10 @@ export function ProductGrid({ products }: ProductGridProps) {
   return (
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {products.map((product, index) => (
+        {products.map((product) => (
           <ProductCard 
             key={product.id} 
             product={product} 
-            index={index} 
             onQuickView={handleQuickView}
           />
         ))}
@@ -73,11 +71,9 @@ export function ProductGrid({ products }: ProductGridProps) {
 
 function ProductCard({ 
   product, 
-  index, 
   onQuickView 
 }: { 
   product: ProductListItem; 
-  index: number;
   onQuickView: (product: ProductListItem) => void;
 }) {
   const [isWishlisted, setIsWishlisted] = useState(false)
@@ -91,18 +87,29 @@ function ProductCard({
     }).format(priceCents / 100)
   }
 
+  // Calculate discount for price display
   const hasDiscount = product.compare_at_price_cents && product.compare_at_price_cents > product.price_cents
-  const discountPercentage = hasDiscount 
-    ? Math.round(((product.compare_at_price_cents! - product.price_cents) / product.compare_at_price_cents!) * 100)
-    : 0
 
-  // Generate fashion-specific badges
-  const badges = []
-  if (hasDiscount) badges.push({ text: `-${discountPercentage}% OFF`, className: 'bg-red-500 text-white' })
-  if (index % 4 === 0) badges.push({ text: 'Trending', className: 'bg-purple-500 text-white' })
-  if (index % 5 === 0) badges.push({ text: 'New Arrival', className: 'bg-green-500 text-white' })
-  if (product.stock <= 5 && product.stock > 0) badges.push({ text: 'Low Stock', className: 'bg-orange-500 text-white' })
-  if (product.stock === 0) badges.push({ text: 'Sold Out', className: 'bg-gray-500 text-white' })
+  // Generate badges using the new badge system
+  const badgeConfig = {
+    is_featured: product.is_featured,
+    is_bestseller: product.is_bestseller,
+    is_new_arrival: product.is_new_arrival,
+    is_on_sale: product.is_on_sale,
+    is_limited_edition: product.is_limited_edition,
+    is_sold_out: product.is_sold_out,
+    custom_badge_text: product.custom_badge_text,
+    badge_color: product.badge_color,
+    badge_priority: product.badge_priority,
+    badge_display_until: product.badge_display_until,
+    badge_display_from: product.badge_display_from,
+    compare_at_price_cents: product.compare_at_price_cents,
+    price_cents: product.price_cents,
+    stock: product.stock,
+    low_stock_threshold: product.low_stock_threshold
+  }
+  
+  const badges = generateProductBadges(badgeConfig)
 
   const handleWishlistToggle = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -117,7 +124,7 @@ function ProductCard({
   }
 
   return (
-    <div className="group bg-white rounded-2xl shadow-sm overflow-hidden hover:shadow-2xl transition-all duration-500 border border-gray-100 hover:border-gray-200 transform hover:-translate-y-1">
+    <div className="group bg-white rounded-2xl shadow-sm overflow-hidden hover:shadow-2xl transition-all duration-500 border border-gray-100 hover:border-gray-200 transform hover:-translate-y-1 flex flex-col">
               {/* Product Image Container */}
         <div className="relative aspect-[4/5] overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
         {product.hero_image_url ? (
@@ -139,7 +146,12 @@ function ProductCard({
         {/* Badges */}
         <div className="absolute top-3 left-3 flex flex-col gap-1">
           {badges.map((badge, i) => (
-            <span key={i} className={`text-xs px-2 py-1 rounded-full font-medium shadow-sm ${badge.className}`}>
+            <span 
+              key={i} 
+              className={`text-xs px-2 py-1 rounded-full font-medium shadow-sm ${getBadgeClassName(badge, product.badge_color)}`}
+              style={getBadgeStyle(badge, product.badge_color)}
+            >
+              {badge.icon && <span className="mr-1">{badge.icon}</span>}
               {badge.text}
             </span>
           ))}
@@ -168,11 +180,11 @@ function ProductCard({
           </button>
         </div>
 
-        {/* Quick View Overlay */}
-        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100 z-10">
+        {/* Quick View Button - No overlay, just a floating button */}
+        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 pointer-events-none">
           <Link 
             href={`/products/${product.slug}`}
-            className="bg-white text-gray-900 px-6 py-3 rounded-lg font-medium hover:bg-gray-50 transition-colors duration-200 shadow-lg transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300"
+            className="bg-white text-gray-900 px-6 py-3 rounded-lg font-medium hover:bg-gray-50 shadow-lg transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 pointer-events-auto"
           >
             View Details
           </Link>
@@ -188,16 +200,16 @@ function ProductCard({
         )}
       </div>
 
-      {/* Product Info */}
-      <div className="p-4">
+      {/* Product Info - Using flexbox with consistent spacing */}
+      <div className="p-3 flex flex-col">
         <Link href={`/products/${product.slug}`} className="block group">
-          <h3 className="text-sm font-medium text-gray-900 group-hover:text-indigo-600 transition-colors duration-200 line-clamp-2 mb-2 leading-tight">
+          <h3 className="text-sm font-medium text-gray-900 group-hover:text-indigo-600 transition-colors duration-200 line-clamp-2 mb-2 leading-tight min-h-[2rem]">
             {product.name}
           </h3>
         </Link>
         
         {/* Star Rating */}
-        <div className="flex items-center mb-3">
+        <div className="flex items-center mb-2">
           <div className="flex text-yellow-400">
             {[...Array(5)].map((_, i) => (
               <svg key={i} className="w-3 h-3 fill-current" viewBox="0 0 20 20">
@@ -210,7 +222,7 @@ function ProductCard({
         </div>
         
         {/* Price */}
-        <div className="flex items-center space-x-2 mb-4">
+        <div className="flex items-center space-x-2 mb-3">
           <span className="text-lg font-bold text-gray-900">
             {formatPrice(product.price_cents)}
           </span>
@@ -222,7 +234,7 @@ function ProductCard({
         </div>
 
         {/* Size Options Preview */}
-        <div className="flex gap-1 mb-4">
+        <div className="flex gap-1 mb-3">
           {['S', 'M', 'L', 'XL'].map((size) => (
             <button
               key={size}

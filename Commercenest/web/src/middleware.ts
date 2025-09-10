@@ -63,24 +63,15 @@ export function middleware(request: NextRequest) {
   }
 
   if (isAdminRoute) {
-    // Check Supabase auth cookie presence
-    const cookieHeader = request.headers.get('cookie') || '';
-    const hasAuthCookie = /sb-.*-auth-token/.test(cookieHeader);
-    
+    // SECURITY FIX: /admin routes should redirect to tenant-specific admin
+    // This prevents cross-tenant access by forcing explicit tenant context
     const cookieTenant = request.cookies.get('tenant')?.value;
     const inferredTenant = cookieTenant === 'bluebell' || cookieTenant === 'senlysh' ? cookieTenant : 'bluebell';
-    headers.set('x-tenant-admin', inferredTenant);
     
-    if (!hasAuthCookie) {
-      const redirectResp = NextResponse.redirect(new URL('/login', request.url));
-      redirectResp.cookies.set('tenant', inferredTenant, { path: '/', sameSite: 'lax' });
-      return redirectResp;
-    }
-    
-    const response = NextResponse.next({ request: { headers } });
-    // Ensure cookie is set for subsequent requests
-    response.cookies.set('tenant', inferredTenant, { path: '/', sameSite: 'lax' });
-    return response;
+    // Redirect /admin to /{tenant}/admin to enforce tenant isolation
+    const redirectResp = NextResponse.redirect(new URL(`/${inferredTenant}/admin`, request.url));
+    redirectResp.cookies.set('tenant', inferredTenant, { path: '/', sameSite: 'lax' });
+    return redirectResp;
   }
 
   // If path is tenant-prefixed but points to a global page, rewrite to global

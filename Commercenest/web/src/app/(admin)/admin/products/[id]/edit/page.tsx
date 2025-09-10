@@ -110,20 +110,20 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
     // Transform product data to match ProductForm expectations
     const formData = {
       id: product.id,
-      name: product.name,
-      slug: product.slug,
+      name: product.name || '',
+      slug: product.slug || '',
       description: product.description || '',
-      status: product.status,
-      price_cents: product.price_cents,
+      status: product.status || 'draft',
+      price_cents: product.price_cents || 0,
       compare_at_price_cents: product.compare_at_price_cents || 0,
       cost_per_item_cents: product.cost_per_item_cents || 0,
-      stock: product.stock,
+      stock: product.stock || 0,
       sku: product.sku || '',
       track_inventory: product.track_inventory || false,
       low_stock_threshold: product.low_stock_threshold || 0,
       allow_backorders: product.allow_backorders || false,
-      requires_shipping: product.requires_shipping || true,
-      taxable: product.taxable || true,
+      requires_shipping: product.requires_shipping !== false, // Default to true
+      taxable: product.taxable !== false, // Default to true
       weight: product.weight || 0,
       dimensions: product.dimensions || '',
       hs_code: product.hs_code || '',
@@ -137,12 +137,24 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
       material_composition: product.material_composition || '',
       care_instructions: product.care_instructions || '',
       fit_type: product.fit_type || '',
-      model_height_cm: product.model_height_cm || null,
-      model_weight_kg: product.model_weight_kg || null,
+      model_height_cm: product.model_height_cm || 0,
+      model_weight_kg: product.model_weight_kg || 0,
       model_wearing_size: product.model_wearing_size || '',
       is_gift_card: product.is_gift_card || false,
-      gift_card_amount_cents: product.gift_card_amount_cents || null,
-      gift_card_expiry_days: product.gift_card_expiry_days || null
+      gift_card_amount_cents: product.gift_card_amount_cents || 0,
+      gift_card_expiry_days: product.gift_card_expiry_days || 0,
+      // Badge System
+      is_featured: product.is_featured || false,
+      is_bestseller: product.is_bestseller || false,
+      is_new_arrival: product.is_new_arrival || false,
+      is_on_sale: product.is_on_sale || false,
+      is_limited_edition: product.is_limited_edition || false,
+      is_sold_out: product.is_sold_out || false,
+      custom_badge_text: product.custom_badge_text || '',
+      badge_color: product.badge_color || '#ef4444',
+      badge_priority: product.badge_priority || 0,
+      badge_display_until: product.badge_display_until || '',
+      badge_display_from: product.badge_display_from || ''
     }
 
     return (

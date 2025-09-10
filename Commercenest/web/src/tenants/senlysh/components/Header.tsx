@@ -1,18 +1,45 @@
 'use client'
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useCart } from '@/lib/cart';
 
+interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  parent_id?: string;
+}
+
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
   const { state } = useCart();
   const cartCount = state.itemCount;
   const wishlistCount = 0; // TODO: Implement wishlist functionality later
   // Feature flags (superadmin-controlled in future)
   const showNewArrivals = false
   const showSale = false
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch('/api/site/categories');
+        if (response.ok) {
+          const data = await response.json();
+          setCategories(data.categories || []);
+        }
+      } catch (error) {
+        console.error('Failed to fetch categories:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
 
   return (
     <>
@@ -61,11 +88,21 @@ export default function Header() {
                 </Link>
                 {/* Dropdown Menu */}
                 <div className="absolute top-full left-0 bg-white shadow-lg border border-gray-200 rounded-md py-2 min-w-[200px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300">
-                  <Link href="/senlysh/products?category=men" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900">Men&apos;s Fashion</Link>
-                  <Link href="/senlysh/products?category=women" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900">Women&apos;s Fashion</Link>
-                  <Link href="/senlysh/products?category=kids-baby" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900">Kids & Teens</Link>
-                  <Link href="/senlysh/products?category=accessories" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900">Accessories</Link>
-                  <Link href="/senlysh/products?category=shoes" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900">Footwear</Link>
+                  {loading ? (
+                    <div className="px-4 py-2 text-sm text-gray-500">Loading...</div>
+                  ) : categories.length > 0 ? (
+                    categories.slice(0, 8).map((category) => (
+                      <Link 
+                        key={category.id}
+                        href={`/senlysh/products?category=${category.slug}`} 
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                      >
+                        {category.name}
+                      </Link>
+                    ))
+                  ) : (
+                    <div className="px-4 py-2 text-sm text-gray-500">No categories available</div>
+                  )}
                 </div>
               </div>
               {showNewArrivals ? (
@@ -174,10 +211,22 @@ export default function Header() {
                     SHOP
                   </Link>
                   <div className="ml-4 space-y-1">
-                    <Link href="/senlysh/products?category=men" className="block text-sm text-gray-600 hover:text-gray-800">Men&apos;s Fashion</Link>
-                    <Link href="/senlysh/products?category=women" className="block text-sm text-gray-600 hover:text-gray-800">Women&apos;s Fashion</Link>
-                    <Link href="/senlysh/products?category=kids-baby" className="block text-sm text-gray-600 hover:text-gray-800">Kids & Teens</Link>
-                    <Link href="/senlysh/products?category=accessories" className="block text-sm text-gray-600 hover:text-gray-800">Accessories</Link>
+                    {loading ? (
+                      <div className="text-sm text-gray-500">Loading...</div>
+                    ) : categories.length > 0 ? (
+                      categories.slice(0, 6).map((category) => (
+                        <Link 
+                          key={category.id}
+                          href={`/senlysh/products?category=${category.slug}`} 
+                          className="block text-sm text-gray-600 hover:text-gray-800"
+                          onClick={() => setIsMenuOpen(false)}
+                        >
+                          {category.name}
+                        </Link>
+                      ))
+                    ) : (
+                      <div className="text-sm text-gray-500">No categories available</div>
+                    )}
                   </div>
                 </div>
                 {showNewArrivals ? (

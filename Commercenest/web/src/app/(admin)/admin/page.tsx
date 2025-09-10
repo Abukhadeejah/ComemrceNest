@@ -16,7 +16,7 @@ export default async function AdminHome() {
   // Fetch dashboard stats
   const { data: products } = await supabaseAdmin
     .from('products')
-    .select('id, status')
+    .select('id, status, stock, low_stock_threshold, track_inventory')
     .eq('tenant_id', tenantId)
 
   const { data: orders } = await supabaseAdmin
@@ -28,11 +28,19 @@ export default async function AdminHome() {
   const publishedProducts = products?.filter(p => p.status === 'published').length || 0
   const pendingOrders = orders?.filter(o => o.status === 'pending').length || 0
   const totalRevenue = orders?.reduce((sum, order) => sum + (order.total_cents || 0), 0) || 0
-  const lowStockProducts = products?.filter(p => p.status === 'published').length || 0 // TODO: Add stock field
+  
+  // Calculate low stock products
+  const lowStockProducts = products?.filter(p => {
+    if (!p.track_inventory || p.status !== 'published') return false
+    const stock = p.stock || 0
+    const threshold = p.low_stock_threshold || 0
+    return stock <= threshold
+  }).length || 0
 
   const stats = [
     { name: 'Total Products', value: totalProducts, icon: CubeIcon, change: '+12%', changeType: 'positive' },
     { name: 'Published Products', value: publishedProducts, icon: CubeIcon, change: '+8%', changeType: 'positive' },
+    { name: 'Low Stock Products', value: lowStockProducts, icon: ExclamationTriangleIcon, change: lowStockProducts > 0 ? 'Needs attention' : 'All good', changeType: lowStockProducts > 0 ? 'negative' : 'positive' },
     { name: 'Pending Orders', value: pendingOrders, icon: ShoppingCartIcon, change: '+2', changeType: 'neutral' },
     { name: 'Total Revenue', value: `₹${(totalRevenue / 100).toLocaleString()}`, icon: CurrencyRupeeIcon, change: '+23%', changeType: 'positive' },
   ]

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -15,6 +15,15 @@ interface Category {
   salePrice?: string;
 }
 
+interface ApiCategory {
+  id: string;
+  name: string;
+  slug: string;
+  parent_id?: string;
+  image_url?: string;
+  image_alt?: string;
+}
+
 interface CategoryRow {
   title: string;
   categories: Category[];
@@ -26,6 +35,7 @@ interface CategoriesSectionProps {
   subtitle?: string;
   categoryRows?: CategoryRow[];
   bgColor?: string;
+  categories?: ApiCategory[];
 }
 
 const defaultCategoryRows: CategoryRow[] = [
@@ -132,9 +142,86 @@ const defaultCategoryRows: CategoryRow[] = [
 const CategoriesSection: React.FC<CategoriesSectionProps> = ({
   title = "Shop by Category",
   subtitle = "Discover the latest trends in men's and women's fashion",
-  categoryRows = defaultCategoryRows,
-  bgColor = "bg-gray-50"
+  categoryRows: propCategoryRows,
+  bgColor = "bg-gray-50",
+  categories: propCategories
 }) => {
+  const [categoryRows, setCategoryRows] = useState<CategoryRow[]>(propCategoryRows || defaultCategoryRows);
+
+  useEffect(() => {
+    if (propCategories && propCategories.length > 0) {
+      // Group categories by type
+      const menCategories = propCategories.filter(cat => 
+        cat.name.toLowerCase().includes('men') || 
+        cat.name.toLowerCase().includes('shirt') ||
+        cat.name.toLowerCase().includes('jeans') ||
+        cat.name.toLowerCase().includes('trouser') ||
+        cat.name.toLowerCase().includes('jacket') ||
+        cat.name.toLowerCase().includes('sweater') ||
+        cat.name.toLowerCase().includes('hoodie') ||
+        cat.name.toLowerCase().includes('t-shirt')
+      );
+      
+      const womenCategories = propCategories.filter(cat => 
+        cat.name.toLowerCase().includes('women') || 
+        cat.name.toLowerCase().includes('dress') ||
+        cat.name.toLowerCase().includes('top') ||
+        cat.name.toLowerCase().includes('skirt') ||
+        cat.name.toLowerCase().includes('blouse')
+      );
+      
+      const otherCategories = propCategories.filter(cat => 
+        !menCategories.includes(cat) && !womenCategories.includes(cat)
+      );
+
+      const rows: CategoryRow[] = [];
+      
+      if (menCategories.length > 0) {
+        rows.push({
+          title: "Men's Fashion",
+          description: "Discover the latest trends in men's clothing and accessories",
+          categories: menCategories.slice(0, 6).map(cat => ({
+            name: cat.name,
+            image: cat.image_url || `https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400&h=400&fit=crop`,
+            url: `/senlysh/products?category=${cat.slug}`,
+            count: '50+ Items',
+            isTrending: Math.random() > 0.7
+          }))
+        });
+      }
+      
+      if (womenCategories.length > 0) {
+        rows.push({
+          title: "Women's Fashion",
+          description: "Explore stunning women's clothing, accessories, and footwear",
+          categories: womenCategories.slice(0, 6).map(cat => ({
+            name: cat.name,
+            image: cat.image_url || `https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?w=400&h=400&fit=crop`,
+            url: `/senlysh/products?category=${cat.slug}`,
+            count: '65+ Items',
+            isNew: Math.random() > 0.8
+          }))
+        });
+      }
+      
+      if (otherCategories.length > 0) {
+        rows.push({
+          title: "Other Categories",
+          description: "Explore our diverse range of products",
+          categories: otherCategories.slice(0, 6).map(cat => ({
+            name: cat.name,
+            image: cat.image_url || `https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=400&fit=crop`,
+            url: `/senlysh/products?category=${cat.slug}`,
+            count: '40+ Items',
+            hasSale: Math.random() > 0.6,
+            salePercentage: Math.floor(Math.random() * 30) + 10
+          }))
+        });
+      }
+      
+      setCategoryRows(rows);
+    }
+  }, [propCategories]);
   return (
     <section className={`py-12 sm:py-16 md:py-20 ${bgColor}`}>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">

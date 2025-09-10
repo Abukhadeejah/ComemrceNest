@@ -3,7 +3,7 @@ import { supabaseAdmin } from '@/server/supabaseAdmin'
 export async function fetchPublishedProducts(tenantId: string) {
   return supabaseAdmin
     .from('products')
-    .select('id, name, slug, description, price_cents, compare_at_price_cents, stock, currency, hero_image_url')
+    .select('id, name, slug, description, price_cents, compare_at_price_cents, stock, currency, hero_image_url, low_stock_threshold, is_featured, is_bestseller, is_new_arrival, is_on_sale, is_limited_edition, is_sold_out, custom_badge_text, badge_color, badge_priority, badge_display_until, badge_display_from')
     .eq('tenant_id', tenantId)
     .eq('status', 'published')
     .order('updated_at', { ascending: false })
@@ -19,6 +19,19 @@ export type ProductListItem = {
   currency: string
   hero_image_url: string | null
   stock: number
+  low_stock_threshold?: number | null
+  // Badge System (optional until migration is applied)
+  is_featured?: boolean
+  is_bestseller?: boolean
+  is_new_arrival?: boolean
+  is_on_sale?: boolean
+  is_limited_edition?: boolean
+  is_sold_out?: boolean
+  custom_badge_text?: string | null
+  badge_color?: string | null
+  badge_priority?: number | null
+  badge_display_until?: string | null
+  badge_display_from?: string | null
 }
 
 export type ProductListParams = {
@@ -38,7 +51,7 @@ export async function fetchPublishedProductsPaged(
   const { sort = 'updated_at', dir = 'desc', page = 1, pageSize = 12, q, minPriceCents, maxPriceCents, categoryId } = params
   const from = (page - 1) * pageSize
   const to = from + pageSize - 1
-  let selectCols = 'id, name, slug, description, price_cents, compare_at_price_cents, stock, currency, hero_image_url'
+  let selectCols = 'id, name, slug, description, price_cents, compare_at_price_cents, stock, currency, hero_image_url, low_stock_threshold, is_featured, is_bestseller, is_new_arrival, is_on_sale, is_limited_edition, is_sold_out, custom_badge_text, badge_color, badge_priority, badge_display_until, badge_display_from'
   if (categoryId) {
     selectCols += ', product_categories!inner(category_id)'
   }
