@@ -58,7 +58,7 @@ export default function BluebellProductSearch() {
           <input
             type="text"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => setSearchQuery(e?.target?.value || '')}
 
             placeholder="Search for fabrics, patterns, colors..."
             className="w-full pl-12 pr-4 py-4 bg-white border-2 border-gray-200 rounded-2xl text-bluebell-brown placeholder-bluebell-brown/60 focus:border-bluebell-blue focus:ring-2 focus:ring-bluebell-blue/20 transition-all duration-300 text-lg"

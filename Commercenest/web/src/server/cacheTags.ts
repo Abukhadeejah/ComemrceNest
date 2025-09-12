@@ -6,4 +6,8 @@ export function tenantPortfolioTag(tenantId: string): string {
   return `tenant:${tenantId}:portfolio`
 }
 
+export function tenantOrdersTag(tenantId: string): string {
+  return `tenant:${tenantId}:orders`
+}
+
 

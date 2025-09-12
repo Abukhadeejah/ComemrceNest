@@ -19,6 +19,12 @@ interface ProductsPageProps {
     status?: string
     sort?: string
     page?: string
+    is_new_arrival?: string
+    is_featured?: string
+    is_bestseller?: string
+    is_on_sale?: string
+    is_limited_edition?: string
+    is_sold_out?: string
   }>
 }
 
@@ -43,7 +49,13 @@ export default async function BluebellProductsPage({ searchParams }: ProductsPag
     status: params.status,
     sort: params.sort,
     page: parseInt(params.page || '1'),
-    limit: 12
+    limit: 12,
+    is_new_arrival: params.is_new_arrival === 'true',
+    is_featured: params.is_featured === 'true',
+    is_bestseller: params.is_bestseller === 'true',
+    is_on_sale: params.is_on_sale === 'true',
+    is_limited_edition: params.is_limited_edition === 'true',
+    is_sold_out: params.is_sold_out === 'true'
   })
 
   console.log('[BLUEBELL_PRODUCTS_PAGE] Fetched products for tenant:', tenantId, 'Count:', products.length)

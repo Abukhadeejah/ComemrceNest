@@ -758,22 +758,55 @@ export async function updateProduct(productId: string, formData: FormData) {
 }
 
 export async function deleteProduct(productId: string) {
-  const tenantId = await resolveTenantIdFromRequest()
-  if (!tenantId) { throw new Error('Tenant not found') }
-  await assertTenantAdmin(tenantId)
+  try {
+    const tenantId = await resolveTenantIdFromRequest()
+    if (!tenantId) {
+      throw new Error('Tenant not found')
+    }
 
-  const { error } = await supabaseAdmin
-    .from('products')
-    .delete()
-    .eq('id', productId)
-    .eq('tenant_id', tenantId)
+    // Validate tenant admin access
+    await assertTenantAdmin(tenantId)
 
-  if (error) {
-    throw new Error(`Failed to delete product: ${error.message}`)
+    // Validate product ID format
+    if (!productId || typeof productId !== 'string' || productId.length !== 36) {
+      throw new Error('Invalid product ID format')
+    }
+
+    // Use optimized database function for deletion
+    const { data, error } = await supabaseAdmin
+      .rpc('delete_product_safely', {
+        product_id_param: productId,
+        tenant_id_param: tenantId
+      })
+
+    if (error) {
+      console.error('Product deletion error:', error)
+
+      // Handle specific error cases
+      if (error.message.includes('Product not found')) {
+        throw new Error('Product not found or access denied')
+      }
+
+      throw new Error(`Failed to delete product: ${error.message}`)
+    }
+
+    // Invalidate relevant caches
+    revalidateTag(tenantProductsTag(tenantId))
+
+    console.log(`Product ${productId} deleted successfully for tenant ${tenantId}`)
+    console.log(`Deleted ${data?.[0]?.deleted_order_items || 0} order items, ${data?.[0]?.deleted_images || 0} images, and ${data?.[0]?.deleted_categories || 0} category links`)
+
+    return {
+      success: true,
+      deletedOrderItems: data?.[0]?.deleted_order_items || 0,
+      deletedImages: data?.[0]?.deleted_images || 0,
+      deletedCategories: data?.[0]?.deleted_categories || 0
+    }
+
+  } catch (error) {
+    console.error('Unexpected error during product deletion:', error)
+    throw error
   }
-
-  revalidateTag(tenantProductsTag(tenantId))
-  return { success: true }
 }
 
 export async function bulkDeleteProducts(productIds: string[]) {

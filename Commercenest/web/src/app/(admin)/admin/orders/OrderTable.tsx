@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 
 interface Order {
   id: string
@@ -25,11 +26,45 @@ interface OrderTableProps {
 
 export function OrderTable({ orders }: OrderTableProps) {
   const router = useRouter()
-  const onDelete = async (id: string) => {
-    if (!confirm('Delete this order?')) return
-    const res = await fetch(`/api/admin/orders/${id}`, { method: 'DELETE' })
-    if (res.ok) router.refresh()
-    else alert('Failed to delete order')
+  const [deletingOrderId, setDeletingOrderId] = useState<string | null>(null)
+
+  const onDelete = async (id: string, orderNumber: string) => {
+    if (deletingOrderId !== null) {
+      console.warn('Delete operation already in progress')
+      return
+    }
+
+    if (!confirm(`Are you sure you want to delete order "${orderNumber}"? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      setDeletingOrderId(id)
+      console.log(`Starting deletion of order: ${orderNumber} (${id})`)
+
+      const res = await fetch(`/api/admin/orders/${id}`, { method: 'DELETE' })
+      const data = await res.json()
+
+      if (res.ok && data.success) {
+        console.log(`Successfully deleted order: ${orderNumber}`)
+        console.log(`Deleted ${data.deletedItemsCount} order items`)
+
+        // Show success feedback
+        alert(`Order "${orderNumber}" deleted successfully. ${data.deletedItemsCount} items removed.`)
+
+        // Refresh the page to show updated data
+        router.refresh()
+      } else {
+        const errorMessage = data.error || 'Failed to delete order'
+        console.error('Delete failed:', errorMessage)
+        alert(`Failed to delete order: ${errorMessage}`)
+      }
+    } catch (error) {
+      console.error('Network error during deletion:', error)
+      alert('Network error occurred while deleting the order. Please try again.')
+    } finally {
+      setDeletingOrderId(null)
+    }
   }
   const onMarkPaid = async (id: string) => {
     if (!confirm('Mark this order as paid?')) return
@@ -144,10 +179,14 @@ export function OrderTable({ orders }: OrderTableProps) {
                   </button>
                 )}
                 <button
-                  onClick={() => onDelete(order.id)}
-                  className="text-red-600 hover:text-red-800"
+                  onClick={() => onDelete(order.id, order.order_number)}
+                  disabled={deletingOrderId === order.id}
+                  className={`text-red-600 hover:text-red-800 disabled:opacity-50 disabled:cursor-not-allowed ${
+                    deletingOrderId === order.id ? 'animate-pulse' : ''
+                  }`}
+                  title={deletingOrderId === order.id ? "Deleting order..." : "Delete order"}
                 >
-                  Delete
+                  {deletingOrderId === order.id ? 'Deleting...' : 'Delete'}
                 </button>
               </td>
             </tr>

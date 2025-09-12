@@ -133,7 +133,7 @@ export function ProductFilters() {
           <span className="text-sm font-medium text-gray-700">Sort by</span>
           <select
             value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
+            onChange={(e) => setSortBy(e?.target?.value || '')}
             className="text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
           >
             <option value="">Popularity</option>
@@ -240,7 +240,7 @@ export function ProductFilters() {
             <label className="block text-sm font-medium text-gray-700">Category</label>
             <select
               value={category}
-              onChange={(e) => setCategory(e.target.value)}
+              onChange={(e) => setCategory(e?.target?.value || '')}
               className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
               disabled={loading}
             >
@@ -258,7 +258,7 @@ export function ProductFilters() {
             <label className="block text-sm font-medium text-gray-700">Color</label>
             <select
               value={color}
-              onChange={(e) => setColor(e.target.value)}
+              onChange={(e) => setColor(e?.target?.value || '')}
               className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
             >
               <option value="">All Colors</option>
@@ -280,7 +280,7 @@ export function ProductFilters() {
             <label className="block text-sm font-medium text-gray-700">Size</label>
             <select
               value={size}
-              onChange={(e) => setSize(e.target.value)}
+              onChange={(e) => setSize(e?.target?.value || '')}
               className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
             >
               <option value="">All Sizes</option>
@@ -305,7 +305,7 @@ export function ProductFilters() {
             <label className="block text-sm font-medium text-gray-700">Price Range</label>
             <select
               value={priceRange}
-              onChange={(e) => setPriceRange(e.target.value)}
+              onChange={(e) => setPriceRange(e?.target?.value || '')}
               className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
             >
               <option value="">All Prices</option>
@@ -324,7 +324,7 @@ export function ProductFilters() {
             <label className="block text-sm font-medium text-gray-700">Tags</label>
             <select
               value={tag}
-              onChange={(e) => setTag(e.target.value)}
+              onChange={(e) => setTag(e?.target?.value || '')}
               className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
               disabled={loading}
             >
