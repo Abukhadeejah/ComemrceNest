@@ -14,18 +14,9 @@ export async function generateMetadata(): Promise<Metadata> {
   const isTenant = first === 'bluebell' || first === 'senlysh'
   let tenantKey: string | undefined = isTenant ? first : undefined
 
-  // Fallback to cookie when path does not include tenant prefix
-  if (!tenantKey) {
-    try {
-      const cookieStore = await cookies()
-      const cookieTenant = cookieStore.get('tenant')?.value?.toLowerCase()
-      if (cookieTenant === 'bluebell' || cookieTenant === 'senlysh') {
-        tenantKey = cookieTenant
-      }
-    } catch {
-      // ignore cookie parsing errors
-    }
-  }
+  // CRITICAL FIX: generateMetadata should NOT use tenant cookies for root routes
+  // This prevents metadata contamination and ensures consistent branding
+  // Only tenant-prefixed routes should use cookies
 
   if (!tenantKey) {
     return {
@@ -98,18 +89,9 @@ export default async function SiteLayout({
     }
   }
 
-  // Fallback to cookie if still undefined
-  if (!tenantKey) {
-    try {
-      const cookieStore = await cookies()
-      const cookieTenant = cookieStore.get('tenant')?.value?.toLowerCase()
-      if (cookieTenant === 'bluebell' || cookieTenant === 'senlysh') {
-        tenantKey = cookieTenant
-      }
-    } catch {
-      // ignore
-    }
-  }
+  // CRITICAL FIX: Root routes (/) should NEVER use tenant cookies
+  // Only tenant-prefixed routes (/bluebell/*, /senlysh/*) should use cookies
+  // This prevents cross-tenant contamination on the platform homepage
 
   return (
     <TenantProvider tenantKey={tenantKey}>

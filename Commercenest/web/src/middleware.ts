@@ -74,7 +74,14 @@ export function middleware(request: NextRequest) {
     // SECURITY FIX: /admin routes should redirect to tenant-specific admin
     // This prevents cross-tenant access by forcing explicit tenant context
     const cookieTenant = request.cookies.get('tenant')?.value;
-    const inferredTenant = cookieTenant === 'bluebell' || cookieTenant === 'senlysh' ? cookieTenant : 'bluebell';
+    // CRITICAL FIX: Never default to a specific tenant - this causes cross-tenant contamination
+    // If cookie is invalid, redirect to platform homepage instead
+    const inferredTenant = cookieTenant === 'bluebell' || cookieTenant === 'senlysh' ? cookieTenant : null;
+    if (!inferredTenant) {
+      // Redirect to platform homepage if no valid tenant cookie
+      const redirectResp = NextResponse.redirect(new URL('/', request.url));
+      return redirectResp;
+    }
     
     // Redirect /admin to /{tenant}/admin to enforce tenant isolation
     const redirectResp = NextResponse.redirect(new URL(`/${inferredTenant}/admin`, request.url));
