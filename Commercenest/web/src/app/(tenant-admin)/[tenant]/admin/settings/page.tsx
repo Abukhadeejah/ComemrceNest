@@ -1,8 +1,10 @@
 import { getSettings } from '../../../../(admin)/admin/settings/actions'
+import { getPaymentSettings } from '../../../../(admin)/admin/settings/payments-actions'
 import { SettingsForm } from '../../../../(admin)/admin/settings/SettingsForm'
 
 export default async function AdminSettings() {
   const settings = await getSettings()
+  const paymentSettings = await getPaymentSettings()
 
   return (
     <div className="p-6">
@@ -18,7 +20,7 @@ export default async function AdminSettings() {
           <h2 className="text-lg font-medium text-gray-900">Store Settings</h2>
         </div>
         <div className="p-6">
-          <SettingsForm settings={settings} />
+          <SettingsForm settings={settings} paymentSettings={paymentSettings} />
         </div>
       </div>
     </div>

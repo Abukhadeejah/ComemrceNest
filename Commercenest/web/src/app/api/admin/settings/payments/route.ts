@@ -4,11 +4,17 @@ import { updatePaymentSettings } from '@/app/(admin)/admin/settings/payments-act
 export async function POST(request: Request) {
   const formData = await request.formData()
   try {
-    const res = await updatePaymentSettings(formData)
-    return NextResponse.json(res)
+    await updatePaymentSettings(formData)
+    // Redirect to the admin dashboard with success message
+    const url = new URL(request.url)
+    const referer = request.headers.get('referer') || url.origin
+    return NextResponse.redirect(new URL(referer + '?success=payment-settings-updated'))
   } catch (e: unknown) {
     console.error('updatePaymentSettings failed', e)
-    return NextResponse.json({ error: 'failed' }, { status: 400 })
+    // Redirect with error message
+    const url = new URL(request.url)
+    const referer = request.headers.get('referer') || url.origin
+    return NextResponse.redirect(new URL(referer + '?error=payment-settings-failed'))
   }
 }
 

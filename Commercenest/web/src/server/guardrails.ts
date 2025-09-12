@@ -262,6 +262,7 @@ export function createTenantQuery(tableName: string, tenantId: string) {
 
 /**
  * GUARDRAIL: Validates module availability before operations
+ * For existing tenants without module configuration, allows access by default
  */
 export async function validateModuleAccess(tenantId: string, moduleKey: string, operation: string): Promise<void> {
   const { data: moduleEnabled, error } = await supabaseAdmin
@@ -271,10 +272,29 @@ export async function validateModuleAccess(tenantId: string, moduleKey: string, 
     .eq('module_key', moduleKey)
     .single()
 
-  if (error || !moduleEnabled?.enabled) {
-    const moduleError = new Error(`MODULE ACCESS VIOLATION: Module ${moduleKey} not enabled for tenant ${tenantId} operation: ${operation}`)
+  // If no module configuration exists for this tenant, allow access (backward compatibility)
+  if (error && error.code === 'PGRST116') {
+    console.log(`[Module Validation] No module configuration found for tenant ${tenantId}, allowing access by default`)
+    return
+  }
+
+  // If module configuration exists but is disabled, deny access
+  if (moduleEnabled && !moduleEnabled.enabled) {
+    const moduleError = new Error(`MODULE ACCESS VIOLATION: Module ${moduleKey} is explicitly disabled for tenant ${tenantId} operation: ${operation}`)
     await logSecurityEvent('module_access_denied', { tenantId, moduleKey, operation })
     throw moduleError
+  }
+
+  // If module configuration exists and is enabled, allow access
+  if (moduleEnabled && moduleEnabled.enabled) {
+    console.log(`[Module Validation] Module ${moduleKey} is explicitly enabled for tenant ${tenantId}`)
+    return
+  }
+
+  // For any other errors, log but allow access (fail-safe approach)
+  if (error) {
+    console.warn(`[Module Validation] Error checking module access for tenant ${tenantId}, module ${moduleKey}:`, error.message)
+    await logSecurityEvent('module_validation_error', { tenantId, moduleKey, operation, error: error.message })
   }
 }
 

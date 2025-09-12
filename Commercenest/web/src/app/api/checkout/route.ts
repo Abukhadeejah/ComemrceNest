@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import Razorpay from 'razorpay'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
+import { resolveRazorpayCredentials } from '@/server/payments'
 
 function decodeSecret(val: unknown): string {
   if (!val) return ''
@@ -20,37 +21,17 @@ function decodeSecret(val: unknown): string {
 }
 
 export async function POST(request: Request) {
-  const tenantId = await resolveTenantIdFromRequest()
-  if (!tenantId) {
-    console.error('Checkout API: Tenant resolution failed', {
-      headers: Object.fromEntries(request.headers.entries()),
-      url: request.url
-    })
-    return NextResponse.json({ 
-      error: 'tenant_not_found',
-      message: 'Unable to determine tenant context for checkout'
-    }, { status: 400 })
-  }
+  try {
+    const tenantId = await resolveTenantIdFromRequest()
+    if (!tenantId) {
+      return NextResponse.json({ error: 'tenant_not_found' }, { status: 400 })
+    }
 
-  // Load tenant payment settings (prefer enabled env row)
-  const { data: rows } = await supabaseAdmin
-    .from('tenant_payment_settings')
-    .select('env, enabled, razorpay_key_id, razorpay_key_secret')
-    .eq('tenant_id', tenantId)
-  const active = rows?.find(r => r.enabled) || rows?.find(r => r.env === 'test')
-
-  // Determine credentials: prefer enabled tenant settings, else fall back to env vars
-  let keyId = active?.enabled ? active.razorpay_key_id : undefined
-  let keySecret = active?.enabled ? decodeSecret(active.razorpay_key_secret) : undefined
-
-  if (!keyId || !keySecret) {
-    keyId = process.env.RAZORPAY_KEY_ID
-    keySecret = process.env.RAZORPAY_KEY_SECRET
-  }
-
-  if (!keyId || !keySecret) {
-    return NextResponse.json({ error: 'payments_not_configured' }, { status: 400 })
-  }
+    const creds = await resolveRazorpayCredentials(tenantId)
+    if (!creds) {
+      return NextResponse.json({ error: 'payments_not_configured' }, { status: 400 })
+    }
+    const { keyId, keySecret } = creds
 
   const client = new Razorpay({ key_id: keyId, key_secret: keySecret })
   const body = (await request.json().catch(() => ({}))) as {
@@ -135,6 +116,14 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({ order, keyId })
+  } catch (error) {
+    console.error('Checkout API: Unexpected error:', error)
+    return NextResponse.json({ 
+      error: 'internal_server_error', 
+      message: error instanceof Error ? error.message : 'Unknown error',
+      details: error 
+    }, { status: 500 })
+  }
 }
 
 
