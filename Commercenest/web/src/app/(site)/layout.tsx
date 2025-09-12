@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { headers, cookies } from 'next/headers'
+import { headers } from 'next/headers'
 import TenantProvider from '@/components/TenantProvider'
 import TenantLayoutServer from '@/components/tenant/TenantLayoutServer'
 import { CartProvider } from '@/lib/cart'
@@ -12,7 +12,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const segments = pathname.split('/').filter(Boolean)
   const first = segments[0]?.toLowerCase()
   const isTenant = first === 'bluebell' || first === 'senlysh'
-  let tenantKey: string | undefined = isTenant ? first : undefined
+  const tenantKey: string | undefined = isTenant ? first : undefined
 
   // CRITICAL FIX: generateMetadata should NOT use tenant cookies for root routes
   // This prevents metadata contamination and ensures consistent branding
