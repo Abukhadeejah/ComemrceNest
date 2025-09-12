@@ -225,12 +225,32 @@ export function CategoryTable({ categories }: CategoryTableProps) {
                     className="text-red-600 hover:text-red-900"
                     onClick={async () => {
                       if (!confirm('Are you sure you want to delete this category?')) return
-                      const res = await fetch(`/api/admin/categories?id=${category.id}`, { method: 'DELETE' })
-                      if (!res.ok) {
-                        alert('Failed to delete category')
-                        return
+                      
+                      try {
+                        const res = await fetch(`/api/admin/categories?id=${category.id}`, { method: 'DELETE' })
+                        
+                        if (!res.ok) {
+                          const errorData = await res.json().catch(() => ({}))
+                          const errorMessage = errorData.error || `Failed to delete category (${res.status})`
+                          alert(`Failed to delete category: ${errorMessage}`)
+                          return
+                        }
+                        
+                        // Show success message
+                        alert('Category deleted successfully!')
+                        
+                        // Refresh the page to show updated data
+                        router.refresh()
+                        
+                        // Also force a page reload as backup
+                        setTimeout(() => {
+                          window.location.reload()
+                        }, 100)
+                        
+                      } catch (error) {
+                        console.error('Delete category error:', error)
+                        alert('Failed to delete category: Network error')
                       }
-                      router.refresh()
                     }}
                   >
                     Delete
