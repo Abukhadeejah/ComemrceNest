@@ -42,36 +42,125 @@ export type ProductListParams = {
   q?: string
   minPriceCents?: number
   maxPriceCents?: number
+  
+  // Badge filters
+  is_featured?: boolean
+  is_bestseller?: boolean
+  is_new_arrival?: boolean
+  is_on_sale?: boolean
+  is_limited_edition?: boolean
+  is_sold_out?: boolean
+  
+  // Tag filters
+  tag?: string
+  tags?: string[]
+  
+  // Filter presets
+  filter?: string
 }
 
 export async function fetchPublishedProductsPaged(
   tenantId: string,
   params: ProductListParams & { categoryId?: string }
 ) {
-  const { sort = 'updated_at', dir = 'desc', page = 1, pageSize = 12, q, minPriceCents, maxPriceCents, categoryId } = params
+  const { 
+    sort = 'updated_at', 
+    dir = 'desc', 
+    page = 1, 
+    pageSize = 12, 
+    q, 
+    minPriceCents, 
+    maxPriceCents, 
+    categoryId,
+    is_featured,
+    is_bestseller,
+    is_new_arrival,
+    is_on_sale,
+    is_limited_edition,
+    is_sold_out,
+    tag,
+    tags,
+    filter
+  } = params
+  
   const from = (page - 1) * pageSize
   const to = from + pageSize - 1
-  let selectCols = 'id, name, slug, description, price_cents, compare_at_price_cents, stock, currency, hero_image_url, low_stock_threshold, is_featured, is_bestseller, is_new_arrival, is_on_sale, is_limited_edition, is_sold_out, custom_badge_text, badge_color, badge_priority, badge_display_until, badge_display_from'
+  let selectCols = 'id, name, slug, description, price_cents, compare_at_price_cents, stock, currency, hero_image_url, low_stock_threshold, is_featured, is_bestseller, is_new_arrival, is_on_sale, is_limited_edition, is_sold_out, custom_badge_text, badge_color, badge_priority, badge_display_until, badge_display_from, tags'
+  
   if (categoryId) {
     selectCols += ', product_categories!inner(category_id)'
   }
+  
   let query = supabaseAdmin
     .from('products')
     .select(selectCols, { count: 'exact' })
     .eq('tenant_id', tenantId)
     .eq('status', 'published')
+    
   if (categoryId) {
     query = query.eq('product_categories.category_id', categoryId)
   }
+  
   if (q && q.trim()) {
     query = query.ilike('name', `%${q.trim()}%`)
   }
+  
   if (typeof minPriceCents === 'number' && !Number.isNaN(minPriceCents)) {
     query = query.gte('price_cents', minPriceCents)
   }
+  
   if (typeof maxPriceCents === 'number' && !Number.isNaN(maxPriceCents)) {
     query = query.lte('price_cents', maxPriceCents)
   }
+  
+  // Badge filters
+  if (is_featured !== undefined) {
+    query = query.eq('is_featured', is_featured)
+  }
+  if (is_bestseller !== undefined) {
+    query = query.eq('is_bestseller', is_bestseller)
+  }
+  if (is_new_arrival !== undefined) {
+    query = query.eq('is_new_arrival', is_new_arrival)
+  }
+  if (is_on_sale !== undefined) {
+    query = query.eq('is_on_sale', is_on_sale)
+  }
+  if (is_limited_edition !== undefined) {
+    query = query.eq('is_limited_edition', is_limited_edition)
+  }
+  if (is_sold_out !== undefined) {
+    query = query.eq('is_sold_out', is_sold_out)
+  }
+  
+  // Tag filters
+  if (tag) {
+    query = query.contains('tags', [tag])
+  }
+  if (tags && tags.length > 0) {
+    query = query.overlaps('tags', tags)
+  }
+  
+  // Filter presets - handle common badge-based filters
+  if (filter) {
+    switch (filter) {
+      case 'featured':
+        query = query.eq('is_featured', true)
+        break
+      case 'new-arrivals':
+        query = query.eq('is_new_arrival', true)
+        break
+      case 'sale':
+        query = query.eq('is_on_sale', true)
+        break
+      case 'bestsellers':
+        query = query.eq('is_bestseller', true)
+        break
+      // Add more preset cases as needed
+    }
+  }
+  
+  // Apply sorting
   const { data, count, error } = await query.order(sort, { ascending: dir === 'asc' }).range(from, to)
   return { data, count, error }
 }

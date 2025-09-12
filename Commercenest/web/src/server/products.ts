@@ -8,6 +8,42 @@ export interface GetProductsParams {
   sort?: string
   page?: number
   limit?: number
+  tag?: string
+  tags?: string[]
+  color?: string
+  size?: string
+  price?: string
+  fabric?: string
+  is_new_arrival?: boolean
+  is_featured?: boolean
+  is_bestseller?: boolean
+  is_on_sale?: boolean
+  is_limited_edition?: boolean
+  is_sold_out?: boolean
+}
+
+// Helper function to parse sort parameter from frontend
+function parseSortParameter(sortParam?: string): { sort: 'updated_at' | 'name' | 'price_cents', dir: 'asc' | 'desc' } {
+  if (!sortParam || sortParam === '') {
+    // Default to popularity (most recently updated)
+    return { sort: 'updated_at', dir: 'desc' }
+  }
+
+  // Parse combined sort_direction format
+  const [sortField, direction] = sortParam.split('_')
+  
+  switch (sortField) {
+    case 'price':
+      return { sort: 'price_cents', dir: direction as 'asc' | 'desc' }
+    case 'name':
+      return { sort: 'name', dir: direction as 'asc' | 'desc' }
+    case 'created':
+      // Map 'created' to 'updated_at' since that's the actual DB column
+      return { sort: 'updated_at', dir: direction as 'asc' | 'desc' }
+    default:
+      // Fallback to default
+      return { sort: 'updated_at', dir: 'desc' }
+  }
 }
 
 export async function getProducts(params: GetProductsParams): Promise<ProductListItem[]> {
@@ -15,9 +51,21 @@ export async function getProducts(params: GetProductsParams): Promise<ProductLis
     tenantId,
     search,
     category,
-    sort = 'updated_at',
+    sort = '',
     page = 1,
-    limit = 12
+    limit = 12,
+    tag,
+    tags,
+    color,
+    size,
+    price,
+    fabric,
+    is_new_arrival,
+    is_featured,
+    is_bestseller,
+    is_on_sale,
+    is_limited_edition,
+    is_sold_out
   } = params
 
   // If no tenantId provided, return empty array (platform showcase not implemented yet)
@@ -26,14 +74,31 @@ export async function getProducts(params: GetProductsParams): Promise<ProductLis
     return []
   }
 
+  // Parse sort parameter to get sort field and direction
+  const { sort: sortField, dir } = parseSortParameter(sort)
+  
+  console.log('[GET_PRODUCTS] Sort parameter:', sort, '→ Parsed:', { sort: sortField, dir })
+
   // Map the parameters to match the service function
   const serviceParams = {
     q: search,
-    sort: sort as 'updated_at' | 'name' | 'price_cents',
-    dir: 'desc' as const,
+    sort: sortField,
+    dir,
     page,
     pageSize: limit,
-    categoryId: category
+    categoryId: category,
+    tag,
+    tags,
+    color,
+    size,
+    price,
+    fabric,
+    is_new_arrival,
+    is_featured,
+    is_bestseller,
+    is_on_sale,
+    is_limited_edition,
+    is_sold_out
   }
 
   const result = await fetchPublishedProductsPaged(tenantId, serviceParams)

@@ -25,7 +25,7 @@ interface ApiProduct {
   slug: string;
   price_cents: number;
   compare_at_price_cents?: number;
-  images: string[];
+  images?: string[];
   status: string;
   stock: number;
   low_stock_threshold?: number;
@@ -41,6 +41,8 @@ interface ApiProduct {
   badge_priority?: number;
   badge_display_until?: string;
   badge_display_from?: string;
+  // Known DB field used as primary image
+  hero_image_url?: string;
 }
 
 interface LatestProductsProps {
@@ -151,11 +153,16 @@ const LatestProducts: React.FC<LatestProductsProps> = ({
         // Get the primary badge (first one) for backward compatibility
         const primaryBadge = badges.length > 0 ? badges[0] : { text: 'New', className: 'bg-green-500 text-white' };
 
+        // Prefer DB hero image when images array is missing/empty
+        const resolvedImages: string[] = (Array.isArray(product.images) && product.images.length > 0)
+          ? product.images
+          : (product.hero_image_url ? [product.hero_image_url] : [
+              'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=800&h=800&fit=crop'
+            ]);
+
         return {
           name: product.name || 'Unnamed Product',
-          images: (product.images && Array.isArray(product.images) && product.images.length > 0) ? product.images : [
-            'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400&h=400&fit=crop'
-          ],
+          images: resolvedImages,
           price: price,
           originalPrice: originalPrice,
           badge: primaryBadge.text,

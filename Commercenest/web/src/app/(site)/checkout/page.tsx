@@ -181,7 +181,7 @@ export default function CheckoutPage() {
     }
   }
 
-  async function createTestOrder() {
+  async function _createTestOrder() {
     setBusy(true)
     setMessage(null)
     try {
@@ -212,7 +212,7 @@ export default function CheckoutPage() {
     }
   }
 
-  async function simulatePayment() {
+  async function _simulatePayment() {
     if (!orderId) return
     setBusy(true)
     setMessage(null)

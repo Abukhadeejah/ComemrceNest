@@ -16,6 +16,18 @@ interface ProductsPageProps {
     status?: string
     sort?: string
     page?: string
+    tag?: string
+    tags?: string
+    color?: string
+    size?: string
+    price?: string
+    fabric?: string
+    is_new_arrival?: string
+    is_featured?: string
+    is_bestseller?: string
+    is_on_sale?: string
+    is_limited_edition?: string
+    is_sold_out?: string
   }>
 }
 
@@ -34,7 +46,19 @@ export default async function SenlyshProductsPage({ searchParams }: ProductsPage
     status: params.status,
     sort: params.sort,
     page: parseInt(params.page || '1'),
-    limit: 12
+    limit: 12,
+    tag: params.tag,
+    tags: params.tags ? params.tags.split(',') : undefined,
+    color: params.color,
+    size: params.size,
+    price: params.price,
+    fabric: params.fabric,
+    is_new_arrival: params.is_new_arrival === 'true' ? true : params.is_new_arrival === 'false' ? false : undefined,
+    is_featured: params.is_featured === 'true' ? true : params.is_featured === 'false' ? false : undefined,
+    is_bestseller: params.is_bestseller === 'true' ? true : params.is_bestseller === 'false' ? false : undefined,
+    is_on_sale: params.is_on_sale === 'true' ? true : params.is_on_sale === 'false' ? false : undefined,
+    is_limited_edition: params.is_limited_edition === 'true' ? true : params.is_limited_edition === 'false' ? false : undefined,
+    is_sold_out: params.is_sold_out === 'true' ? true : params.is_sold_out === 'false' ? false : undefined
   })
 
   console.log('[SENLYSH_PRODUCTS_PAGE] Fetched products for tenant:', tenantId, 'Count:', products.length)

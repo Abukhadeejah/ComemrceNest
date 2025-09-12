@@ -58,7 +58,7 @@ const defaultCategoryRows: CategoryRow[] = [
         isNew: true
       },
       { 
-        name: 'Jeans', 
+        name: 'Men Jeans', 
         image: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=400&h=400&fit=crop', 
         url: '/shop/men/jeans',
         count: '40+ Items',
@@ -113,7 +113,7 @@ const defaultCategoryRows: CategoryRow[] = [
         count: '45+ Items'
       },
       { 
-        name: 'Jeans', 
+        name: 'Women Jeans', 
         image: 'https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=400&h=400&fit=crop', 
         url: '/shop/women/jeans',
         count: '55+ Items',
@@ -251,8 +251,8 @@ const CategoriesSection: React.FC<CategoriesSectionProps> = ({
                 <div className="flex gap-4 sm:gap-6 overflow-x-auto scrollbar-hide pb-4 sm:pb-6
                   scroll-smooth snap-x snap-mandatory
                   [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                  {row.categories.map((category) => (
-                    <Link key={category.name} href={category.url} className="group flex-shrink-0 w-48 sm:w-56 md:w-64 snap-start">
+                  {row.categories.map((category, index) => (
+                    <Link key={`${rowIndex}-${category.name}-${index}`} href={category.url} className="group flex-shrink-0 w-48 sm:w-56 md:w-64 snap-start">
                       <div className="relative overflow-hidden rounded-xl shadow-lg 
                         transition-transform duration-300 ease-out will-change-transform
                         group-hover:scale-105 group-hover:shadow-xl

@@ -10,7 +10,9 @@ import {
   ShoppingCartIcon,
   UsersIcon,
   ChartBarIcon,
-  Cog6ToothIcon
+  Cog6ToothIcon,
+  PhotoIcon,
+  AcademicCapIcon
 } from '@heroicons/react/24/outline'
 import { ADMIN_URLS } from '@/utils/admin-urls'
 import { useAdminBranding, useAdminTenantKey } from '@/components/admin/AdminBrandingWrapper'
@@ -24,6 +26,8 @@ function buildNavigation(tenant?: string, enabledModules?: Set<string>) {
     { key: 'orders', name: 'Orders', href: ADMIN_URLS.orders(tenant), icon: ShoppingCartIcon },
     { key: 'customers', name: 'Customers', href: ADMIN_URLS.customers(tenant), icon: UsersIcon },
     { key: 'portfolio', name: 'Portfolio', href: ADMIN_URLS.portfolio(tenant), icon: BriefcaseIcon },
+    { key: 'hero', name: 'Hero Carousel', href: ADMIN_URLS.hero(tenant), icon: PhotoIcon },
+    { key: 'tutorial', name: 'Tutorial', href: ADMIN_URLS.tutorial(tenant), icon: AcademicCapIcon },
     { key: 'analytics', name: 'Analytics', href: ADMIN_URLS.analytics(tenant), icon: ChartBarIcon },
     { key: 'settings', name: 'Settings', href: ADMIN_URLS.settings(tenant), icon: Cog6ToothIcon },
   ] as const

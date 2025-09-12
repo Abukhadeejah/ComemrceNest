@@ -98,6 +98,7 @@ export interface ProductFormData {
   // Organization
   category_id: string
   status: 'draft' | 'published'
+  tags?: string[]
   
   // SEO
   meta_title: string

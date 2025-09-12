@@ -36,6 +36,8 @@ export const ADMIN_URLS = {
   analytics: (tenant?: string) => getAdminUrl('/analytics', tenant),
   settings: (tenant?: string) => getAdminUrl('/settings', tenant),
   portfolio: (tenant?: string) => getAdminUrl('/portfolio', tenant),
+  hero: (tenant?: string) => getAdminUrl('/hero', tenant),
+  tutorial: (tenant?: string) => getAdminUrl('/tutorial', tenant),
 }
 
 

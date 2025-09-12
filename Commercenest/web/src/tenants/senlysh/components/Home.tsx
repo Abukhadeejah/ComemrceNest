@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
+import { HeroSlide as SharedHeroSlide } from '@/types/hero'
 
 // Import modular components
 import HeroSection from './HeroSection';
@@ -13,7 +14,8 @@ import BrandCarousel from './BrandCarousel';
 import FeaturedProducts from './FeaturedProducts';
 import CustomerReviews from './CustomerReviews';
 
-interface Product {
+// DB-shaped product used by HomeServer
+interface ApiProduct {
   id: string
   name: string
   slug: string
@@ -22,7 +24,7 @@ interface Product {
   compare_at_price_cents?: number
   currency: string
   hero_image_url?: string
-  images: string[]
+  images?: string[]
   stock: number
   status: string
 }
@@ -36,12 +38,27 @@ interface Category {
   image_alt?: string
 }
 
-interface HomeProps {
-  products: Product[]
-  categories: Category[]
+interface HeroSlide extends SharedHeroSlide {
+  id: string
+  position: number
+  is_active: boolean
 }
 
-export default function Home({ products, categories }: HomeProps) {
+interface HeroSettings {
+  id: string
+  auto_play: boolean
+  auto_play_interval_ms: number
+  bg_overlay_class?: string
+}
+
+interface HomeProps {
+  products: ApiProduct[]
+  categories: Category[]
+  heroSlides: HeroSlide[]
+  heroSettings: HeroSettings | null
+}
+
+export default function Home({ products, categories, heroSlides, heroSettings }: HomeProps) {
   const [countdown, setCountdown] = useState({
     days: 129,
     hours: 6,
@@ -72,7 +89,12 @@ export default function Home({ products, categories }: HomeProps) {
     <div className="bg-white overflow-x-auto">
       <div className="min-w-[1200px] w-full">
         {/* Hero Section */}
-        <HeroSection autoPlay={true} autoPlayInterval={8000} />
+        <HeroSection 
+          heroSlides={heroSlides}
+          heroSettings={heroSettings}
+          autoPlay={heroSettings?.auto_play ?? true} 
+          autoPlayInterval={heroSettings?.auto_play_interval_ms ?? 8000} 
+        />
 
         {/* Categories Section */}
         <CategoriesSection categories={categories} />

@@ -1,6 +1,6 @@
 'use client'
 
-
+import Link from 'next/link'
 import { ProductFormData } from '@/types/product'
 
 interface OrganizationSectionProps {
@@ -52,6 +52,66 @@ export function OrganizationSection({ formData, errors, categories, onInputChang
             <p className="mt-1 text-sm text-red-600">{errors.status}</p>
           )}
         </div>
+      </div>
+
+      {/* Tags Section */}
+      <div className="mt-6">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Tags
+        </label>
+        <div className="space-y-2">
+          <input
+            type="text"
+            placeholder="Enter tags separated by commas (e.g., rain, waterproof, summer)"
+            value={Array.isArray(formData.tags) ? formData.tags.join(', ') : ''}
+            onChange={(e) => {
+              const tags = e.target.value
+                .split(',')
+                .map(tag => tag.trim())
+                .filter(tag => tag.length > 0)
+              onInputChange('tags', tags)
+            }}
+            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          />
+                <div className="space-y-2">
+                  <p className="text-xs text-gray-500">
+                    Tags help customers find products through filters and collections. Use descriptive words like &quot;rain&quot;, &quot;summer&quot;, &quot;waterproof&quot;, etc.
+                  </p>
+                  <div className="bg-blue-50 border border-blue-200 rounded-md p-2">
+                    <p className="text-xs text-blue-800">
+                      <strong>💡 Pro Tip:</strong> Tags can be used in Hero Carousel CTAs to create dynamic collections! 
+                      <Link href="/senlysh/admin/tutorial" className="text-blue-600 hover:text-blue-800 underline ml-1">
+                        Learn more
+                      </Link>
+                    </p>
+                  </div>
+                </div>
+          {Array.isArray(formData.tags) && formData.tags.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-2">
+              {formData.tags.map((tag, index) => (
+                <span
+                  key={index}
+                  className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800"
+                >
+                  {tag}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newTags = formData.tags?.filter((_, i) => i !== index) || []
+                      onInputChange('tags', newTags)
+                    }}
+                    className="ml-1 inline-flex items-center justify-center w-4 h-4 rounded-full text-indigo-400 hover:bg-indigo-200 hover:text-indigo-500"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+        {errors.tags && (
+          <p className="mt-1 text-sm text-red-600">{errors.tags}</p>
+        )}
       </div>
     </div>
   )

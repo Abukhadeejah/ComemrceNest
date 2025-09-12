@@ -54,11 +54,11 @@ export async function POST(req: Request) {
     }
 
     // Parse JSON safely after signature verification
-    let payload: unknown
+    let _payload: unknown
     try {
-      payload = JSON.parse(rawBody)
+      _payload = JSON.parse(rawBody)
     } catch {
-      payload = null
+      _payload = null
     }
 
     // TODO: Map events (e.g. payment.captured) to order state transitions

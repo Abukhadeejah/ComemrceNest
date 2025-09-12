@@ -1,9 +1,8 @@
 import { resolveTenantIdFromRequest } from '@/server/tenant'
-import { fetchPublishedProducts } from '@/server/modules/products/service'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
 import Home from './Home'
 
-interface Category {
+interface _Category {
   id: string
   name: string
   slug: string
@@ -18,10 +17,10 @@ export default async function HomeServer() {
     return <main className="p-6"><h1 className="text-xl font-semibold">Senlysh</h1><p className="text-sm text-neutral-600">Tenant not found.</p></main>
   }
 
-  const [{ data: products }, { data: categories }] = await Promise.all([
+  const [{ data: products }, { data: categories }, { data: heroSlides }, { data: heroSettings }] = await Promise.all([
     supabaseAdmin
       .from('products')
-      .select('id, name, slug, description, price_cents, compare_at_price_cents, stock, currency, hero_image_url, images, status')
+      .select('id, name, slug, description, price_cents, compare_at_price_cents, stock, currency, hero_image_url, status')
       .eq('tenant_id', tenantId)
       .eq('status', 'published')
       .order('updated_at', { ascending: false }),
@@ -29,8 +28,24 @@ export default async function HomeServer() {
       .from('categories')
       .select('id, name, slug, parent_id, image_url, image_alt')
       .eq('tenant_id', tenantId)
-      .order('name', { ascending: true })
+      .order('name', { ascending: true }),
+    supabaseAdmin
+      .from('hero_slides')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .eq('is_active', true)
+      .order('position', { ascending: true }),
+    supabaseAdmin
+      .from('hero_settings')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .single()
   ])
 
-  return <Home products={products || []} categories={categories || []} />
+  return <Home 
+    products={products || []} 
+    categories={categories || []} 
+    heroSlides={heroSlides || []}
+    heroSettings={heroSettings || null}
+  />
 }

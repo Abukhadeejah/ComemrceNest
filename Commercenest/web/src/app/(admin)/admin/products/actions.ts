@@ -65,6 +65,8 @@ interface ProductData {
   badge_priority?: number | null
   badge_display_until?: string | null
   badge_display_from?: string | null
+  // Tags
+  tags?: string[]
 }
 
 function normalizeImageInputs(imageInputs: string[]): string[] {
@@ -188,7 +190,9 @@ export async function createProduct(formData: FormData) {
     badge_color: formData.get('badge_color') as string,
     badge_priority: formData.get('badge_priority') ? parseInt(formData.get('badge_priority') as string) : null,
     badge_display_until: formData.get('badge_display_until') as string,
-    badge_display_from: formData.get('badge_display_from') as string
+    badge_display_from: formData.get('badge_display_from') as string,
+    // Tags
+    tags: formData.get('tags') ? JSON.parse(formData.get('tags') as string) : []
   }
 
   // Process numeric fields - convert empty strings to null
@@ -255,7 +259,9 @@ export async function createProduct(formData: FormData) {
       badge_color: productData.badge_color,
       badge_priority: productData.badge_priority,
       badge_display_until: productData.badge_display_until,
-      badge_display_from: productData.badge_display_from
+      badge_display_from: productData.badge_display_from,
+      // Tags
+      tags: productData.tags || []
     })
     .select()
     .single()
@@ -476,7 +482,9 @@ export async function updateProduct(productId: string, formData: FormData) {
     badge_color: formData.get('badge_color') as string,
     badge_priority: formData.get('badge_priority') ? parseInt(formData.get('badge_priority') as string) : null,
     badge_display_until: formData.get('badge_display_until') as string,
-    badge_display_from: formData.get('badge_display_from') as string
+    badge_display_from: formData.get('badge_display_from') as string,
+    // Tags
+    tags: formData.get('tags') ? JSON.parse(formData.get('tags') as string) : []
   }
 
   // Process numeric fields - convert empty strings to null
@@ -542,7 +550,9 @@ export async function updateProduct(productId: string, formData: FormData) {
       badge_color: productData.badge_color,
       badge_priority: productData.badge_priority,
       badge_display_until: productData.badge_display_until,
-      badge_display_from: productData.badge_display_from
+      badge_display_from: productData.badge_display_from,
+      // Tags
+      tags: productData.tags || []
     })
     .eq('id', productId)
     .eq('tenant_id', tenantId)
@@ -747,10 +757,32 @@ export async function updateProduct(productId: string, formData: FormData) {
   return product
 }
 
+export async function deleteProduct(productId: string) {
+  const tenantId = await resolveTenantIdFromRequest()
+  if (!tenantId) { throw new Error('Tenant not found') }
+  await assertTenantAdmin(tenantId)
+
+  const { error } = await supabaseAdmin
+    .from('products')
+    .delete()
+    .eq('id', productId)
+    .eq('tenant_id', tenantId)
+
+  if (error) {
+    throw new Error(`Failed to delete product: ${error.message}`)
+  }
+
+  revalidateTag(tenantProductsTag(tenantId))
+  return { success: true }
+}
+
 export async function bulkDeleteProducts(productIds: string[]) {
   const tenantId = await resolveTenantIdFromRequest()
   if (!tenantId) { throw new Error('Tenant not found') }
   await assertTenantAdmin(tenantId)
+
+  // GUARDRAIL: Validate module access
+  await validateModuleAccess(tenantId, 'products', 'delete')
 
   const { error } = await supabaseAdmin
     .from('products')
@@ -762,7 +794,15 @@ export async function bulkDeleteProducts(productIds: string[]) {
     throw new Error(`Failed to delete products: ${error.message}`)
   }
 
+  // GUARDRAIL: Success logging and cache invalidation
   revalidateTag(tenantProductsTag(tenantId))
+
+  await logSecurityEvent('products_bulk_deleted_success', {
+    productIds,
+    tenantId,
+    count: productIds.length
+  })
+
   return { success: true }
 }
 
