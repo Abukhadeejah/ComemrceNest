@@ -67,6 +67,25 @@ export async function resolveTenantIdFromRequest(): Promise<string | null> {
     }
   } catch {}
 
+  // 2c. Enhanced fallback: Try to infer tenant from referer or other context
+  // This helps when accessing global routes like /checkout directly
+  try {
+    const referer = h.get('referer') || ''
+    if (referer) {
+      const refererUrl = new URL(referer)
+      const refererPath = refererUrl.pathname
+      const refererSegments = refererPath.split('/').filter(Boolean)
+      
+      if (refererSegments.length > 0) {
+        const refererTenant = refererSegments[0]
+        const refererTenantId = await resolveTenantIdFromKey(refererTenant)
+        if (refererTenantId) {
+          return refererTenantId
+        }
+      }
+    }
+  } catch {}
+
   // 3. Special handling for localhost development
   if (host === 'localhost') {
     const pathSegments = pathname.split('/').filter(Boolean)

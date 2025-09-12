@@ -21,7 +21,16 @@ function decodeSecret(val: unknown): string {
 
 export async function POST(request: Request) {
   const tenantId = await resolveTenantIdFromRequest()
-  if (!tenantId) return NextResponse.json({ error: 'tenant_not_found' }, { status: 400 })
+  if (!tenantId) {
+    console.error('Checkout API: Tenant resolution failed', {
+      headers: Object.fromEntries(request.headers.entries()),
+      url: request.url
+    })
+    return NextResponse.json({ 
+      error: 'tenant_not_found',
+      message: 'Unable to determine tenant context for checkout'
+    }, { status: 400 })
+  }
 
   // Load tenant payment settings (prefer enabled env row)
   const { data: rows } = await supabaseAdmin

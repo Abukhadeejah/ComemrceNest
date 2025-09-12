@@ -50,6 +50,14 @@ export function middleware(request: NextRequest) {
     response.cookies.set('tenant_mode', 'host', { path: '/', sameSite: 'lax' });
     return response;
   }
+
+  // Enhanced: Set tenant cookies for global routes when there's a tenant context
+  if (tenantFromHost && isGlobalRoute) {
+    headers.set('x-tenant-admin', tenantFromHost);
+    const response = NextResponse.next({ request: { headers } });
+    response.cookies.set('tenant', tenantFromHost, { path: '/', sameSite: 'lax' });
+    return response;
+  }
   
   // Path-based tenancy (staging/local) with cookie fallback
   if (tenantFromPath) {
