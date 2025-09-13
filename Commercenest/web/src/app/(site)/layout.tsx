@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { headers } from 'next/headers'
+import { headers, cookies } from 'next/headers'
 import TenantProvider from '@/components/TenantProvider'
 import TenantLayoutServer from '@/components/tenant/TenantLayoutServer'
 import { CartProvider } from '@/lib/cart'
@@ -76,8 +76,7 @@ export default async function SiteLayout({
   const headersList = await headers()
   const pathname = headersList.get('x-pathname') || '/'
   
-  // Extract tenant key from pathname, but only for tenant-specific routes
-  // Root routes (/, /products, etc.) should not have a tenant key
+  // Extract tenant key from pathname first
   const pathSegments = pathname.split('/').filter(Boolean)
   let tenantKey: string | undefined = undefined
   
@@ -89,9 +88,19 @@ export default async function SiteLayout({
     }
   }
 
-  // CRITICAL FIX: Root routes (/) should NEVER use tenant cookies
-  // Only tenant-prefixed routes (/bluebell/*, /senlysh/*) should use cookies
-  // This prevents cross-tenant contamination on the platform homepage
+  // For root routes (/, /products, etc.), check cookies for tenant context
+  // This allows shared routes to maintain tenant branding when accessed from tenant context
+  if (!tenantKey) {
+    try {
+      const cookieStore = await cookies()
+      const cookieTenant = cookieStore.get('tenant')?.value
+      if (cookieTenant === 'bluebell' || cookieTenant === 'senlysh') {
+        tenantKey = cookieTenant
+      }
+    } catch {
+      // Ignore cookie errors
+    }
+  }
 
   return (
     <TenantProvider tenantKey={tenantKey}>

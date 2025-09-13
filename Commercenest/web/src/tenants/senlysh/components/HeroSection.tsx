@@ -50,69 +50,17 @@ interface HeroSectionProps {
   autoPlayInterval?: number;
 }
 
-const defaultSlides: HeroSlide[] = [
-  {
-    id: 1,
-    title: 'NEW',
-    subtitle: 'COLLECTION',
-    description: 'Discover the latest trends in fashion',
-    badge: '',
-    image: 'https://images.pexels.com/photos/1043474/pexels-photo-1043474.jpeg',
-    ctaText: 'Shop Now',
-    ctaLink: '/new-arrivals',
-    bgColor: 'bg-gradient-to-r from-gray-900 via-purple-900 to-gray-900',
-    countdown: true,
-    countdownEnd: '2024-12-31T23:59:59',
-    socialProof: {
-      customers: '10,000+',
-      rating: '4.8',
-      reviews: 'Happy Customers'
-    },
-    features: ['Premium Quality', 'Latest Trends', 'Express Delivery']
-  },
-  {
-    id: 2,
-    title: "WINTER",
-    subtitle: 'ESSENTIALS',
-    description: 'Stay warm and stylish this season',
-    saleText: 'UP TO 50% OFF',
-    badge: '',
-    image: 'https://images.pexels.com/photos/1926769/pexels-photo-1926769.jpeg',
-    ctaText: 'SHOP SALE',
-    ctaLink: '/sale',
-    bgColor: 'bg-gradient-to-r from-amber-50 via-orange-100 to-red-50',
-    countdown: true,
-    countdownEnd: '2024-01-15T23:59:59',
-    urgencyText: 'Limited Time Offer - Ends Soon!',
-    features: ['Warm & Cozy', 'Trendy Designs', 'Best Prices']
-  },
-  {
-    id: 3,
-    title: 'PREMIUM',
-    subtitle: 'ACCESSORIES',
-    description: 'Complete your look with our premium collection',
-    badge: '',
-    image: 'https://images.pexels.com/photos/996329/pexels-photo-996329.jpeg',
-    ctaText: 'Explore Now',
-    ctaLink: '/accessories',
-    bgColor: 'bg-gradient-to-r from-gray-900/40 via-purple-900/30 to-pink-900/40',
-    socialProof: {
-      customers: '5,000+',
-      rating: '4.9',
-      reviews: 'Premium Customers'
-    },
-    features: ['Luxury Quality', 'Exclusive Designs', 'VIP Service']
-  }
-];
+// PRODUCTION READY: No hardcoded mock data - only dynamic database data is used
+// All hero slides are managed through the admin panel and stored in the database
 
 const HeroSection: React.FC<HeroSectionProps> = ({
   heroSlides = [],
   heroSettings = null,
-  slides = defaultSlides,
+  slides = [], // PRODUCTION READY: No default slides - only database data
   autoPlay = true,
-  autoPlayInterval = 8000
+  autoPlayInterval = 2000
 }) => {
-  // Convert database slides to component format, fallback to default slides
+  // Convert database slides to component format - PRODUCTION READY: No fallback to mock data
   const clampOverlay = (overlayClass?: string): string => {
     if (!overlayClass) return 'bg-black/30';
     // Only allow 10–60 strength to guarantee image remains visible
@@ -128,28 +76,25 @@ const HeroSection: React.FC<HeroSectionProps> = ({
   const getSlides = (): HeroSlide[] => {
     if (heroSlides && heroSlides.length > 0) {
       return heroSlides.map((dbSlide, index) => {
-        // Use fallback images for Unsplash URLs that might be blocked
-        const fallbackImages = [
-          'https://images.pexels.com/photos/1857353/pexels-photo-1857353.jpeg',
-          'https://images.pexels.com/photos/1043474/pexels-photo-1043474.jpeg',
-          'https://images.pexels.com/photos/1926769/pexels-photo-1926769.jpeg',
-          'https://images.pexels.com/photos/996329/pexels-photo-996329.jpeg'
-        ];
-        
-        const imageUrl = dbSlide.image_url || fallbackImages[index % fallbackImages.length];
-        
+        // PRODUCTION READY: No fallback images - only database data
+        const imageUrl = dbSlide.image_url;
+
+        if (!imageUrl) {
+          console.warn(`Hero slide ${index + 1} has no image_url in database`);
+        }
+
         console.log(`Hero slide ${index + 1}:`, {
           title: dbSlide.title,
           imageUrl,
           bgOverlay: dbSlide.bg_overlay_class
         });
-        
+
         return {
           id: index + 1,
           title: dbSlide.title || 'New Collection',
           subtitle: dbSlide.subtitle || 'Discover',
           description: dbSlide.description || 'Explore our latest collection',
-          image: imageUrl,
+          image: imageUrl || '', // Only use database image - no fallbacks
           ctaText: dbSlide.cta_text || 'Shop Now',
           ctaLink: dbSlide.cta_link || '/products',
           saleText: dbSlide.sale_text,
@@ -163,13 +108,17 @@ const HeroSection: React.FC<HeroSectionProps> = ({
         };
       });
     }
-    return slides;
+    // PRODUCTION READY: No fallback to mock data - return empty array if no database data
+    console.warn('No hero slides found in database - HeroSection will be empty');
+    return [];
   };
 
   const finalSlides = getSlides();
   const finalAutoPlay = heroSettings?.auto_play ?? autoPlay;
   const finalAutoPlayInterval = heroSettings?.auto_play_interval_ms ?? autoPlayInterval;
+
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
   const tenant = useTenant()
   const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number; seconds: number }>({
     days: 0,
@@ -180,14 +129,41 @@ const HeroSection: React.FC<HeroSectionProps> = ({
 
   // Auto-play functionality
   useEffect(() => {
-    if (!finalAutoPlay) return;
+    if (!finalAutoPlay || isPaused) return;
 
     const interval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % finalSlides.length);
     }, finalAutoPlayInterval);
 
     return () => clearInterval(interval);
-  }, [finalAutoPlay, finalAutoPlayInterval, finalSlides.length]);
+  }, [finalAutoPlay, finalAutoPlayInterval, finalSlides.length, isPaused]);
+
+  // Pause on hover
+  const handleMouseEnter = () => {
+    if (finalAutoPlay) setIsPaused(true);
+  };
+
+  const handleMouseLeave = () => {
+    if (finalAutoPlay) setIsPaused(false);
+  };
+
+  const togglePause = () => {
+    setIsPaused((prev) => !prev);
+  };
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'ArrowLeft') {
+        goToPreviousSlide();
+      } else if (event.key === 'ArrowRight') {
+        goToNextSlide();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [finalSlides.length]);
 
   // Countdown timer
   useEffect(() => {
@@ -217,8 +193,20 @@ const HeroSection: React.FC<HeroSectionProps> = ({
     setCurrentSlide(index);
   };
 
+  const goToPreviousSlide = () => {
+    setCurrentSlide((prev) => (prev === 0 ? finalSlides.length - 1 : prev - 1));
+  };
+
+  const goToNextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % finalSlides.length);
+  };
+
   return (
-    <section className="relative w-full h-[600px] sm:h-[700px] md:h-[700px] overflow-hidden">
+    <section
+      className="relative w-full h-[600px] sm:h-[700px] md:h-[700px] overflow-hidden"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
       {/* Slides */}
       <div className="relative w-full h-full">
         {finalSlides.map((slide, index) => (
@@ -365,8 +353,11 @@ const HeroSection: React.FC<HeroSectionProps> = ({
         ))}
       </div>
 
-      {/* Pagination Dots */}
-      <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex space-x-2 sm:space-x-3">
+
+      {/* Navigation Controls */}
+      <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex items-center space-x-4 sm:space-x-6">
+
+        {/* Pagination Dots */}
         {finalSlides.map((_, index) => (
           <button
             key={index}
@@ -383,13 +374,21 @@ const HeroSection: React.FC<HeroSectionProps> = ({
 
       {/* Progress Bar */}
       <div className="absolute bottom-0 left-0 w-full h-1 bg-white/20">
-        <div 
+        <div
           className="h-full bg-white transition-all duration-1000 ease-linear"
-          style={{ 
-            width: `${((currentSlide + 1) / finalSlides.length) * 100}%` 
+          style={{
+            width: `${((currentSlide + 1) / finalSlides.length) * 100}%`
           }}
         />
       </div>
+
+      {/* Auto-play indicator */}
+      {!isPaused && finalAutoPlay && finalSlides.length > 1 && (
+        <div className="absolute top-6 right-6 bg-black/30 text-white px-3 py-1 rounded-full text-xs flex items-center gap-2">
+          <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+          <span>Auto-play</span>
+        </div>
+      )}
     </section>
   );
 };

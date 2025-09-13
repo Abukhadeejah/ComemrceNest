@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import AutoCarousel from '@/components/tenant/AutoCarousel';
 
 interface Category {
   name: string;
@@ -246,103 +247,104 @@ const CategoriesSection: React.FC<CategoriesSectionProps> = ({
                 <div className="w-24 h-1 bg-gradient-to-r from-purple-500 to-pink-500 mx-auto rounded-full"></div>
               </div>
 
-              {/* Categories Grid - Horizontal Scrollable */}
-              <div className="relative">
-                <div className="flex gap-4 sm:gap-6 overflow-x-auto scrollbar-hide pb-4 sm:pb-6
-                  scroll-smooth snap-x snap-mandatory
-                  [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                  {row.categories.map((category, index) => (
-                    <Link key={`${rowIndex}-${category.name}-${index}`} href={category.url} className="group flex-shrink-0 w-48 sm:w-56 md:w-64 snap-start">
-                      <div className="relative overflow-hidden rounded-xl shadow-lg 
-                        transition-transform duration-300 ease-out will-change-transform
-                        group-hover:scale-105 group-hover:shadow-xl
-                        group-hover:-translate-y-1 motion-reduce:transition-none">
-                        {/* Category Image */}
-                        <div className="relative h-32 sm:h-40 md:h-48">
-                          <Image
-                            src={category.image}
-                            alt={category.name}
-                            fill
-                            loading="lazy"
-                            className="object-cover 
-                              transition-transform duration-300 ease-out will-change-transform
-                              group-hover:scale-110 motion-reduce:transition-none"
-                          />
-                          {/* Optimized Base Overlay */}
-                          <div className="absolute inset-0 
-                            bg-gradient-to-t from-black/60 via-black/20 to-transparent
-                            group-hover:from-black/50 group-hover:via-black/15
-                            transition-all duration-300 motion-reduce:transition-none"></div>
-                        </div>
-                        
-                        {/* Optimized Badges */}
-                        <div className="absolute top-2 left-2 flex flex-col gap-1">
-                          {category.isTrending && (
-                            <span className="bg-orange-500 text-white text-xs px-2 py-1 rounded-full font-semibold 
-                              animate-pulse motion-reduce:animate-none">
-                              🔥 Trending
-                            </span>
-                          )}
-                          {category.isNew && (
-                            <span className="bg-green-500 text-white text-xs px-2 py-1 rounded-full font-semibold">
-                              ✨ New
-                            </span>
-                          )}
-                          {category.hasSale && (
-                            <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-semibold">
-                              {category.salePercentage}% OFF
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Optimized Category Info */}
-                        <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4">
-                          <h4 className="text-white text-sm sm:text-base font-semibold mb-1
-                            transition-colors duration-300 motion-reduce:transition-none
-                            group-hover:text-yellow-200">
-                            {category.name}
-                          </h4>
-                          {category.count && (
-                            <p className="text-white/80 text-xs sm:text-sm
-                              transition-colors duration-300 motion-reduce:transition-none
-                              group-hover:text-white">
-                              {category.count}
-                            </p>
-                          )}
-                          {/* Optimized Price Info for Sale Items */}
-                          {category.hasSale && category.salePercentage && (
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-yellow-300 text-xs font-semibold
-                                transition-colors duration-300 motion-reduce:transition-none
-                                group-hover:text-yellow-200">
-                                Up to {category.salePercentage}% off
-                              </span>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Optimized Hover Effect */}
-                        <div className="absolute inset-0 
-                          bg-gradient-to-t from-purple-500/20 to-transparent 
-                          opacity-0 group-hover:opacity-100 
-                          transition-opacity duration-300 motion-reduce:transition-none"></div>
+              {/* Categories Auto-Play Carousel */}
+              <AutoCarousel
+                itemsPerView={{
+                  mobile: 2.5,
+                  tablet: 3,
+                  desktop: 4
+                }}
+                autoPlay={true}
+                autoPlayInterval={8000}
+                showControls={false}  // Remove play/pause button
+                showIndicators={true}
+                showProgress={true}
+                className="px-4"
+              >
+                {row.categories.map((category, index) => (
+                  <Link key={`${rowIndex}-${category.name}-${index}`} href={category.url} className="group flex-shrink-0 w-full px-2">
+                    <div className="relative overflow-hidden rounded-xl shadow-lg
+                      transition-transform duration-300 ease-out will-change-transform
+                      group-hover:scale-105 group-hover:shadow-xl
+                      group-hover:-translate-y-1 motion-reduce:transition-none">
+                      {/* Category Image */}
+                      <div className="relative h-32 sm:h-40 md:h-48">
+                        <Image
+                          src={category.image}
+                          alt={category.name}
+                          fill
+                          loading="lazy"
+                          className="object-cover
+                            transition-transform duration-300 ease-out will-change-transform
+                            group-hover:scale-110 motion-reduce:transition-none"
+                        />
+                        {/* Optimized Base Overlay */}
+                        <div className="absolute inset-0
+                          bg-gradient-to-t from-black/60 via-black/20 to-transparent
+                          group-hover:from-black/50 group-hover:via-black/15
+                          transition-all duration-300 motion-reduce:transition-none"></div>
                       </div>
-                    </Link>
-                  ))}
-                </div>
 
-                {/* Scroll Indicators */}
-                <div className="flex justify-center mt-4 space-x-2">
-                  <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
-                  <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
-                  <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
-                </div>
-              </div>
+                      {/* Optimized Badges */}
+                      <div className="absolute top-2 left-2 flex flex-col gap-1">
+                        {category.isTrending && (
+                          <span className="bg-orange-500 text-white text-xs px-2 py-1 rounded-full font-semibold
+                            animate-pulse motion-reduce:animate-none">
+                            🔥 Trending
+                          </span>
+                        )}
+                        {category.isNew && (
+                          <span className="bg-green-500 text-white text-xs px-2 py-1 rounded-full font-semibold">
+                            ✨ New
+                          </span>
+                        )}
+                        {category.hasSale && (
+                          <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-semibold">
+                            {category.salePercentage}% OFF
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Optimized Category Info */}
+                      <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4">
+                        <h4 className="text-white text-sm sm:text-base font-semibold mb-1
+                          transition-colors duration-300 motion-reduce:transition-none
+                          group-hover:text-yellow-200">
+                          {category.name}
+                        </h4>
+                        {category.count && (
+                          <p className="text-white/80 text-xs sm:text-sm
+                            transition-colors duration-300 motion-reduce:transition-none
+                            group-hover:text-white">
+                            {category.count}
+                          </p>
+                        )}
+                        {/* Optimized Price Info for Sale Items */}
+                        {category.hasSale && category.salePercentage && (
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-yellow-300 text-xs font-semibold
+                              transition-colors duration-300 motion-reduce:transition-none
+                              group-hover:text-yellow-200">
+                              Up to {category.salePercentage}% off
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Optimized Hover Effect */}
+                      <div className="absolute inset-0
+                        bg-gradient-to-t from-purple-500/20 to-transparent
+                        opacity-0 group-hover:opacity-100
+                        transition-opacity duration-300 motion-reduce:transition-none"></div>
+                    </div>
+                  </Link>
+                ))}
+              </AutoCarousel>
 
               {/* Optimized View All Button for each row */}
               <div className="text-center">
                 <Link 
-                  href={rowIndex === 0 ? '/shop/men' : '/shop/women'}
+                  href={rowIndex === 0 ? '/senlysh/products?category=men' : '/senlysh/products?category=women'}
                   className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-3 rounded-full font-semibold 
                     transition-all duration-300 shadow-lg hover:shadow-xl 
                     transform hover:scale-105 hover:-translate-y-1

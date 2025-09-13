@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useCart } from '@/lib/cart';
+import { usePathname } from 'next/navigation';
 
 interface Category {
   id: string;
@@ -17,11 +18,27 @@ export default function Header() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const { state } = useCart();
+  const pathname = usePathname();
   const cartCount = state.itemCount;
   const wishlistCount = 0; // TODO: Implement wishlist functionality later
   // Feature flags (superadmin-controlled in future)
   const showNewArrivals = false
   const showSale = false
+
+  // Helper function to determine if a link is active
+  const isActive = (href: string) => {
+    if (href === '/senlysh') {
+      return pathname === '/senlysh' || pathname === '/senlysh/';
+    }
+    return pathname.startsWith(href);
+  };
+
+  // Helper function to get active link classes
+  const getActiveClasses = (href: string, baseClasses: string) => {
+    return isActive(href) 
+      ? `${baseClasses} border-b-2 border-gray-800 pb-1`
+      : `${baseClasses} pb-1`;
+  };
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -76,11 +93,11 @@ export default function Header() {
 
             {/* Navigation Menu - Desktop */}
             <nav className="hidden lg:flex space-x-8">
-              <Link href="/senlysh" className="text-gray-800 hover:text-gray-600 font-semibold text-sm uppercase tracking-wide transition-colors border-b-2 border-gray-800 pb-1">
+              <Link href="/senlysh" className={getActiveClasses('/senlysh', 'text-gray-800 hover:text-gray-600 font-semibold text-sm uppercase tracking-wide transition-colors')}>
                 HOME
               </Link>
               <div className="relative group">
-                <Link href="/senlysh/products" className="text-gray-800 hover:text-gray-600 font-semibold text-sm uppercase tracking-wide transition-colors pb-1 flex items-center gap-1">
+                <Link href="/senlysh/products" className={getActiveClasses('/senlysh/products', 'text-gray-800 hover:text-gray-600 font-semibold text-sm uppercase tracking-wide transition-colors flex items-center gap-1')}>
                   SHOP
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -106,19 +123,19 @@ export default function Header() {
                 </div>
               </div>
               {showNewArrivals ? (
-                <Link href="/senlysh/new-arrivals" className="text-gray-800 hover:text-gray-600 font-semibold text-sm uppercase tracking-wide transition-colors pb-1">
+                <Link href="/senlysh/new-arrivals" className={getActiveClasses('/senlysh/new-arrivals', 'text-gray-800 hover:text-gray-600 font-semibold text-sm uppercase tracking-wide transition-colors')}>
                   NEW ARRIVALS
                 </Link>
               ) : null}
               {showSale ? (
-                <Link href="/senlysh/sale" className="text-red-600 hover:text-red-700 font-semibold text-sm uppercase tracking-wide transition-colors pb-1">
+                <Link href="/senlysh/sale" className={getActiveClasses('/senlysh/sale', 'text-red-600 hover:text-red-700 font-semibold text-sm uppercase tracking-wide transition-colors')}>
                   SALE
                 </Link>
               ) : null}
-              <Link href="/senlysh/about" className="text-gray-800 hover:text-gray-600 font-semibold text-sm uppercase tracking-wide transition-colors pb-1">
+              <Link href="/senlysh/about" className={getActiveClasses('/senlysh/about', 'text-gray-800 hover:text-gray-600 font-semibold text-sm uppercase tracking-wide transition-colors')}>
                 ABOUT US
               </Link>
-              <Link href="/senlysh/contact" className="text-gray-800 hover:text-gray-600 font-semibold text-sm uppercase tracking-wide transition-colors pb-1">
+              <Link href="/senlysh/contact" className={getActiveClasses('/senlysh/contact', 'text-gray-800 hover:text-gray-600 font-semibold text-sm uppercase tracking-wide transition-colors')}>
                 CONTACT US
               </Link>
             </nav>
@@ -197,7 +214,7 @@ export default function Header() {
               <div className="flex flex-col space-y-4">
                 <Link 
                   href="/senlysh" 
-                  className="text-gray-800 hover:text-gray-600 font-semibold text-base uppercase tracking-wide transition-colors border-b-2 border-gray-800 pb-2"
+                  className={getActiveClasses('/senlysh', 'text-gray-800 hover:text-gray-600 font-semibold text-base uppercase tracking-wide transition-colors pb-2')}
                   onClick={() => setIsMenuOpen(false)}
                 >
                   HOME
@@ -205,7 +222,7 @@ export default function Header() {
                 <div className="space-y-2">
                   <Link 
                     href="/senlysh/products" 
-                    className="text-gray-800 hover:text-gray-600 font-semibold text-base uppercase tracking-wide transition-colors pb-2 block"
+                    className={getActiveClasses('/senlysh/products', 'text-gray-800 hover:text-gray-600 font-semibold text-base uppercase tracking-wide transition-colors pb-2 block')}
                     onClick={() => setIsMenuOpen(false)}
                   >
                     SHOP

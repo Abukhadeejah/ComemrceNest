@@ -3,7 +3,7 @@
 import { useCart, formatPrice } from '@/lib/cart'
 import Link from 'next/link'
 import Image from 'next/image'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Playfair_Display, Inter } from 'next/font/google'
 import { SITE_URLS } from '@/utils/site-urls'
 
@@ -13,19 +13,28 @@ const inter = Inter({ subsets: ['latin'], weight: ['300','400','500','600','700'
 export default function CartPage() {
   const { state, removeItem, updateQuantity } = useCart()
   const [isProcessing, setIsProcessing] = useState(false)
+  const [tenantKey, setTenantKey] = useState<string | null>(null)
 
-  // Get tenant key from URL path (most reliable approach)
-  const getTenantKey = (): string | null => {
-    if (typeof window !== 'undefined') {
+  // Get tenant key from URL path or cookies (avoid hydration mismatch)
+  useEffect(() => {
+    const getTenantKey = (): string | null => {
+      // First try URL path
       const pathSegments = window.location.pathname.split('/').filter(Boolean)
       if (pathSegments.length > 0 && (pathSegments[0] === 'bluebell' || pathSegments[0] === 'senlysh')) {
         return pathSegments[0]
       }
+      
+      // Fallback to cookies if URL path doesn't have tenant
+      const cookies = document.cookie || ''
+      const tenantCookie = /(?:^|; )tenant=([^;]+)/.exec(cookies)?.[1]
+      if (tenantCookie === 'bluebell' || tenantCookie === 'senlysh') {
+        return tenantCookie
+      }
+      return null
     }
-    return null
-  }
 
-  const tenantKey = getTenantKey()
+    setTenantKey(getTenantKey())
+  }, [])
 
   const handleCheckout = async () => {
     setIsProcessing(true)

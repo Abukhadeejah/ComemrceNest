@@ -2,6 +2,10 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { generateProductBadges, getBadgeClassName, getBadgeStyle } from '@/utils/badges';
+import AutoCarousel from '@/components/tenant/AutoCarousel';
+import { QuickViewModal } from '@/components/tenant/products/QuickViewModal';
+import { useCart } from '@/lib/cart';
+import { ProductListItem } from '@/server/modules/products/service';
 
 interface Product {
   name: string;
@@ -23,8 +27,10 @@ interface ApiProduct {
   id: string;
   name: string;
   slug: string;
+  description?: string;
   price_cents: number;
   compare_at_price_cents?: number;
+  currency: string;
   images?: string[];
   status: string;
   stock: number;
@@ -52,63 +58,8 @@ interface LatestProductsProps {
   apiProducts?: ApiProduct[];
 }
 
-const defaultProducts: Product[] = [
-  {
-    name: 'Front Back Fusion Graphic Tee',
-    images: [
-      'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400&h=400&fit=crop',
-      'https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=400&h=400&fit=crop',
-      'https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=400&h=400&fit=crop'
-    ],
-    price: 599,
-    originalPrice: 799,
-    badge: '',
-    url: '/product/front-back-graphic-tee',
-    sizes: ['M-38', 'L-40', 'XL-42'],
-    discount: 25
-  },
-  {
-    name: 'Righteous -EDP 100ml-Premium Perfume',
-    images: [
-      'https://images.unsplash.com/photo-1541643600914-78b084683601?w=400&h=400&fit=crop',
-      'https://images.unsplash.com/photo-1587017539504-67cfbddac569?w=400&h=400&fit=crop',
-      'https://images.unsplash.com/photo-1592945403244-b3faa74b2c98?w=400&h=400&fit=crop'
-    ],
-    price: 1500,
-    originalPrice: 1690,
-    badge: '',
-    url: '/product/righteous-edp-100ml-premium-perfume',
-    discount: 11,
-    isNew: true
-  },
-  {
-    name: 'Boxers',
-    images: [
-      'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=400&h=400&fit=crop',
-      'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=400&h=400&fit=crop',
-      'https://images.unsplash.com/photo-1542272604-787c3835535d?w=400&h=400&fit=crop'
-    ],
-    price: 600,
-    originalPrice: 800,
-    badge: '',
-    url: '/product/boxers',
-    discount: 25,
-    isTrending: true
-  },
-  {
-    name: 'Dark Side EDP 100ml-Premium Perfume',
-    images: [
-      'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=400&h=400&fit=crop',
-      'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=400&h=400&fit=crop',
-      'https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?w=400&h=400&fit=crop'
-    ],
-    price: 1250,
-    originalPrice: 1495,
-    badge: '',
-    url: '/product/dark-side-edp-100ml-premium-perfume',
-    discount: 16
-  }
-];
+// PRODUCTION READY: No hardcoded mock data - only dynamic database data is used
+// All products are managed through the admin panel and stored in the database
 
 const LatestProducts: React.FC<LatestProductsProps> = ({
   title = "Latest Products",
@@ -116,9 +67,32 @@ const LatestProducts: React.FC<LatestProductsProps> = ({
   bgColor = "bg-white",
   apiProducts: propApiProducts
 }) => {
-  const [products, setProducts] = useState<Product[]>(propProducts || defaultProducts);
+  const [products, setProducts] = useState<Product[]>(propProducts || []); // PRODUCTION READY: No default products - only database data
   const [hoveredProduct, setHoveredProduct] = useState<string | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState<{ [key: string]: number }>({});
+  const [quickViewProduct, setQuickViewProduct] = useState<ProductListItem | null>(null);
+  const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
+
+  // Convert ApiProduct to ProductListItem for QuickViewModal
+  const convertToProductListItem = (apiProduct: ApiProduct): ProductListItem => ({
+    id: apiProduct.id,
+    name: apiProduct.name,
+    slug: apiProduct.slug || '',
+    description: apiProduct.description || 'No description available',
+    price_cents: apiProduct.price_cents,
+    compare_at_price_cents: apiProduct.compare_at_price_cents,
+    currency: 'INR', // Default currency
+    hero_image_url: apiProduct.hero_image_url || null,
+    stock: apiProduct.stock || 0,
+    low_stock_threshold: 5,
+    is_featured: apiProduct.is_featured,
+    is_bestseller: apiProduct.is_bestseller,
+    is_new_arrival: apiProduct.is_new_arrival,
+    is_on_sale: apiProduct.is_on_sale,
+    is_limited_edition: apiProduct.is_limited_edition,
+    is_sold_out: apiProduct.is_sold_out,
+  });
+  const { addItem } = useCart();
 
   useEffect(() => {
     if (propApiProducts && Array.isArray(propApiProducts) && propApiProducts.length > 0) {
@@ -153,12 +127,35 @@ const LatestProducts: React.FC<LatestProductsProps> = ({
         // Get the primary badge (first one) for backward compatibility
         const primaryBadge = badges.length > 0 ? badges[0] : { text: 'New', className: 'bg-green-500 text-white' };
 
-        // Prefer DB hero image when images array is missing/empty
+        // PRODUCTION READY: Use database images with fallback for missing images
         const resolvedImages: string[] = (Array.isArray(product.images) && product.images.length > 0)
           ? product.images
-          : (product.hero_image_url ? [product.hero_image_url] : [
-              'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=800&h=800&fit=crop'
-            ]);
+          : (product.hero_image_url ? [product.hero_image_url] : []);
+
+        // Add fallback images if no images found in database
+        if (resolvedImages.length === 0) {
+          console.warn(`Product ${product.name} has no images in database, using fallback`);
+          const fallbackImages = [
+            'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=400&fit=crop&crop=center',
+            'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=400&h=400&fit=crop&crop=center',
+            'https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?w=400&h=400&fit=crop&crop=center',
+            'https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=400&h=400&fit=crop&crop=center',
+            'https://images.unsplash.com/photo-1445205170230-053b83016050?w=400&h=400&fit=crop&crop=center'
+          ];
+          resolvedImages.push(fallbackImages[Math.floor(Math.random() * fallbackImages.length)]);
+        }
+
+        // Generate a proper slug from product name if slug is missing
+        const generateSlug = (name: string) => {
+          return name
+            .toLowerCase()
+            .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+            .replace(/\s+/g, '-') // Replace spaces with hyphens
+            .replace(/-+/g, '-') // Replace multiple hyphens with single
+            .trim();
+        };
+
+        const productSlug = product.slug || generateSlug(product.name || 'unnamed-product');
 
         return {
           name: product.name || 'Unnamed Product',
@@ -166,7 +163,7 @@ const LatestProducts: React.FC<LatestProductsProps> = ({
           price: price,
           originalPrice: originalPrice,
           badge: primaryBadge.text,
-          url: `/senlysh/products/${product.slug || 'unknown'}`,
+          url: `/senlysh/products/${productSlug}`,
           sizes: ['M-38', 'L-40', 'XL-42'],
           isNew: product.is_new_arrival || (product.status === 'published' && Math.random() > 0.7),
           isTrending: product.is_bestseller || Math.random() > 0.8,
@@ -212,25 +209,65 @@ const LatestProducts: React.FC<LatestProductsProps> = ({
     setCurrentImageIndex(prev => ({ ...prev, [productName]: index }));
   };
 
+  const handleQuickView = (product: Product) => {
+    // Find the original API product data
+    const apiProduct = propApiProducts?.find(p => p.name === product.name);
+    if (apiProduct) {
+      setQuickViewProduct(convertToProductListItem(apiProduct));
+      setIsQuickViewOpen(true);
+    }
+  };
+
+  const handleAddToCart = (product: Product) => {
+    // Find the original API product data
+    const apiProduct = propApiProducts?.find(p => p.name === product.name);
+    if (apiProduct) {
+      addItem({
+        productId: apiProduct.id,
+        name: product.name,
+        price: product.price * 100, // Convert to cents
+        imageUrl: product.images[0],
+        quantity: 1
+      });
+      
+      // Show success feedback (you could add a toast notification here)
+      console.log('Added to cart:', product.name);
+    }
+  };
+
+  const closeQuickView = () => {
+    setIsQuickViewOpen(false);
+    setQuickViewProduct(null);
+  };
+
 
   return (
     <section className={`py-8 sm:py-12 md:py-16 ${bgColor}`}>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800 text-center mb-6 sm:mb-8 md:mb-12 animate-fade-in-up">{title}</h2>
         
-        {/* Horizontal Scrollable Container */}
-        <div className="relative">
-          {/* Scrollable Products Grid */}
-          <div className="flex gap-4 sm:gap-6 overflow-x-auto scrollbar-hide pb-4 sm:pb-6
-            scroll-smooth snap-x snap-mandatory
-            [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        {/* Auto-Play Carousel */}
+        <AutoCarousel
+          itemsPerView={{
+            mobile: 2.2,
+            tablet: 3,
+            desktop: 4
+          }}
+          autoPlay={true}
+          autoPlayInterval={5000}
+          showControls={false}  // Remove play/pause button
+          showIndicators={true}
+          showProgress={true}
+          className="px-4"
+          itemClassName="animate-fade-in-up"
+        >
             {products.map((product, index) => {
               const imageIndex = currentImageIndex[product.name] || 0;
 
               return (
                 <div 
                   key={product.name} 
-                  className="group relative flex-shrink-0 w-64 sm:w-72 md:w-80 animate-fade-in-up snap-start"
+                className="group relative w-full animate-fade-in-up px-2"
                   style={{ animationDelay: `${index * 100}ms` }}
                   onMouseEnter={() => handleMouseEnter(product.name)}
                   onMouseLeave={handleMouseLeave}
@@ -259,6 +296,18 @@ const LatestProducts: React.FC<LatestProductsProps> = ({
                             loading="lazy"
                             className="object-cover transition-transform duration-700 ease-out
                               group-hover:scale-110 motion-reduce:transition-none"
+                            onError={(e) => {
+                              console.error('LatestProducts image failed to load:', image);
+                              const fallbackImages = [
+                                'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=400&fit=crop&crop=center',
+                                'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=400&h=400&fit=crop&crop=center',
+                                'https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?w=400&h=400&fit=crop&crop=center'
+                              ];
+                              e.currentTarget.src = fallbackImages[Math.floor(Math.random() * fallbackImages.length)];
+                            }}
+                            onLoad={() => {
+                              console.log('LatestProducts image loaded successfully:', image);
+                            }}
                           />
                         </div>
                       ))}
@@ -311,10 +360,10 @@ const LatestProducts: React.FC<LatestProductsProps> = ({
                       </div>
 
                       {/* Wishlist Button with enhanced hover */}
-                      <Link href="/wishlist" className="absolute top-2 right-2 bg-white p-2 rounded-full shadow-lg 
+                      <Link href="/wishlist" className="absolute top-2 right-2 bg-white p-3 rounded-full shadow-lg
                         hover:bg-gray-100 transition-all duration-300 transform hover:scale-110 
                         motion-reduce:transition-none z-10 hover:shadow-xl
-                        hover:-translate-y-0.5">
+                        hover:-translate-y-0.5 min-w-[44px] min-h-[44px] flex items-center justify-center">
                         <svg className="h-4 w-4 text-gray-600 transition-transform duration-200
                           group-hover:rotate-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
@@ -325,14 +374,18 @@ const LatestProducts: React.FC<LatestProductsProps> = ({
                       <div className="absolute bottom-2 left-2 right-2 flex justify-center gap-2 opacity-0 group-hover:opacity-100 
                         transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 
                         motion-reduce:transition-none z-10">
-                        <button className="bg-white text-gray-800 px-3 py-1 rounded-full text-xs font-semibold 
+                      <button 
+                        onClick={() => handleQuickView(product)}
+                        className="bg-white text-gray-800 px-4 py-2 rounded-full text-sm font-semibold
                           shadow-lg hover:bg-gray-100 transition-all duration-200 hover:scale-105
-                          hover:shadow-xl hover:-translate-y-0.5">
+                        hover:shadow-xl hover:-translate-y-0.5 min-h-[44px] flex items-center justify-center">
                           Quick View
                         </button>
-                        <button className="bg-purple-600 text-white px-3 py-1 rounded-full text-xs font-semibold 
+                      <button 
+                        onClick={() => handleAddToCart(product)}
+                        className="bg-purple-600 text-white px-4 py-2 rounded-full text-sm font-semibold
                           shadow-lg hover:bg-purple-700 transition-all duration-200 hover:scale-105
-                          hover:shadow-xl hover:-translate-y-0.5">
+                        hover:shadow-xl hover:-translate-y-0.5 min-h-[44px] flex items-center justify-center">
                           Add to Cart
                         </button>
                       </div>
@@ -400,15 +453,16 @@ const LatestProducts: React.FC<LatestProductsProps> = ({
                       {/* Size Options - Fixed Height with enhanced interactions */}
                       <div className="mt-auto">
                         {product.sizes && (
-                          <div className="flex flex-wrap gap-1 mt-2 min-h-[1.5rem]">
+                          <div className="flex flex-wrap gap-2 mt-2 min-h-[2rem]">
                             {product.sizes.map((size) => (
                               <Link 
                                 key={size} 
                                 href="#" 
-                                className="text-xs text-gray-600 hover:text-purple-600 border border-gray-300 
-                                  px-2 py-1 rounded transition-all duration-200 hover:border-purple-300 
+                                className="text-sm text-gray-600 hover:text-purple-600 border border-gray-300
+                                  px-3 py-2 rounded transition-all duration-200 hover:border-purple-300
                                   motion-reduce:transition-none hover:scale-105 hover:shadow-sm
-                                  hover:-translate-y-0.5 transform-gpu"
+                                  hover:-translate-y-0.5 transform-gpu min-w-[44px] min-h-[44px]
+                                  flex items-center justify-center"
                               >
                                 {size}
                               </Link>
@@ -429,16 +483,15 @@ const LatestProducts: React.FC<LatestProductsProps> = ({
                 </div>
               );
             })}
-          </div>
-
-          {/* Scroll Indicators */}
-          <div className="flex justify-center mt-6 space-x-2">
-            <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
-            <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
-            <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
-          </div>
-        </div>
+        </AutoCarousel>
       </div>
+      
+      {/* Quick View Modal */}
+      <QuickViewModal
+        product={quickViewProduct}
+        isOpen={isQuickViewOpen}
+        onClose={closeQuickView}
+      />
     </section>
   );
 };

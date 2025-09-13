@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
 import { fetchProductBySlug, fetchProductImages } from '@/server/modules/products/service'
-import PdpClient from '@/app/(site)/products/[slug]/PdpClient'
+import { ProductDetail } from '@/components/tenant/products/ProductDetail'
 
 interface SenlyshProductPageProps {
   params: Promise<{ slug: string }>
@@ -26,14 +26,9 @@ export default async function SenlyshProductPage({ params }: SenlyshProductPageP
   const images = await fetchProductImages(tenantId, product.id)
 
   return (
-    <PdpClient
-      productId={product.id}
-      name={product.name}
-      description={product.description}
-      hero_image_url={product.hero_image_url}
+    <ProductDetail
+      product={product}
       images={images || []}
-      price_cents={product.price_cents}
-      tenantKey="senlysh"
     />
   )
 }
@@ -62,3 +57,5 @@ export async function generateMetadata({ params }: SenlyshProductPageProps): Pro
     }
   }
 }
+
+

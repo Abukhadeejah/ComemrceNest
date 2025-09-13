@@ -8,7 +8,6 @@ import HeroSection from './HeroSection';
 import CategoriesSection from './CategoriesSection';
 import LatestProducts from './LatestProducts';
 import FeatureIcons from './FeatureIcons';
-import PromotionalBanners from './PromotionalBanners';
 import BestSellers from './BestSellers';
 import BrandCarousel from './BrandCarousel';
 import FeaturedProducts from './FeaturedProducts';
@@ -27,6 +26,10 @@ interface ApiProduct {
   images?: string[]
   stock: number
   status: string
+  is_featured?: boolean
+  is_bestseller?: boolean
+  is_on_sale?: boolean
+  is_new_arrival?: boolean
 }
 
 interface Category {
@@ -86,8 +89,8 @@ export default function Home({ products, categories, heroSlides, heroSettings }:
   }, []);
 
   return (
-    <div className="bg-white overflow-x-auto">
-      <div className="min-w-[1200px] w-full">
+    <div className="bg-white">
+      <div className="w-full max-w-screen-xl mx-auto px-2 sm:px-4 lg:px-6">
         {/* Hero Section */}
         <HeroSection 
           heroSlides={heroSlides}
@@ -105,17 +108,21 @@ export default function Home({ products, categories, heroSlides, heroSettings }:
         {/* Feature Icons Section */}
         <FeatureIcons />
 
-        {/* Promotional Banners Section */}
-        <PromotionalBanners />
 
         {/* Best Sellers Section */}
-        <BestSellers countdown={countdown} />
+        <BestSellers 
+          products={products.filter(p => p.is_bestseller)} 
+          countdown={countdown} 
+        />
 
         {/* Brand Carousel Section */}
         <BrandCarousel />
 
         {/* Featured Products Section */}
-        <FeaturedProducts countdown={countdown} />
+        <FeaturedProducts 
+          products={products.filter(p => p.is_featured)} 
+          countdown={countdown} 
+        />
 
         {/* Customer Reviews Section */}
         <CustomerReviews />

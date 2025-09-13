@@ -9,55 +9,116 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   const supabase = createClientComponentClient()
   const [checking, setChecking] = useState(true)
   const [hasChecked, setHasChecked] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     // Only run auth check once
     if (hasChecked) return
 
     let isMounted = true
+    let timeoutId: NodeJS.Timeout | undefined
+
     ;(async () => {
       try {
-        // Check both authentication AND tenant authorization
         console.log('[AuthGate] Starting auth check...')
-        const res = await fetch('/api/auth/check-tenant-access', { cache: 'no-store', credentials: 'include' })
+
+        // Add timeout to prevent hanging
+        const controller = new AbortController()
+        timeoutId = setTimeout(() => {
+          console.log('[AuthGate] Auth check timed out after 10 seconds')
+          controller.abort()
+        }, 10000) // 10 second timeout
+
+        // Check both authentication AND tenant authorization
+        const res = await fetch('/api/auth/check-tenant-access', {
+          cache: 'no-store',
+          credentials: 'include',
+          signal: controller.signal
+        })
+
+        if (timeoutId) clearTimeout(timeoutId)
+
         console.log('[AuthGate] Auth check response:', res.status, res.ok)
         if (!isMounted) return
 
+        // Success - user is authenticated and authorized
         if (res.ok) {
-          console.log('[AuthGate] Setting checking to false')
+          console.log('[AuthGate] Authentication successful')
           setChecking(false)
           setHasChecked(true)
           return
         }
-        
-        // If unauthorized for this tenant, redirect to login
+
+        // Handle specific error codes
         if (res.status === 403) {
+          console.log('[AuthGate] Unauthorized for this tenant, redirecting to login')
           router.replace('/login')
           return
         }
-        
-        // If unauthenticated, redirect to login
+
         if (res.status === 401) {
+          console.log('[AuthGate] Unauthenticated, redirecting to login')
           router.replace('/login')
           return
         }
-        
-        // Fallback to client check for other errors
+
+        // For any other status, try client-side check
+        console.log('[AuthGate] Server check failed, trying client-side check...')
         const { data: { user } } = await supabase.auth.getUser()
         if (!isMounted) return
-        if (!user) router.replace('/login')
-        else setChecking(false)
-      } catch {
+
+        if (!user) {
+          console.log('[AuthGate] No client user found, redirecting to login')
+          router.replace('/login')
+        } else {
+          console.log('[AuthGate] Client user found, authentication successful')
+          setChecking(false)
+          setHasChecked(true)
+        }
+
+      } catch (error) {
+        if (timeoutId) clearTimeout(timeoutId)
         if (!isMounted) return
-        router.replace('/login')
+
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        console.error('[AuthGate] Auth check failed:', errorMessage)
+
+        // Don't redirect on timeout or network errors - try client check first
+        if (error instanceof Error && error.name === 'AbortError') {
+          console.log('[AuthGate] Request timed out, trying client check...')
+
+          try {
+            const { data: { user } } = await supabase.auth.getUser()
+            if (!isMounted) return
+
+            if (!user) {
+              console.log('[AuthGate] No client user after timeout, redirecting to login')
+              router.replace('/login')
+            } else {
+              console.log('[AuthGate] Client user found after timeout')
+              setChecking(false)
+              setHasChecked(true)
+            }
+          } catch (clientError) {
+            console.error('[AuthGate] Client check also failed:', clientError)
+            router.replace('/login')
+          }
+        } else {
+          router.replace('/login')
+        }
       } finally {
         if (!isMounted) return
-        // Ensure we don't get stuck on loader in edge cases
+        // Always ensure we don't get stuck on loader
+        console.log('[AuthGate] Ensuring checking is set to false')
         setChecking(false)
       }
     })()
-    return () => { isMounted = false }
-  }, []) // Empty dependency array to run only once
+
+    return () => {
+      isMounted = false
+      if (timeoutId) clearTimeout(timeoutId)
+    }
+  }, [router, supabase]) // Include dependencies for proper cleanup
 
   if (checking) {
     console.log('[AuthGate] Still checking, rendering loading state')
