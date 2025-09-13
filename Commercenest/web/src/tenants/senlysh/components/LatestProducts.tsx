@@ -62,7 +62,7 @@ const defaultProducts: Product[] = [
     ],
     price: 599,
     originalPrice: 799,
-    badge: 'Sale',
+    badge: '',
     url: '/product/front-back-graphic-tee',
     sizes: ['M-38', 'L-40', 'XL-42'],
     discount: 25
@@ -76,7 +76,7 @@ const defaultProducts: Product[] = [
     ],
     price: 1500,
     originalPrice: 1690,
-    badge: '-11%',
+    badge: '',
     url: '/product/righteous-edp-100ml-premium-perfume',
     discount: 11,
     isNew: true
@@ -90,7 +90,7 @@ const defaultProducts: Product[] = [
     ],
     price: 600,
     originalPrice: 800,
-    badge: '-25%',
+    badge: '',
     url: '/product/boxers',
     discount: 25,
     isTrending: true
@@ -104,7 +104,7 @@ const defaultProducts: Product[] = [
     ],
     price: 1250,
     originalPrice: 1495,
-    badge: '-16%',
+    badge: '',
     url: '/product/dark-side-edp-100ml-premium-perfume',
     discount: 16
   }

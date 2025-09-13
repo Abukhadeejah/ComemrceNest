@@ -5,6 +5,7 @@ import { useCart, formatPrice } from '@/lib/cart'
 import Link from 'next/link'
 import { Playfair_Display } from 'next/font/google'
 import { useTenant } from '@/hooks/useTenant'
+import { SITE_URLS } from '@/utils/site-urls'
 
 const playfair = Playfair_Display({ subsets: ['latin'], weight: ['700','800','900'] })
 
@@ -63,6 +64,19 @@ export default function CheckoutPage() {
   const { state: cart } = useCart()
   const tenant = useTenant()
   const [hydrated, setHydrated] = useState(false)
+
+  // Get tenant key from URL path (most reliable approach)
+  const getTenantKey = (): string | null => {
+    if (typeof window !== 'undefined') {
+      const pathSegments = window.location.pathname.split('/').filter(Boolean)
+      if (pathSegments.length > 0 && (pathSegments[0] === 'bluebell' || pathSegments[0] === 'senlysh')) {
+        return pathSegments[0]
+      }
+    }
+    return null
+  }
+
+  const tenantKey = getTenantKey()
   const [orderId, setOrderId] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
@@ -290,8 +304,8 @@ export default function CheckoutPage() {
           ) : (
             <div className="text-center mb-8">
               <p className="text-gray-600 mb-4">Your cart is empty. Add some products before checkout.</p>
-              <Link 
-                href="/products"
+              <Link
+                href={tenantKey ? SITE_URLS.products(tenantKey) : '/products'}
                 className="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
               >
                 Browse Products
@@ -368,7 +382,7 @@ export default function CheckoutPage() {
           
           <div className="mt-8 text-center">
             <Link
-              href="/products"
+              href={tenantKey ? SITE_URLS.products(tenantKey) : '/products'}
               className="text-blue-600 hover:underline"
             >
               Continue Shopping

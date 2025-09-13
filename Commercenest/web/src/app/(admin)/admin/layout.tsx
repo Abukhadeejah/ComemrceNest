@@ -31,28 +31,67 @@ export default async function AdminLayout({
   children: React.ReactNode
 }) {
   const tenantId = await resolveTenantIdFromRequest()
-  
-  if (!tenantId) {
+
+  // DEBUG: Add fallback tenant resolution for localhost development
+  let resolvedTenantId = tenantId
+  let tenantKey: TenantKey | undefined
+
+  if (!resolvedTenantId) {
+    // Try to get tenant from pathname for localhost development
+    const hdrs = await headers()
+    const pathname = hdrs.get('x-pathname') || ''
+    const pathSegments = pathname.split('/').filter(Boolean)
+
+    if (pathSegments.length > 0) {
+      const firstSegment = pathSegments[0].toLowerCase()
+      if (firstSegment === 'bluebell') {
+        resolvedTenantId = '11111111-1111-4111-8111-11111111bb01' // Bluebell Interiors
+        tenantKey = 'bluebell'
+      } else if (firstSegment === 'senlysh') {
+        resolvedTenantId = '1e4c9aa7-e7af-4fe7-999b-c9c46219fa3c' // Senlysh Fashion
+        tenantKey = 'senlysh'
+      }
+    }
+
+    // Fallback to cookie if still no tenant
+    if (!resolvedTenantId) {
+      try {
+        const cookieStore = await cookies()
+        const ck = cookieStore.get('tenant')?.value?.toLowerCase()
+        if (ck === 'bluebell') {
+          resolvedTenantId = '11111111-1111-4111-8111-11111111bb01'
+          tenantKey = 'bluebell'
+        } else if (ck === 'senlysh') {
+          resolvedTenantId = '1e4c9aa7-e7af-4fe7-999b-c9c46219fa3c'
+          tenantKey = 'senlysh'
+        }
+      } catch {}
+    }
+  }
+
+  // If still no tenant, redirect to login
+  if (!resolvedTenantId) {
     redirect('/login')
   }
 
   // Resolve tenant key for admin branding (dev: cookie/header; prod: path/host via middleware)
-  const hdrs = await headers()
-  let tenantKey: TenantKey | undefined = (hdrs.get('x-tenant-admin') as TenantKey) || undefined
   if (!tenantKey) {
-    try {
-      const cookieStore = await cookies()
-      const ck = cookieStore.get('tenant')?.value?.toLowerCase()
-      if (ck === 'bluebell' || ck === 'senlysh') tenantKey = ck as TenantKey
-    } catch {}
+    const hdrs = await headers()
+    tenantKey = (hdrs.get('x-tenant-admin') as TenantKey) || undefined
+    if (!tenantKey) {
+      try {
+        const cookieStore = await cookies()
+        const ck = cookieStore.get('tenant')?.value?.toLowerCase()
+        if (ck === 'bluebell' || ck === 'senlysh') tenantKey = ck as TenantKey
+      } catch {}
+    }
   }
-  if (!tenantKey) tenantKey = 'bluebell'
 
   // Fetch enabled modules server-side and pass to client via data attribute
-  const enabledModules = await getEnabledModules(tenantId)
+  const enabledModules = await getEnabledModules(resolvedTenantId)
 
   return (
-    <AdminBrandingWrapper tenantKey={tenantKey}>
+    <AdminBrandingWrapper tenantKey={tenantKey || 'bluebell'}>
       <div className="min-h-screen bg-gray-50" data-enabled-modules={JSON.stringify(Array.from(enabledModules))}>
         <AdminSidebar />
         <div className="lg:pl-64">

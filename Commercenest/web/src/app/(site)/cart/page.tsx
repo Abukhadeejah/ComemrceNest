@@ -5,6 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useState } from 'react'
 import { Playfair_Display, Inter } from 'next/font/google'
+import { SITE_URLS } from '@/utils/site-urls'
 
 const playfair = Playfair_Display({ subsets: ['latin'], weight: ['700','800','900'] })
 const inter = Inter({ subsets: ['latin'], weight: ['300','400','500','600','700'] })
@@ -13,13 +14,26 @@ export default function CartPage() {
   const { state, removeItem, updateQuantity } = useCart()
   const [isProcessing, setIsProcessing] = useState(false)
 
+  // Get tenant key from URL path (most reliable approach)
+  const getTenantKey = (): string | null => {
+    if (typeof window !== 'undefined') {
+      const pathSegments = window.location.pathname.split('/').filter(Boolean)
+      if (pathSegments.length > 0 && (pathSegments[0] === 'bluebell' || pathSegments[0] === 'senlysh')) {
+        return pathSegments[0]
+      }
+    }
+    return null
+  }
+
+  const tenantKey = getTenantKey()
+
   const handleCheckout = async () => {
     setIsProcessing(true)
     try {
       // Here we'll integrate with the checkout API
       console.log('Processing checkout with items:', state.items)
       // For now, redirect to checkout
-      window.location.href = '/checkout'
+      window.location.href = tenantKey ? SITE_URLS.checkout(tenantKey) : '/checkout'
     } catch (error) {
       console.error('Checkout error:', error)
     } finally {
@@ -38,7 +52,7 @@ export default function CartPage() {
             <h1 className={`${playfair.className} text-3xl font-bold text-gray-900 mb-2`}>Your cart is empty</h1>
             <p className={`${inter.className} text-gray-600 mb-8`}>Discover our premium fabric collection and start building your perfect interior.</p>
             <Link
-              href="/products"
+              href={tenantKey ? SITE_URLS.products(tenantKey) : '/products'}
               className="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
             >
               Browse Products
@@ -177,7 +191,7 @@ export default function CartPage() {
 
               <div className="mt-4 text-center">
                 <Link
-                  href="/products"
+                  href={tenantKey ? SITE_URLS.products(tenantKey) : '/products'}
                   className="text-sm text-blue-600 hover:text-blue-800"
                 >
                   Continue Shopping

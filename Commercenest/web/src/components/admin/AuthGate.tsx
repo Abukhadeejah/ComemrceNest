@@ -8,17 +8,25 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const supabase = createClientComponentClient()
   const [checking, setChecking] = useState(true)
+  const [hasChecked, setHasChecked] = useState(false)
 
   useEffect(() => {
+    // Only run auth check once
+    if (hasChecked) return
+
     let isMounted = true
     ;(async () => {
       try {
         // Check both authentication AND tenant authorization
-        const res = await fetch('/api/auth/check-tenant-access', { cache: 'no-store', credentials: 'same-origin' })
+        console.log('[AuthGate] Starting auth check...')
+        const res = await fetch('/api/auth/check-tenant-access', { cache: 'no-store', credentials: 'include' })
+        console.log('[AuthGate] Auth check response:', res.status, res.ok)
         if (!isMounted) return
-        
+
         if (res.ok) {
+          console.log('[AuthGate] Setting checking to false')
           setChecking(false)
+          setHasChecked(true)
           return
         }
         
@@ -49,9 +57,10 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
       }
     })()
     return () => { isMounted = false }
-  }, [router, supabase])
+  }, []) // Empty dependency array to run only once
 
   if (checking) {
+    console.log('[AuthGate] Still checking, rendering loading state')
     return (
       <div className="min-h-[40vh] grid place-items-center">
         <div className="flex flex-col items-center gap-3">

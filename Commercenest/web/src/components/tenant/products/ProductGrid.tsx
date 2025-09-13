@@ -8,6 +8,7 @@ import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid'
 import { useState } from 'react'
 import { QuickViewModal } from './QuickViewModal'
 import { generateProductBadges, getBadgeClassName, getBadgeStyle } from '@/utils/badges'
+import { SITE_URLS } from '@/utils/site-urls'
 
 interface ProductGridProps {
   products: ProductListItem[]
@@ -17,6 +18,19 @@ export function ProductGrid({ products }: ProductGridProps) {
   const [quickViewProduct, setQuickViewProduct] = useState<ProductListItem | null>(null)
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false)
 
+  // Get tenant key from URL path (most reliable approach)
+  const getTenantKey = (): string | null => {
+    if (typeof window !== 'undefined') {
+      const pathSegments = window.location.pathname.split('/').filter(Boolean)
+      if (pathSegments.length > 0 && (pathSegments[0] === 'bluebell' || pathSegments[0] === 'senlysh')) {
+        return pathSegments[0]
+      }
+    }
+    return null
+  }
+
+  const tenantKey = getTenantKey()
+
 
   if (products.length === 0) {
     return (
@@ -25,8 +39,8 @@ export function ProductGrid({ products }: ProductGridProps) {
         <p className="text-gray-400 max-w-md mx-auto">
           We couldn&apos;t find any products matching your criteria. Try adjusting your search or browse our categories.
         </p>
-        <Link 
-          href="/products" 
+        <Link
+          href={tenantKey ? SITE_URLS.products(tenantKey) : '/products'}
           className="inline-block mt-6 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors duration-200"
         >
           Browse All Products
@@ -49,10 +63,11 @@ export function ProductGrid({ products }: ProductGridProps) {
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {products.map((product) => (
-          <ProductCard 
-            key={product.id} 
-            product={product} 
+          <ProductCard
+            key={product.id}
+            product={product}
             onQuickView={handleQuickView}
+            tenantKey={tenantKey}
           />
         ))}
       </div>
@@ -69,12 +84,14 @@ export function ProductGrid({ products }: ProductGridProps) {
   )
 }
 
-function ProductCard({ 
-  product, 
-  onQuickView 
-}: { 
-  product: ProductListItem; 
+function ProductCard({
+  product,
+  onQuickView,
+  tenantKey
+}: {
+  product: ProductListItem;
   onQuickView: (product: ProductListItem) => void;
+  tenantKey: string | null;
 }) {
   const [isWishlisted, setIsWishlisted] = useState(false)
 
@@ -182,8 +199,8 @@ function ProductCard({
 
         {/* Quick View Button - No overlay, just a floating button */}
         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 pointer-events-none">
-          <Link 
-            href={`/products/${product.slug}`}
+          <Link
+            href={tenantKey ? SITE_URLS.productDetail(product.slug, tenantKey) : `/products/${product.slug}`}
             className="bg-white text-gray-900 px-6 py-3 rounded-lg font-medium hover:bg-gray-50 shadow-lg transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 pointer-events-auto"
           >
             View Details
@@ -202,7 +219,7 @@ function ProductCard({
 
       {/* Product Info - Using flexbox with consistent spacing */}
       <div className="p-3 flex flex-col">
-        <Link href={`/products/${product.slug}`} className="block group">
+        <Link href={tenantKey ? SITE_URLS.productDetail(product.slug, tenantKey) : `/products/${product.slug}`} className="block group">
           <h3 className="text-sm font-medium text-gray-900 group-hover:text-indigo-600 transition-colors duration-200 line-clamp-2 mb-2 leading-tight min-h-[2rem]">
             {product.name}
           </h3>
