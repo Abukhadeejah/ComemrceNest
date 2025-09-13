@@ -40,3 +40,6 @@ WHERE id IN (
     ORDER BY created_at ASC
     LIMIT 1
 ) AND tenant_id = '1e4c9aa7-e7af-4fe7-999b-c9c46219fa3c';
+
+
+

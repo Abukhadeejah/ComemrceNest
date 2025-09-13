@@ -78,3 +78,6 @@ CREATE INDEX IF NOT EXISTS idx_product_categories_product_tenant
 ON product_categories(product_id, tenant_id);
 
 
+
+
+
