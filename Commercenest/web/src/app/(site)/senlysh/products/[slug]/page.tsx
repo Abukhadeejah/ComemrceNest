@@ -27,7 +27,7 @@ export default async function SenlyshProductPage({ params }: SenlyshProductPageP
 
   return (
     <ProductDetail
-      product={product as any}
+      product={product as Product & { product_size_guides?: any[] }}
       images={images || []}
     />
   )

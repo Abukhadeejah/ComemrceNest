@@ -26,7 +26,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
   return (
     <div className="bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <ProductDetail product={product as any} images={images || []} />
+        <ProductDetail product={product as Product & { product_size_guides?: any[] }} images={images || []} />
       </div>
     </div>
   )

@@ -28,6 +28,13 @@ type ProductServerResponse = Partial<Product> & {
   }[]
 }
 
+// Type for tenant config with additional properties
+type TenantConfigWithExtras = {
+  name?: string
+  slug?: string
+  [key: string]: unknown
+}
+
 interface ProductDetailProps {
   product: ProductServerResponse
   images: Record<string, unknown>[]
@@ -443,13 +450,13 @@ export function ProductDetail({ product, images }: ProductDetailProps) {
               <div className="flex items-center">
                 <h3 className="text-2xl font-serif mr-4">
                   {product.product_size_guides && product.product_size_guides.length > 0
-                    ? (product.product_size_guides[0].size_guides as any).name
+                    ? product.product_size_guides[0].size_guides.name
                     : 'Size Chart'
                   }
                 </h3>
                 <div className="flex-1 h-px bg-gray-300"></div>
                 <span className="ml-4 text-sm font-script text-gray-600">
-                  {(tenant as any)?.name || 'Store'}
+                  {(tenant as TenantConfigWithExtras)?.name || 'Store'}
                 </span>
               </div>
               <button
@@ -466,7 +473,7 @@ export function ProductDetail({ product, images }: ProductDetailProps) {
             {product.product_size_guides && product.product_size_guides.length > 0 ? (
               <div className="overflow-hidden">
                 {product.product_size_guides.map((productSizeGuide, index) => {
-                  const sizeGuide = productSizeGuide.size_guides as any
+                  const sizeGuide = productSizeGuide.size_guides
                   return (
                     <div key={sizeGuide.id || index} className="mb-8">
                       <div className="mb-4">
@@ -555,7 +562,7 @@ export function ProductDetail({ product, images }: ProductDetailProps) {
             )}
             
             <div className="mt-6 text-center text-sm text-gray-500">
-              @{(tenant as any)?.slug || 'store'}
+              @{(tenant as TenantConfigWithExtras)?.slug || 'store'}
             </div>
           </div>
         </div>
