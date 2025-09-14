@@ -9,6 +9,7 @@ import { QuestionMarkCircleIcon } from '@heroicons/react/24/outline'
 import { StarIcon } from '@heroicons/react/24/solid'
 import { Product } from '@/types/product'
 import { useCart } from '@/lib/cart'
+import { PaymentLogos } from '@/components/PaymentLogos'
 
 // Type for server response which may be partial
 type ProductServerResponse = Partial<Product> & {
@@ -192,20 +193,20 @@ export function ProductDetail({ product, images }: ProductDetailProps) {
               <h1 className="text-2xl font-bold text-black mb-4">{String(product.name)}</h1>
               
               {/* Price */}
-              <div className="space-y-1 mb-4">
+              <div className="flex items-center space-x-2 mb-4">
                 {hasDiscount ? (
                   <>
-                    <div className="text-lg text-gray-500 line-through">
+                    <span className="text-lg text-gray-500 line-through">
                       {formatPrice(product.compare_at_price_cents || 0)}
-                    </div>
-                    <div className="text-2xl font-bold text-black underline">
+                    </span>
+                    <span className="text-2xl font-bold text-black underline">
                       {formatPrice(product.price_cents)}
-                    </div>
+                    </span>
                   </>
                 ) : (
-                  <div className="text-2xl font-bold text-black">
+                  <span className="text-2xl font-bold text-black">
                     {formatPrice(product.price_cents)}
-                  </div>
+                  </span>
                 )}
               </div>
 
@@ -328,41 +329,7 @@ export function ProductDetail({ product, images }: ProductDetailProps) {
             </div>
 
             {/* Guaranteed Safe Checkout */}
-            <div className="text-center">
-              <p className="text-sm font-semibold text-gray-800 mb-4">Guaranteed Safe Checkout</p>
-              <div className="flex justify-center space-x-4">
-                {/* PayPal */}
-                <div className="w-12 h-8 flex items-center justify-center">
-                  <svg className="w-full h-full" viewBox="0 0 100 30" fill="none">
-                    <rect width="100" height="30" rx="4" fill="#0070BA"/>
-                    <text x="50" y="20" textAnchor="middle" fill="white" fontSize="8" fontWeight="bold">PayPal</text>
-                  </svg>
-                </div>
-                {/* Visa */}
-                <div className="w-12 h-8 flex items-center justify-center">
-                  <svg className="w-full h-full" viewBox="0 0 100 30" fill="none">
-                    <rect width="100" height="30" rx="4" fill="#1A1F71"/>
-                    <text x="50" y="20" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold">VISA</text>
-                  </svg>
-                </div>
-                {/* Mastercard */}
-                <div className="w-12 h-8 flex items-center justify-center">
-                  <svg className="w-full h-full" viewBox="0 0 100 30" fill="none">
-                    <rect width="100" height="30" rx="4" fill="#EB001B"/>
-                    <circle cx="35" cy="15" r="8" fill="#F79E1B"/>
-                    <circle cx="45" cy="15" r="8" fill="#FF5F00"/>
-                    <text x="70" y="20" textAnchor="middle" fill="white" fontSize="6" fontWeight="bold">MC</text>
-                  </svg>
-                </div>
-                {/* American Express */}
-                <div className="w-12 h-8 flex items-center justify-center">
-                  <svg className="w-full h-full" viewBox="0 0 100 30" fill="none">
-                    <rect width="100" height="30" rx="4" fill="#006FCF"/>
-                    <text x="50" y="20" textAnchor="middle" fill="white" fontSize="6" fontWeight="bold">AMEX</text>
-                  </svg>
-                </div>
-              </div>
-            </div>
+            <PaymentLogos />
           </div>
         </div>
 

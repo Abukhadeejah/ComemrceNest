@@ -26,6 +26,21 @@ const nextConfig: NextConfig = {
         hostname: "images.pexels.com",
         pathname: "/**",
       },
+      {
+        protocol: "https" as const,
+        hostname: "razorpay.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https" as const,
+        hostname: "upload.wikimedia.org",
+        pathname: "/**",
+      },
+      {
+        protocol: "https" as const,
+        hostname: "seeklogo.com",
+        pathname: "/**",
+      },
     ],
   },
   ...(process.env.NODE_ENV === 'production'

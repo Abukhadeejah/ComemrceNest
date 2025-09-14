@@ -240,12 +240,18 @@ function ProductCard({
         
         {/* Price */}
         <div className="flex items-center space-x-2 mb-3">
-          <span className="text-lg font-bold text-gray-900">
-            {formatPrice(product.price_cents)}
-          </span>
-          {hasDiscount && (
-            <span className="text-sm text-gray-500 line-through">
-              {formatPrice(product.compare_at_price_cents!)}
+          {hasDiscount ? (
+            <>
+              <span className="text-sm text-gray-500 line-through">
+                {formatPrice(product.compare_at_price_cents!)}
+              </span>
+              <span className="text-lg font-bold text-gray-900 underline">
+                {formatPrice(product.price_cents)}
+              </span>
+            </>
+          ) : (
+            <span className="text-lg font-bold text-gray-900">
+              {formatPrice(product.price_cents)}
             </span>
           )}
         </div>
