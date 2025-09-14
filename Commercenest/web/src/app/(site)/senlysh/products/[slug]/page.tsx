@@ -27,7 +27,7 @@ export default async function SenlyshProductPage({ params }: SenlyshProductPageP
 
   return (
     <ProductDetail
-      product={product}
+      product={product as any}
       images={images || []}
     />
   )

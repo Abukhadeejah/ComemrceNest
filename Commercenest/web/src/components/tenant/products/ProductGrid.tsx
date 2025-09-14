@@ -9,6 +9,7 @@ import { useState } from 'react'
 import { QuickViewModal } from './QuickViewModal'
 import { generateProductBadges, getBadgeClassName, getBadgeStyle } from '@/utils/badges'
 import { SITE_URLS } from '@/utils/site-urls'
+import { useCart } from '@/lib/cart'
 
 interface ProductGridProps {
   products: ProductListItem[]
@@ -93,7 +94,22 @@ function ProductCard({
   onQuickView: (product: ProductListItem) => void;
   tenantKey: string | null;
 }) {
+  const { addItem } = useCart()
   const [isWishlisted, setIsWishlisted] = useState(false)
+
+  const handleAddToCart = () => {
+    try {
+      addItem({
+        productId: String(product.id),
+        name: String(product.name),
+        price: Number(product.price_cents || 0),
+        imageUrl: product.hero_image_url || undefined,
+        quantity: 1,
+      })
+    } catch (e) {
+      console.error('Failed to add to cart', e)
+    }
+  }
 
   const formatPrice = (priceCents: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -284,6 +300,7 @@ function ProductCard({
           
           {/* Add to Cart Button */}
           <button 
+            onClick={handleAddToCart}
             disabled={product.stock === 0}
             className="bg-indigo-600 text-white text-sm py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors duration-200 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center space-x-1"
           >

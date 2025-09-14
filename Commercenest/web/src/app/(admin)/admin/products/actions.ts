@@ -398,6 +398,50 @@ export async function createProduct(formData: FormData) {
     await Promise.all(combinationPromises)
   }
 
+  // Handle size guides
+  if (Array.isArray(productData.sizeGuides) && productData.sizeGuides.length > 0) {
+    const sizeGuidePromises = productData.sizeGuides.map(async (guide: Record<string, unknown>) => {
+      // Create the size guide
+      const { data: sizeGuide, error: sizeGuideError } = await supabaseAdmin
+        .from('size_guides')
+        .insert({
+          tenant_id: tenantId,
+          name: guide.name as string,
+          category: guide.category as string,
+          gender: guide.gender as string,
+          measurements: guide.measurements as Record<string, unknown>
+        })
+        .select()
+        .single()
+
+      if (sizeGuideError) throw sizeGuideError
+
+      // Link the size guide to the product
+      await supabaseAdmin
+        .from('product_size_guides')
+        .insert({
+          tenant_id: tenantId,
+          product_id: product.id,
+          size_guide_id: sizeGuide.id
+        })
+
+      return sizeGuide
+    })
+
+    await Promise.all(sizeGuidePromises)
+  }
+
+  // Handle selected size guide
+  if (productData.sizeGuideId && productData.sizeGuideId !== '') {
+    await supabaseAdmin
+      .from('product_size_guides')
+      .insert({
+        tenant_id: tenantId,
+        product_id: product.id,
+        size_guide_id: productData.sizeGuideId
+      })
+  }
+
       // GUARDRAIL: Success logging and cache invalidation
       revalidateTag(tenantProductsTag(tenantId))
 
@@ -751,6 +795,66 @@ export async function updateProduct(productId: string, formData: FormData) {
       })
       await Promise.all(combinationPromises)
     }
+  }
+
+  // Handle size guides update
+  if (Array.isArray(productData.sizeGuides)) {
+    // Remove existing size guide associations
+    await supabaseAdmin
+      .from('product_size_guides')
+      .delete()
+      .eq('product_id', productId)
+
+    // Add new size guides
+    if (productData.sizeGuides.length > 0) {
+      const sizeGuidePromises = productData.sizeGuides.map(async (guide: Record<string, unknown>) => {
+        // Create the size guide
+        const { data: sizeGuide, error: sizeGuideError } = await supabaseAdmin
+          .from('size_guides')
+          .insert({
+            tenant_id: tenantId,
+            name: guide.name as string,
+            category: guide.category as string,
+            gender: guide.gender as string,
+            measurements: guide.measurements as Record<string, unknown>
+          })
+          .select()
+          .single()
+
+        if (sizeGuideError) throw sizeGuideError
+
+        // Link the size guide to the product
+        await supabaseAdmin
+          .from('product_size_guides')
+          .insert({
+            tenant_id: tenantId,
+            product_id: productId,
+            size_guide_id: sizeGuide.id
+          })
+
+        return sizeGuide
+      })
+
+      await Promise.all(sizeGuidePromises)
+    }
+  }
+
+  // Handle selected size guide update
+  if (productData.sizeGuideId && productData.sizeGuideId !== '') {
+    // Remove existing associations first
+    await supabaseAdmin
+      .from('product_size_guides')
+      .delete()
+      .eq('product_id', productId)
+
+    // Add the selected size guide
+    await supabaseAdmin
+      .from('product_size_guides')
+      .insert({
+        tenant_id: tenantId,
+        product_id: productId,
+        size_guide_id: productData.sizeGuideId
+      })
   }
 
   revalidateTag(tenantProductsTag(tenantId))

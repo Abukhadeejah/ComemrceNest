@@ -66,6 +66,7 @@ export interface Product {
     name: string
     values: string[]
   }[]
+  size_guides?: SizeGuide[]
 }
 
 // Type for form data used in admin product form

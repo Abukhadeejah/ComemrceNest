@@ -17,6 +17,15 @@ type ProductServerResponse = Partial<Product> & {
   name: string
   price_cents: number
   currency: string
+  product_size_guides?: {
+    size_guides: {
+      id: string
+      name: string
+      category: string
+      gender: string
+      measurements: Record<string, Record<string, string>>
+    }
+  }[]
 }
 
 interface ProductDetailProps {
@@ -429,12 +438,19 @@ export function ProductDetail({ product, images }: ProductDetailProps) {
       {/* Size Guide Modal */}
       {showSizeGuide && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-8 max-w-lg w-full mx-4">
+          <div className="bg-white rounded-lg p-8 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <div className="flex items-center">
-                <h3 className="text-2xl font-serif mr-4">Size Chart</h3>
+                <h3 className="text-2xl font-serif mr-4">
+                  {product.product_size_guides && product.product_size_guides.length > 0
+                    ? (product.product_size_guides[0].size_guides as any).name
+                    : 'Size Chart'
+                  }
+                </h3>
                 <div className="flex-1 h-px bg-gray-300"></div>
-                <span className="ml-4 text-sm font-script text-gray-600">Senlysh Store</span>
+                <span className="ml-4 text-sm font-script text-gray-600">
+                  {(tenant as any)?.name || 'Store'}
+                </span>
               </div>
               <button
                 onClick={() => setShowSizeGuide(false)}
@@ -446,7 +462,52 @@ export function ProductDetail({ product, images }: ProductDetailProps) {
               </button>
             </div>
             
-            {/* Size Chart Table */}
+            {/* Dynamic Size Guide Table */}
+            {product.product_size_guides && product.product_size_guides.length > 0 ? (
+              <div className="overflow-hidden">
+                {product.product_size_guides.map((productSizeGuide, index) => {
+                  const sizeGuide = productSizeGuide.size_guides as any
+                  return (
+                    <div key={sizeGuide.id || index} className="mb-8">
+                      <div className="mb-4">
+                        <h4 className="text-lg font-semibold text-gray-900">{sizeGuide.name}</h4>
+                        <p className="text-sm text-gray-600">
+                          {sizeGuide.category} • {sizeGuide.gender}
+                        </p>
+                      </div>
+
+                      <table className="w-full border border-gray-200 rounded-lg overflow-hidden">
+                        <thead>
+                          <tr className="bg-gray-50">
+                            <th className="text-left py-3 px-4 font-semibold border-r border-gray-200">Size</th>
+                            {Object.keys(sizeGuide.measurements).map((measurement) => (
+                              <th key={measurement} className="text-left py-3 px-4 font-semibold border-r border-gray-200 last:border-r-0">
+                                {measurement}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {Object.keys(sizeGuide.measurements[Object.keys(sizeGuide.measurements)[0]] || {}).map((size) => (
+                            <tr key={size} className="border-b border-gray-100 last:border-b-0">
+                              <td className="py-3 px-4 bg-gray-50 font-medium border-r border-gray-200">
+                                {size}
+                              </td>
+                              {Object.keys(sizeGuide.measurements).map((measurement) => (
+                                <td key={measurement} className="py-3 px-4 border-r border-gray-200 last:border-r-0">
+                                  {sizeGuide.measurements[measurement][size] || '-'}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              /* Fallback to static size guide if no dynamic guides */
             <div className="overflow-hidden">
               <table className="w-full">
                 <thead>
@@ -491,9 +552,10 @@ export function ProductDetail({ product, images }: ProductDetailProps) {
                 </tbody>
               </table>
             </div>
+            )}
             
             <div className="mt-6 text-center text-sm text-gray-500">
-              @senlyshstore
+              @{(tenant as any)?.slug || 'store'}
             </div>
           </div>
         </div>

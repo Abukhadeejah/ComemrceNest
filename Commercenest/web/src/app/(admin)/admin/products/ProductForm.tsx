@@ -20,6 +20,7 @@ import { SeoSection } from './components/SeoSection'
 import { ProductPreview } from './components/ProductPreview'
 import { VariantsSection } from './components/VariantsSection'
 import { BadgeSection } from './components/BadgeSection'
+import SizeGuideSection from '@/components/admin/products/SizeGuideSection'
 import { ProductFormData } from '@/types/product'
 
 interface ProductFormProps {
@@ -306,6 +307,11 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
           onVariantOptionsChange={setVariantOptions}
           variantCombinations={variantCombinations}
           onVariantCombinationsChange={setVariantCombinations}
+        />
+
+        <SizeGuideSection
+          formData={formData}
+          onInputChange={handleInputChange}
         />
         
         <MediaSection 

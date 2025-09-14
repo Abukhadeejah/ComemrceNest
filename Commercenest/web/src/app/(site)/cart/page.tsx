@@ -41,8 +41,8 @@ export default function CartPage() {
     try {
       // Here we'll integrate with the checkout API
       console.log('Processing checkout with items:', state.items)
-      // For now, redirect to checkout
-      window.location.href = tenantKey ? SITE_URLS.checkout(tenantKey) : '/checkout'
+      // For now, redirect to checkout (shared route)
+      window.location.href = '/checkout'
     } catch (error) {
       console.error('Checkout error:', error)
     } finally {
