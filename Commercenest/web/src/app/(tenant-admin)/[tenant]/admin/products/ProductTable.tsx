@@ -11,6 +11,7 @@ import {
 import { ADMIN_URLS } from '@/utils/admin-urls'
 import { useAdminTenantKey } from '@/components/admin/AdminBrandingWrapper'
 import { deleteProduct } from '@/app/(admin)/admin/products/actions'
+import { forcePageRefresh } from '@/utils/cacheBusting'
 
 interface Product {
   id: string
@@ -87,9 +88,10 @@ export function ProductTable({ products }: ProductTableProps) {
         const detailsText = details.length > 0 ? ` (${details.join(', ')} cleaned up)` : ''
         alert(`Product "${productName}" deleted successfully${detailsText}.`)
 
-        // Use setTimeout to ensure state is updated before page refresh
+        // Force refresh the page to show updated data immediately
+        // This ensures admins see the deletion immediately without cache issues
         setTimeout(() => {
-          window.location.reload()
+          forcePageRefresh()
         }, 100)
       } else {
         throw new Error('Delete operation returned unexpected result')

@@ -5,6 +5,7 @@ import { supabaseAdmin } from '@/server/supabaseAdmin'
 import { assertTenantAdmin, getAuthenticatedUserId, hasAuthCookie } from '@/server/auth'
 import { revalidateTag, unstable_cache } from 'next/cache'
 import { tenantProductsTag } from '@/server/cacheTags'
+import { forceInvalidateProductCaches } from '@/server/cacheUtils'
 // GUARDRAIL: Import comprehensive guardrail system
 import {
   validateModuleAccess,
@@ -444,6 +445,10 @@ export async function createProduct(formData: FormData) {
 
       // GUARDRAIL: Success logging and cache invalidation
       revalidateTag(tenantProductsTag(tenantId))
+      // Also invalidate the general products cache
+      revalidateTag('products')
+      // Force revalidation of the admin products page
+      revalidateTag(`admin-products-${tenantId}`)
 
       await logSecurityEvent('product_created_success', {
         productId: product.id,
@@ -858,6 +863,10 @@ export async function updateProduct(productId: string, formData: FormData) {
   }
 
   revalidateTag(tenantProductsTag(tenantId))
+  // Also invalidate the general products cache
+  revalidateTag('products')
+  // Force revalidation of the admin products page
+  revalidateTag(`admin-products-${tenantId}`)
   return product
 }
 
@@ -894,8 +903,8 @@ export async function deleteProduct(productId: string) {
       throw new Error(`Failed to delete product: ${error.message}`)
     }
 
-    // Invalidate relevant caches
-    revalidateTag(tenantProductsTag(tenantId))
+    // Force immediate cache invalidation to ensure admins see updated data
+    await forceInvalidateProductCaches(tenantId)
 
     console.log(`Product ${productId} deleted successfully for tenant ${tenantId}`)
     console.log(`Deleted ${data?.[0]?.deleted_order_items || 0} order items, ${data?.[0]?.deleted_images || 0} images, and ${data?.[0]?.deleted_categories || 0} category links`)
@@ -932,7 +941,7 @@ export async function bulkDeleteProducts(productIds: string[]) {
   }
 
   // GUARDRAIL: Success logging and cache invalidation
-  revalidateTag(tenantProductsTag(tenantId))
+  await forceInvalidateProductCaches(tenantId)
 
   await logSecurityEvent('products_bulk_deleted_success', {
     productIds,
@@ -1174,7 +1183,7 @@ const getCachedProducts = unstable_cache(
   ['products'],
   {
     tags: ['products'],
-    revalidate: 60 // Cache for 60 seconds
+    revalidate: 30 // Reduced cache time to 30 seconds for faster updates
   }
 )
 
