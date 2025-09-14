@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
 import { fetchProductBySlug, fetchProductImages } from '@/server/modules/products/service'
 import { ProductDetail } from '@/components/tenant/products/ProductDetail'
+import { Product } from '@/types/product'
 
 interface SenlyshProductPageProps {
   params: Promise<{ slug: string }>
