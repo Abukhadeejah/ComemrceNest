@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { ADMIN_URLS } from '@/utils/admin-urls'
 import { useAdminTenantKey } from '@/components/admin/AdminBrandingWrapper'
 
@@ -183,9 +184,11 @@ export function CategoryTable({ categories }: CategoryTableProps) {
                     onChange={(e) => handleSelectCategory(category.id, e.target.checked)}
                   />
                   {category.image_url ? (
-                    <img
+                    <Image
                       src={category.image_url}
                       alt={category.image_alt || category.name}
+                      width={40}
+                      height={40}
                       className="h-10 w-10 rounded object-cover border border-gray-200 mr-3"
                     />
                   ) : (

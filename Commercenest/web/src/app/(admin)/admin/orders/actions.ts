@@ -2,6 +2,7 @@ import { resolveTenantIdFromRequest } from '@/server/tenant'
 import { assertTenantAdmin } from '@/server/auth'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
 import { unstable_cache } from 'next/cache'
+import { tenantOrdersTag } from '@/server/cacheTags'
 
 // Internal function for actual database query
 async function _getOrdersFromDB(searchParams: {

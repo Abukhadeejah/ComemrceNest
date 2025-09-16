@@ -33,7 +33,7 @@ interface SettingsFormProps {
 export function SettingsForm({ settings, paymentSettings }: SettingsFormProps) {
   const [, startTransition] = useTransition()
 
-  const handleSubmit = async (formData: FormData) => {
+  const _handleSubmit = async (_formData: FormData) => {
     startTransition(async () => {
       // Form will be submitted via action to /api/admin/settings
       // which will redirect back with success/error message

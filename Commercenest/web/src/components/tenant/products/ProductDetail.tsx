@@ -43,7 +43,7 @@ interface ProductDetailProps {
 export function ProductDetail({ product, images }: ProductDetailProps) {
   const { addItem } = useCart()
   const tenant = useTenant()
-  const [selectedSize, setSelectedSize] = useState('')
+  const [selectedSize] = useState('')
   const [quantity, setQuantity] = useState(1)
   const [activeImage, setActiveImage] = useState(0)
   const [activeTab, setActiveTab] = useState('description')
@@ -209,21 +209,26 @@ export function ProductDetail({ product, images }: ProductDetailProps) {
               <h1 className="text-2xl font-bold text-black mb-4">{String(product.name)}</h1>
               
               {/* Price */}
-              <div className="flex items-center space-x-2 mb-4">
-                {hasDiscount ? (
-                  <>
-                    <span className="text-lg text-gray-500 line-through">
-                      {formatPrice(product.compare_at_price_cents || 0)}
-                    </span>
-                    <span className="text-2xl font-bold text-black underline">
+              <div className="space-y-2 mb-4">
+                <div className="flex items-center space-x-2">
+                  {hasDiscount ? (
+                    <>
+                      <span className="text-lg text-gray-500 line-through">
+                        {formatPrice(product.compare_at_price_cents || 0)}
+                      </span>
+                      <span className="text-2xl font-bold text-black underline">
+                        {formatPrice(product.price_cents)}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-2xl font-bold text-black">
                       {formatPrice(product.price_cents)}
                     </span>
-                  </>
-                ) : (
-                  <span className="text-2xl font-bold text-black">
-                    {formatPrice(product.price_cents)}
-                  </span>
-                )}
+                  )}
+                </div>
+                <div className="text-sm text-gray-600">
+                  Inclusive of all taxes
+                </div>
               </div>
 
               {/* Stock Status */}

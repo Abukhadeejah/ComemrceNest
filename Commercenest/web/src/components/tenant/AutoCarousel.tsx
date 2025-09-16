@@ -42,7 +42,7 @@ const AutoCarousel: React.FC<AutoCarouselProps> = ({
   const [scrollLeft, setScrollLeft] = useState(0);
 
   const totalItems = children.length;
-  const maxIndex = Math.max(0, totalItems - itemsPerView.desktop);
+  // const maxIndex = Math.max(0, totalItems - itemsPerView.desktop);
 
   // Get current items per view based on screen size
   const getItemsPerView = useCallback(() => {
@@ -147,9 +147,9 @@ const AutoCarousel: React.FC<AutoCarouselProps> = ({
     });
   };
 
-  const togglePause = () => {
-    setIsPaused(!isPaused);
-  };
+  // const togglePause = () => {
+  //   setIsPaused(!isPaused);
+  // };
 
   return (
     <div

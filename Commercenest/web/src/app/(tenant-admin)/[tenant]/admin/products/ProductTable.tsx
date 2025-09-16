@@ -33,7 +33,7 @@ export function ProductTable({ products }: ProductTableProps) {
   const [deletingProductId, setDeletingProductId] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const tenantKey = useAdminTenantKey()
-  const router = useRouter()
+  // const router = useRouter()
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {

@@ -19,9 +19,11 @@ export function middleware(request: NextRequest) {
   if (/(^|\.)bluebell\.local(?::\d+)?$/i.test(host) || /(^|\.)bluebellstudio\.in(?::\d+)?$/i.test(host)) tenantFromHost = 'bluebell';
   else if (/(^|\.)senlysh\.local(?::\d+)?$/i.test(host) || /(^|\.)senlysh\.in(?::\d+)?$/i.test(host)) tenantFromHost = 'senlysh';
   
+  // HOLY_GRAIL:GLOBAL_NO_REWRITE_START
   // Global (non-tenant) routes that must not be rewritten
   const globalNoRewrite = new Set(['/login', '/checkout', '/cart'])
   const isGlobalRoute = globalNoRewrite.has(pathname)
+  // HOLY_GRAIL:GLOBAL_NO_REWRITE_END
 
   // Static assets should never be rewritten (images, svgs, etc.)
   const looksLikeAsset = /\.[a-zA-Z0-9]+$/.test(pathname);
@@ -29,6 +31,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.next({ request: { headers } });
   }
 
+  // HOLY_GRAIL:HOST_REWRITE_START
   // If host maps to a tenant and the path is not already tenant-prefixed
   if (tenantFromHost && !tenantFromPath && !isGlobalRoute) {
     headers.set('x-tenant-admin', tenantFromHost);
@@ -50,6 +53,7 @@ export function middleware(request: NextRequest) {
     response.cookies.set('tenant_mode', 'host', { path: '/', sameSite: 'lax' });
     return response;
   }
+  // HOLY_GRAIL:HOST_REWRITE_END
 
   // Enhanced: Set tenant cookies for global routes when there's a tenant context
   if (tenantFromHost && isGlobalRoute) {
@@ -70,6 +74,7 @@ export function middleware(request: NextRequest) {
     return response;
   }
 
+  // HOLY_GRAIL:ADMIN_REDIRECT_START
   if (isAdminRoute) {
     // SECURITY FIX: /admin routes should redirect to tenant-specific admin
     // This prevents cross-tenant access by forcing explicit tenant context
@@ -88,6 +93,7 @@ export function middleware(request: NextRequest) {
     redirectResp.cookies.set('tenant', inferredTenant, { path: '/', sameSite: 'lax' });
     return redirectResp;
   }
+  // HOLY_GRAIL:ADMIN_REDIRECT_END
 
   // If path is tenant-prefixed but points to a global page, rewrite to global
   if (tenantFromPath) {
@@ -110,6 +116,7 @@ export function middleware(request: NextRequest) {
       return response
     }
 
+    // HOLY_GRAIL:SENLYSH_PDP_REWRITE_START
     // Senlysh PDP: /senlysh/products/{slug} -> /products/{slug}
     if (tenantFromPath === 'senlysh' && segments.length >= 3 && segments[1] === 'products') {
       const globalTarget = `/${segments.slice(1).join('/')}` // /products/{slug}[...]
@@ -119,6 +126,7 @@ export function middleware(request: NextRequest) {
       response.cookies.set('tenant', tenantFromPath, { path: '/', sameSite: 'lax' })
       return response
     }
+    // HOLY_GRAIL:SENLYSH_PDP_REWRITE_END
   }
 
   return NextResponse.next({ request: { headers } });

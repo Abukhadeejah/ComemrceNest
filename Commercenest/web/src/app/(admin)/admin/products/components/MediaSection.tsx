@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useId } from 'react'
+import Image from 'next/image'
 import { PhotoIcon, XMarkIcon } from '@heroicons/react/24/outline'
 
 interface MediaSectionProps {
@@ -82,9 +83,11 @@ export function MediaSection({ images, onImagesChange }: MediaSectionProps) {
                 
                 return (
                   <div key={index} className="relative group">
-                    <img
+                    <Image
                       src={imageSrc}
                       alt={`Product image ${index + 1}`}
+                      width={96}
+                      height={96}
                       className="w-full h-24 object-cover rounded-lg border border-gray-200"
                     />
                     

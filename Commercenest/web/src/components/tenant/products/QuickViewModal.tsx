@@ -311,20 +311,25 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
                         </div>
 
                         {/* Price */}
-                        <div className="flex items-center space-x-3">
-                          <span className="text-2xl font-bold text-gray-900">
-                            {formatPrice(product.price_cents)}
-                          </span>
-                          {hasDiscount && (
-                            <>
-                              <span className="text-lg text-gray-500 line-through">
-                                {formatPrice(product.compare_at_price_cents!)}
-                              </span>
-                              <span className="text-sm font-medium text-red-600">
-                                {discountPercentage}% OFF
-                              </span>
-                            </>
-                          )}
+                        <div className="space-y-1">
+                          <div className="flex items-center space-x-3">
+                            <span className="text-2xl font-bold text-gray-900">
+                              {formatPrice(product.price_cents)}
+                            </span>
+                            {hasDiscount && (
+                              <>
+                                <span className="text-lg text-gray-500 line-through">
+                                  {formatPrice(product.compare_at_price_cents!)}
+                                </span>
+                                <span className="text-sm font-medium text-red-600">
+                                  {discountPercentage}% OFF
+                                </span>
+                              </>
+                            )}
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            Inclusive of all taxes
+                          </div>
                         </div>
 
                         {/* Enhanced Stock Status with Urgency */}

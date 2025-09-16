@@ -31,15 +31,14 @@ const ResponsiveImage: React.FC<ResponsiveImageProps> = ({
   blurDataURL,
 }) => {
   // Generate responsive srcSet for better performance
-  const generateSrcSet = (baseSrc: string) => {
-    // For external URLs, return as-is (Next.js handles optimization)
-    if (baseSrc.startsWith('http')) {
-      return undefined;
-    }
-
-    // For local images, Next.js handles responsive optimization automatically
-    return undefined;
-  };
+  // const generateSrcSet = (baseSrc: string) => {
+  //   // For external URLs, return as-is (Next.js handles optimization)
+  //   if (baseSrc.startsWith('http')) {
+  //     return undefined;
+  //   }
+  //   // For local images, Next.js handles responsive optimization automatically
+  //   return undefined;
+  // };
 
   return (
     <div className={`relative overflow-hidden ${className}`}>
@@ -62,6 +61,8 @@ const ResponsiveImage: React.FC<ResponsiveImageProps> = ({
 };
 
 export default ResponsiveImage;
+
+
 
 
 

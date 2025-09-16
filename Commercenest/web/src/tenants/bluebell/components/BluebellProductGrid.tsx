@@ -120,9 +120,14 @@ function ProductCard({ product }: { product: ProductListItem }) {
           <p className="text-bluebell-brown text-sm mb-4 line-clamp-2 min-h-[2.5rem]">
             {product.description || 'Premium fabric for exceptional interior design'}
           </p>
-          <div className="flex items-baseline justify-start mb-4 gap-2">
-            <span className="text-2xl leading-none font-serif font-bold text-bluebell-crimson whitespace-nowrap">₹{Number(pricePerYard).toLocaleString('en-IN')}</span>
-            <span className="text-bluebell-brown text-sm leading-none whitespace-nowrap">per metre</span>
+          <div className="space-y-1 mb-4">
+            <div className="flex items-baseline justify-start gap-2">
+              <span className="text-2xl leading-none font-serif font-bold text-bluebell-crimson whitespace-nowrap">₹{Number(pricePerYard).toLocaleString('en-IN')}</span>
+              <span className="text-bluebell-brown text-sm leading-none whitespace-nowrap">per metre</span>
+            </div>
+            <div className="text-bluebell-brown text-xs">
+              Inclusive of all taxes
+            </div>
           </div>
           <div className="flex space-x-3 mt-auto"></div>
         </div>

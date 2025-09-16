@@ -20,15 +20,15 @@ async function testGuardrails() {
     // This should fail since we don't have proper tenant context
     await validateTenantContext('test_operation')
     console.log('❌ Tenant validation should have failed')
-  } catch (error) {
-    console.log('✅ Tenant validation correctly failed:', error instanceof Error ? error.message : String(error))
+  } catch (_error) {
+    console.log('✅ Tenant validation correctly failed:', _error instanceof Error ? _error.message : String(_error))
   }
 
   // Test 3: Error response generation
   console.log('\nTest 3: Safe error response')
   try {
     throw new Error('Test error that should be handled safely')
-  } catch (error) {
+  } catch (_error) {
     const safeResponse = {
       success: false,
       error: 'An unexpected error occurred. Please try again or contact support.',
@@ -44,6 +44,15 @@ async function testGuardrails() {
 if (require.main === module) {
   testGuardrails().catch(console.error)
 }
+
+
+
+
+
+
+
+
+
 
 
 

@@ -66,7 +66,7 @@ const BrandCarousel: React.FC<BrandCarouselProps> = ({
   brands = defaultBrands,
   seeAllUrl = "/shop",
   bgColor = "bg-white",
-  autoPlayInterval = 3000
+  autoPlayInterval: _autoPlayInterval = 3000
 }) => {
 
   return (

@@ -36,7 +36,7 @@ export default function Home({ products, projects: _projects }: HomeClientProps)
   useEffect(() => {
     const id = setInterval(() => setSlideIndex((i) => (i + 1) % heroSlides.length), 4500)
     return () => clearInterval(id)
-  }, [])
+  }, [heroSlides.length])
 
   return (
     <main className="p-0">

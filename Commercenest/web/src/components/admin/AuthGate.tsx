@@ -9,7 +9,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   const supabase = createClientComponentClient()
   const [checking, setChecking] = useState(true)
   const [hasChecked, setHasChecked] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [_error, _setError] = useState<string | null>(null)
 
   useEffect(() => {
     // Only run auth check once
@@ -29,6 +29,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
           controller.abort()
         }, 10000) // 10 second timeout
 
+        // HOLY_GRAIL:AUTHGATE_CHECK_START
         // Check both authentication AND tenant authorization
         const res = await fetch('/api/auth/check-tenant-access', {
           cache: 'no-store',
@@ -61,6 +62,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
           router.replace('/login')
           return
         }
+        // HOLY_GRAIL:AUTHGATE_CHECK_END
 
         // For any other status, try client-side check
         console.log('[AuthGate] Server check failed, trying client-side check...')
@@ -118,7 +120,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
       isMounted = false
       if (timeoutId) clearTimeout(timeoutId)
     }
-  }, [router, supabase]) // Include dependencies for proper cleanup
+  }, [router, supabase, hasChecked]) // Include dependencies for proper cleanup
 
   if (checking) {
     console.log('[AuthGate] Still checking, rendering loading state')

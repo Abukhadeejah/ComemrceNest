@@ -2,25 +2,10 @@
 
 import Link from 'next/link'
 
-interface Customer {
-  id: string
-  email: string
-  first_name: string
-  last_name: string
-  phone: string
-  created_at: string
-  total_orders: number
-  total_spent_cents: number
-}
+import type { AdminCustomer, AdminCustomerList } from '@/types/customer'
 
 interface CustomerTableProps {
-  customers: {
-    data: Customer[]
-    count: number
-    page: number
-    pageSize: number
-    totalPages: number
-  }
+  customers: AdminCustomerList
 }
 
 export function CustomerTable({ customers }: CustomerTableProps) {
@@ -40,7 +25,7 @@ export function CustomerTable({ customers }: CustomerTableProps) {
     })
   }
 
-  const getCustomerName = (customer: Customer) => {
+  const getCustomerName = (customer: AdminCustomer) => {
     if (customer.first_name && customer.last_name) {
       return `${customer.first_name} ${customer.last_name}`
     } else if (customer.first_name) {

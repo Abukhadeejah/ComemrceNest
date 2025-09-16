@@ -1,7 +1,8 @@
 'use client'
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useTenant } from '@/hooks/useTenant'
 import { getSiteUrl } from '@/utils/site-urls'
 import { HeroSlide as SharedHeroSlide } from '@/types/hero'
@@ -56,7 +57,7 @@ interface HeroSectionProps {
 const HeroSection: React.FC<HeroSectionProps> = ({
   heroSlides = [],
   heroSettings = null,
-  slides = [], // PRODUCTION READY: No default slides - only database data
+  slides: _slides = [], // PRODUCTION READY: No default slides - only database data
   autoPlay = true,
   autoPlayInterval = 2000
 }) => {
@@ -147,9 +148,18 @@ const HeroSection: React.FC<HeroSectionProps> = ({
     if (finalAutoPlay) setIsPaused(false);
   };
 
-  const togglePause = () => {
-    setIsPaused((prev) => !prev);
-  };
+  // Navigation functions
+  const goToPreviousSlide = useCallback(() => {
+    setCurrentSlide((prev) => (prev === 0 ? finalSlides.length - 1 : prev - 1));
+  }, [finalSlides.length]);
+
+  const goToNextSlide = useCallback(() => {
+    setCurrentSlide((prev) => (prev + 1) % finalSlides.length);
+  }, [finalSlides.length]);
+
+  // const togglePause = () => {
+  //   setIsPaused((prev) => !prev);
+  // };
 
   // Keyboard navigation
   useEffect(() => {
@@ -163,7 +173,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [finalSlides.length]);
+  }, [finalSlides.length, goToNextSlide, goToPreviousSlide]);
 
   // Countdown timer
   useEffect(() => {
@@ -193,14 +203,6 @@ const HeroSection: React.FC<HeroSectionProps> = ({
     setCurrentSlide(index);
   };
 
-  const goToPreviousSlide = () => {
-    setCurrentSlide((prev) => (prev === 0 ? finalSlides.length - 1 : prev - 1));
-  };
-
-  const goToNextSlide = () => {
-    setCurrentSlide((prev) => (prev + 1) % finalSlides.length);
-  };
-
   return (
     <section
       className="relative w-full h-[600px] sm:h-[700px] md:h-[700px] overflow-hidden"
@@ -219,9 +221,10 @@ const HeroSection: React.FC<HeroSectionProps> = ({
             {/* Full-bleed Background Image (robust) */}
             <div className="absolute inset-0 bg-gradient-to-r from-purple-900 via-blue-900 to-indigo-900">
               {slide.image && (
-                <img
+                <Image
                   src={encodeURI(slide.image)}
                   alt=""
+                  fill
                   className="absolute inset-0 w-full h-full object-cover"
                   onError={(e) => {
                     console.error('Hero image failed to load:', slide.image);

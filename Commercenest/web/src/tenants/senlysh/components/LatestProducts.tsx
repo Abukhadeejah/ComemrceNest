@@ -429,24 +429,29 @@ const LatestProducts: React.FC<LatestProductsProps> = ({
                         </h3>
                         
                         {/* Price Section with enhanced hover */}
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center space-x-2">
-                            <span className="text-base sm:text-lg font-bold text-gray-800 
-                              transition-colors duration-200 group-hover:text-purple-600">
-                              ₹{product.price}
-                            </span>
-                            <span className="text-sm text-gray-500 line-through 
-                              transition-opacity duration-200 group-hover:opacity-75">
-                              ₹{product.originalPrice}
-                            </span>
+                        <div className="space-y-1 mb-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                              <span className="text-base sm:text-lg font-bold text-gray-800 
+                                transition-colors duration-200 group-hover:text-purple-600">
+                                ₹{product.price}
+                              </span>
+                              <span className="text-sm text-gray-500 line-through 
+                                transition-opacity duration-200 group-hover:opacity-75">
+                                ₹{product.originalPrice}
+                              </span>
+                            </div>
+                            {product.discount && (
+                              <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full font-semibold
+                                transition-all duration-200 hover:scale-110 hover:shadow-sm
+                                group-hover:bg-red-200">
+                                {product.discount}% OFF
+                              </span>
+                            )}
                           </div>
-                          {product.discount && (
-                            <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full font-semibold
-                              transition-all duration-200 hover:scale-110 hover:shadow-sm
-                              group-hover:bg-red-200">
-                              {product.discount}% OFF
-                            </span>
-                          )}
+                          <div className="text-xs text-gray-500">
+                            Inclusive of all taxes
+                          </div>
                         </div>
                       </Link>
 

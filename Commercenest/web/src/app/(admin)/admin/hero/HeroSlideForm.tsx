@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import Image from 'next/image'
 import { HeroSlide } from '@/types/hero'
 
 interface HeroSlideFormProps {
@@ -246,9 +247,11 @@ export function HeroSlideForm({ slide, onSubmit, onCancel, isPending }: HeroSlid
           </button>
           {formData.image_url && (
             <div className="mt-2">
-              <img 
+              <Image 
                 src={formData.image_url} 
                 alt="Hero preview" 
+                width={128}
+                height={80}
                 className="w-32 h-20 object-cover rounded"
               />
             </div>

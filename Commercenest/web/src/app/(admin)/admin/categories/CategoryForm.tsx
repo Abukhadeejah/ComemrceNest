@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { ADMIN_URLS } from '@/utils/admin-urls'
 import { useAdminTenantKey } from '@/components/admin/AdminBrandingWrapper'
 
@@ -134,7 +135,7 @@ export function CategoryForm({ mode, allCategories = [], initialData }: Category
         </label>
         <div className="mt-1 flex items-center gap-4">
           {imagePreview ? (
-            <img src={imagePreview} alt={imageAlt || 'Preview'} className="h-16 w-16 rounded object-cover border" />
+            <Image src={imagePreview} alt={imageAlt || 'Preview'} width={64} height={64} className="h-16 w-16 rounded object-cover border" />
           ) : (
             <div className="h-16 w-16 rounded bg-gray-100 border flex items-center justify-center text-gray-400 text-xs">
               IMG

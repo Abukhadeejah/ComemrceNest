@@ -2,14 +2,14 @@ import { resolveTenantIdFromRequest } from '@/server/tenant'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
 import Home from './Home'
 
-interface _Category {
-  id: string
-  name: string
-  slug: string
-  parent_id?: string
-  image_url?: string
-  image_alt?: string
-}
+// interface _Category {
+//   id: string
+//   name: string
+//   slug: string
+//   parent_id?: string
+//   image_url?: string
+//   image_alt?: string
+// }
 
 export default async function HomeServer() {
   const tenantId = await resolveTenantIdFromRequest()

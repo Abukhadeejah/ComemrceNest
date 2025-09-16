@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { HeroSlide } from '@/types/hero'
 
 interface HeroSlideFormProps {
@@ -498,9 +499,11 @@ export function HeroSlideForm({ slide, onSubmit, onCancel, isPending, availableT
             <div className="mt-2">
               <div className="w-64 h-36 rounded overflow-hidden border border-gray-200 bg-gray-100 relative">
                 {formData.image_url && (
-                  <img
+                  <Image
                     src={previewUrl}
                     alt="Hero preview"
+                    width={400}
+                    height={200}
                     className="w-full h-full object-cover"
                     onError={handlePreviewError}
                     onLoad={() => console.log('Admin preview loaded:', previewUrl)}

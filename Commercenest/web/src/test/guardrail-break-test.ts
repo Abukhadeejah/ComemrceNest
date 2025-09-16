@@ -8,7 +8,7 @@
 
 import { supabaseAdmin } from '@/server/supabaseAdmin'
 import { createSafeDatabase } from '@/server/safe-database'
-import { validateTenantContext, logSecurityEvent } from '@/server/guardrails'
+import { validateTenantContext } from '@/server/guardrails'
 
 export async function testGuardrailBreakAttempts() {
   console.log('🔥 TESTING GUARDRAIL BREAK ATTEMPTS...\n')
@@ -20,22 +20,22 @@ export async function testGuardrailBreakAttempts() {
   // ============================================================================
   console.log('🧪 Attempt 1: Cross-tenant data access')
   try {
-    const bluebellTenantId = '11111111-1111-4111-8111-11111111bb01'
+    // const bluebellTenantId = '11111111-1111-4111-8111-11111111bb01'
     const senlyshTenantId = '1e4c9aa7-e7af-4fe7-999b-c9c46219fa3c'
 
     // Try to access Senlysh products from Bluebell context
-    const { data, error } = await supabaseAdmin
+    const { data: _data, error } = await supabaseAdmin
       .from('products')
       .select('*')
       .eq('tenant_id', senlyshTenantId) // Wrong tenant!
       .limit(1)
 
-    if (data && data.length > 0) {
+    if (_data && _data.length > 0) {
       testResults.push({
         attempt: 'Cross-tenant data access',
         expected: 'BLOCKED by RLS',
         result: 'ALLOWED',
-        details: `❌ SECURITY BREACH: Retrieved ${data.length} records from wrong tenant`
+        details: `❌ SECURITY BREACH: Retrieved ${_data.length} records from wrong tenant`
       })
     } else {
       testResults.push({
@@ -60,17 +60,17 @@ export async function testGuardrailBreakAttempts() {
   console.log('🧪 Attempt 2: Safe database wrapper bypass')
   try {
     // Try to use unsafe database operations
-    const { data, error } = await supabaseAdmin
+    const { data: _data, error } = await supabaseAdmin
       .from('products')
       .select('*')
       .limit(5) // No tenant filter!
 
-    if (data && data.length > 0) {
+    if (_data && _data.length > 0) {
       testResults.push({
         attempt: 'Safe database wrapper bypass',
         expected: 'BLOCKED by guardrails',
         result: 'ALLOWED',
-        details: `❌ SECURITY BREACH: Retrieved ${data.length} records without tenant isolation`
+        details: `❌ SECURITY BREACH: Retrieved ${_data.length} records without tenant isolation`
       })
     } else {
       testResults.push({
@@ -95,7 +95,7 @@ export async function testGuardrailBreakAttempts() {
   console.log('🧪 Attempt 3: Malformed tenant context')
   try {
     // Try to validate with invalid tenant ID
-    const result = await validateTenantContext('invalid-tenant-id-test')
+    const _result = await validateTenantContext('invalid-tenant-id-test')
 
     testResults.push({
       attempt: 'Malformed tenant context',
@@ -241,14 +241,14 @@ export async function testGuardrailBreakAttempts() {
   console.log('🧪 Attempt 8: Module access violation')
   try {
     // Try to access disabled module
-    const { data, error } = await supabaseAdmin
+    const { data: _data, error } = await supabaseAdmin
       .from('tenant_modules')
       .select('enabled')
       .eq('module_key', 'nonexistent_module')
       .eq('tenant_id', '11111111-1111-4111-8111-11111111bb01')
       .single()
 
-    if (!data || !data.enabled) {
+    if (!_data || !_data.enabled) {
       testResults.push({
         attempt: 'Module access violation',
         expected: 'BLOCKED by module gating',

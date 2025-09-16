@@ -5,7 +5,7 @@
  */
 
 import { supabaseAdmin } from '@/server/supabaseAdmin'
-import { validateTenantContext, logSecurityEvent, enforceTenantFilter } from './guardrails'
+import { validateTenantContext, logSecurityEvent } from './guardrails'
 
 // ============================================================================
 // SAFE DATABASE QUERY BUILDER

@@ -10,6 +10,7 @@ export async function GET() {
       return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
     }
 
+    // HOLY_GRAIL:TENANT_ACCESS_API_START
     const tenantId = await resolveTenantIdFromRequest()
     if (!tenantId) {
       return NextResponse.json({ error: 'no tenant context' }, { status: 400 })
@@ -31,6 +32,7 @@ export async function GET() {
     if (!member) {
       return NextResponse.json({ error: 'unauthorized for this tenant' }, { status: 403 })
     }
+    // HOLY_GRAIL:TENANT_ACCESS_API_END
 
     return NextResponse.json({ 
       userId, 
@@ -43,6 +45,7 @@ export async function GET() {
     return NextResponse.json({ error: 'internal server error' }, { status: 500 })
   }
 }
+
 
 
 

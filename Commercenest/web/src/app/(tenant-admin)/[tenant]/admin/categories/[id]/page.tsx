@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
 import Link from 'next/link'
+import Image from 'next/image'
 import { resolveTenantKeyFromId } from '@/server/tenant'
 
 interface ViewProps { params: Promise<{ id: string; tenant?: string }> }
@@ -44,9 +45,11 @@ export default async function ViewCategoryPage({ params }: ViewProps) {
             <div className="flex items-start gap-6">
               <div>
                 { (cat as { image_url?: string | null }).image_url ? (
-                  <img
+                  <Image
                     src={(cat as { image_url?: string | null }).image_url as string}
                     alt={(cat as { image_alt?: string | null }).image_alt || (cat.name as string)}
+                    width={64}
+                    height={64}
                     className="h-24 w-24 rounded object-cover border"
                   />
                 ) : (

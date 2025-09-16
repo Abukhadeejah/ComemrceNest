@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
 import Link from 'next/link'
+import Image from 'next/image'
 import { ArrowLeftIcon, PencilIcon } from '@heroicons/react/24/outline'
 
 interface ProductViewPageProps {
@@ -119,9 +120,11 @@ export default async function ProductViewPage({ params }: ProductViewPageProps) 
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     {sortedImages.map((image: ProductImage, index: number) => (
                       <div key={index} className="relative">
-                        <img
+                        <Image
                           src={image.url}
                           alt={image.alt || `Product image ${index + 1}`}
+                          width={200}
+                          height={200}
                           className="w-full h-32 object-cover rounded-lg border border-gray-200"
                         />
                         {index === 0 && (

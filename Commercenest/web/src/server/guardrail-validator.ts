@@ -5,7 +5,7 @@
  */
 
 import { supabaseAdmin } from '@/server/supabaseAdmin'
-import { runPreDeploymentChecks } from './guardrails'
+// import { runPreDeploymentChecks } from './guardrails'
 
 export interface ValidationResult {
   passed: boolean
@@ -53,10 +53,10 @@ async function validateTenantIsolation(): Promise<ValidationResult[]> {
   // Test 1: Cross-tenant data access prevention
   try {
     const bluebellTenantId = '11111111-1111-4111-8111-11111111bb01'
-    const senlyshTenantId = '1e4c9aa7-e7af-4fe7-999b-c9c46219fa3c'
+    // const senlyshTenantId = '1e4c9aa7-e7af-4fe7-999b-c9c46219fa3c'
 
     // Attempt to access Senlysh data from Bluebell context (should fail)
-    const { data, error } = await supabaseAdmin
+    const { data: _data, error } = await supabaseAdmin
       .from('products')
       .select('*')
       .eq('tenant_id', bluebellTenantId)
@@ -369,7 +369,7 @@ async function validatePerformance(): Promise<ValidationResult[]> {
   try {
     const startTime = Date.now()
 
-    const { data, error } = await supabaseAdmin
+    const { data: _data, error } = await supabaseAdmin
       .from('products')
       .select('id, name')
       .limit(100)

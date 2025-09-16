@@ -4,7 +4,7 @@ import { supabaseAdmin } from '@/server/supabaseAdmin'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
 import { resolveRazorpayCredentials } from '@/server/payments'
 
-function decodeSecret(val: unknown): string {
+function _decodeSecret(val: unknown): string {
   if (!val) return ''
   if (typeof val === 'string') {
     // Supabase/PostgREST returns bytea as hex string prefixed with "\\x"

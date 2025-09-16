@@ -214,11 +214,16 @@ const FeaturedProducts: React.FC<FeaturedProductsProps> = ({
                 </div>
                 <div className="mt-4">
                   <h3 className="text-lg font-semibold text-gray-800 mb-2 hover:text-purple-600 transition-colors duration-200">{product.name}</h3>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-lg font-bold text-gray-800">₹{product.price}</span>
-                    {product.originalPrice && (
-                      <span className="text-sm text-gray-500 line-through">₹{product.originalPrice}</span>
-                    )}
+                  <div className="space-y-1">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-lg font-bold text-gray-800">₹{product.price}</span>
+                      {product.originalPrice && (
+                        <span className="text-sm text-gray-500 line-through">₹{product.originalPrice}</span>
+                      )}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Inclusive of all taxes
+                    </div>
                   </div>
                   {product.rating && (
                     <div className="flex items-center mt-2">
