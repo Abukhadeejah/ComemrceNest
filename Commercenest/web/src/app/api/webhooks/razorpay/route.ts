@@ -84,9 +84,19 @@ export async function POST(req: Request) {
       hmac.update(rawBody)
       const expected = hmac.digest('hex')
       verified = Boolean(sig && crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected)))
+      console.log('🔍 WEBHOOK DEBUG - Signature verification:', {
+        hasSecret: !!secret,
+        hasSignature: !!sig,
+        verified,
+        expected: expected.substring(0, 10) + '...',
+        received: sig?.substring(0, 10) + '...'
+      })
+    } else {
+      console.log('🔍 WEBHOOK DEBUG - No webhook secret configured, allowUnverified:', allowUnverified)
     }
 
     if (!verified && !allowUnverified) {
+      console.log('🔍 WEBHOOK DEBUG - Webhook rejected due to invalid signature')
       return NextResponse.json({ ok: false, error: 'invalid_signature' }, { status: 401 })
     }
 
@@ -95,10 +105,14 @@ export async function POST(req: Request) {
     // Handle payment.captured event
     console.log('🔍 WEBHOOK DEBUG - Checking payment.captured event...')
     console.log('🔍 WEBHOOK DEBUG - Event match:', payload?.event === 'payment.captured')
-    console.log('🔍 WEBHOOK DEBUG - Payload structure check:', !!(payload as { payload?: { payment?: { entity?: { order_id?: string } } } })?.payload?.payment?.entity?.order_id)
     
-    if (payload?.event === 'payment.captured' && (payload as { payload?: { payment?: { entity?: { order_id?: string } } } })?.payload?.payment?.entity?.order_id) {
-      const razorpayOrderId = (payload as { payload: { payment: { entity: { order_id: string } } } }).payload.payment.entity.order_id
+    // Check for the correct payload structure: event.payload.payment.entity.order_id
+    const paymentEntity = (payload as { payload?: { payment?: { entity?: { order_id?: string } } } })?.payload?.payment?.entity
+    console.log('🔍 WEBHOOK DEBUG - Payment entity:', paymentEntity)
+    console.log('🔍 WEBHOOK DEBUG - Order ID from payment:', paymentEntity?.order_id)
+    
+    if (payload?.event === 'payment.captured' && paymentEntity?.order_id) {
+      const razorpayOrderId = paymentEntity.order_id
       console.log('🔍 WEBHOOK DEBUG - Extracted order ID:', razorpayOrderId)
       
       // Find the order in our database
