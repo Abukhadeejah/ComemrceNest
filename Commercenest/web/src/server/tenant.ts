@@ -137,18 +137,7 @@ async function resolveTenantIdFromKey(tenantKey: string): Promise<string | null>
     return tenantData.id
   }
 
-  // Try case-insensitive name match
-  const { data: tenantDataCI } = await supabaseAdmin
-    .from('tenants')
-    .select('id, name')
-    .ilike('name', `%${tenantKey}%`)
-    .maybeSingle()
-
-  if (tenantDataCI?.id) {
-    return tenantDataCI.id
-  }
-
-  // Try common tenant key mappings
+  // Try common tenant key mappings FIRST (before partial match)
   const keyMappings: Record<string, string> = {
     'bluebell': 'Bluebell Interiors',
     'senlysh': 'Senlysh Fashion',
@@ -165,6 +154,17 @@ async function resolveTenantIdFromKey(tenantKey: string): Promise<string | null>
     if (mappedTenant?.id) {
       return mappedTenant.id
     }
+  }
+
+  // Try case-insensitive name match LAST (after key mappings)
+  const { data: tenantDataCI } = await supabaseAdmin
+    .from('tenants')
+    .select('id, name')
+    .ilike('name', `%${tenantKey}%`)
+    .maybeSingle()
+
+  if (tenantDataCI?.id) {
+    return tenantDataCI.id
   }
 
   return null

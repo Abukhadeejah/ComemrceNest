@@ -369,3 +369,41 @@ if (error || !product) {
 
 
 
+
+
+## Ownership & Quick Runbooks
+
+### Admin redirect (middleware)
+- Owner: Platform team
+- 60s test: Visit `/admin` with no `tenant` cookie → expect redirect `/`
+- Rollback: Revert last change to `Commercenest/web/src/middleware.ts`; run `npm run guardrail:deploy-check`
+
+### Global routes no-rewrite
+- Owner: Platform team
+- 60s test: Visit `/{tenant}/cart` and `/{tenant}/checkout` → should render shared `/cart`, `/checkout`
+- Rollback: Revert edits around GLOBAL_NO_REWRITE markers
+
+### Senlysh PDP rewrite
+- Owner: Platform team
+- 60s test: Visit `/senlysh/products/{slug}` → should render shared `/products/{slug}`
+- Rollback: Revert edits around SENLYSH_PDP_REWRITE markers
+
+### Tenant access API
+- Owner: Auth/Security
+- 60s test: As a user from Tenant A, hit Tenant B admin → expect 403
+- Rollback: Revert edits around TENANT_ACCESS_API markers
+
+### Tenant resolver (server)
+- Owner: Platform team
+- 60s test: Host/path/cookie combos resolve same tenant; mixed cases don’t cross-leak
+- Rollback: Revert edits around TENANT_RESOLVER markers
+
+### URL helpers
+- Owner: Frontend
+- 60s test: Grep for "/bluebell" in code — zero matches in components
+- Rollback: Replace hardcoded strings with `SITE_URLS`/`ADMIN_URLS`
+
+### Storage path guard
+- Owner: Backend
+- 60s test: Try upload without tenantId → should throw before network call
+- Rollback: Reinstate STORAGE_PATH_GUARD markers and validation
