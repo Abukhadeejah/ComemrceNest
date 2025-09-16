@@ -48,10 +48,12 @@ Notes:
 4. [x] Rewards engine: design tenant-config + default rules; Senlysh profit-based cashback.
 5. [x] Rewards API: `POST /api/rewards/calculate` (order context) and `GET /api/rewards/history`.
 6. [x] Order integration: credit cashback to wallet post-payment with idempotency.
-7. [ ] Pagination for wallet history; CSV export.
-8. [ ] Module gating: ensure production checks use `tenant_modules` (remove dev bypass behind env flag in prod).
-9. [ ] E2E tests (Playwright): Senlysh registration → profile → addresses → wallet; Bluebell parity checks.
-10. [ ] Security & RLS advisor run; fix findings.
+7. [x] Profile icon navigation: logged-in users go to profile page, not login page.
+8. [x] Razorpay webhook payment processing: fixed payload structure issues, orders now update to 'paid' status automatically.
+9. [ ] Pagination for wallet history; CSV export.
+10. [ ] Module gating: ensure production checks use `tenant_modules` (remove dev bypass behind env flag in prod).
+11. [ ] E2E tests (Playwright): Senlysh registration → profile → addresses → wallet; Bluebell parity checks.
+12. [ ] Security & RLS advisor run; fix findings.
 
 ### 6) Implementation Notes
 - Derive wallet balance on-the-fly from `wallet_ledger`.

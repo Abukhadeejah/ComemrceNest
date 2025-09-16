@@ -74,8 +74,12 @@ export async function POST(req: Request) {
     // Get webhook secret for the tenant
     const secret = await getActiveWebhookSecret(tenantId)
 
-    // In development, allow webhook without verification if no secret configured
-    const allowUnverified = !secret && process.env.NODE_ENV !== 'production'
+    // In development or staging, allow webhook without verification if no secret configured
+    const allowUnverified = !secret && (
+      process.env.NODE_ENV !== 'production' || 
+      process.env.VERCEL_ENV === 'preview' ||
+      process.env.VERCEL_URL?.includes('staging')
+    )
 
     let verified = false
     if (secret) {

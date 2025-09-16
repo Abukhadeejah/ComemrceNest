@@ -64,3 +64,5 @@ export function useCustomerAuth(): CustomerAuthState {
 
   return authState
 }
+
+

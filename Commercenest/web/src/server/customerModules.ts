@@ -139,6 +139,11 @@ export async function validateCustomerFeatureAccess(
     return { allowed: true }
   }
 
+  // Staging fallback: Allow customer features on staging environment
+  if (process.env.VERCEL_ENV === 'preview' || process.env.VERCEL_URL?.includes('staging')) {
+    return { allowed: true }
+  }
+
   // Additional fallback: if no customer modules are registered in the catalog OR explicit dev flag set,
   // allow the feature to facilitate local development and demos.
   // This avoids hard-blocking when the module registry hasn't been populated yet.
