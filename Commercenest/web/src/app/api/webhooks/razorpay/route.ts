@@ -13,9 +13,15 @@ async function getActiveWebhookSecret(tenantId?: string | null): Promise<string 
       .from('tenant_payment_settings')
       .select('env, enabled, webhook_secret')
       .eq('tenant_id', tenantId)
-    if (error || !data?.length) return null
+    if (error || !data?.length) {
+      // Fallback to platform webhook secret if no tenant settings
+      return process.env.RAZORPAY_WEBHOOK_SECRET || null
+    }
     const active = data.find(r => r.enabled)
-    if (!active?.webhook_secret) return null
+    if (!active?.webhook_secret) {
+      // Fallback to platform webhook secret if tenant has no webhook secret
+      return process.env.RAZORPAY_WEBHOOK_SECRET || null
+    }
     // Stored as hex with \x prefix
     const hex = String(active.webhook_secret).replace(/^\\x/i, '')
     try {

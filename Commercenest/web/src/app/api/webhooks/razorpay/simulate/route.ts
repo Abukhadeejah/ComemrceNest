@@ -16,7 +16,14 @@ export async function POST(request: Request) {
     .eq('tenant_id', order.tenant_id)
     .eq('env', 'test')
     .maybeSingle()
-  if (!pay?.webhook_secret) return NextResponse.json({ error: 'secret_not_configured' }, { status: 400 })
+  
+  // Use tenant webhook secret if available, otherwise fallback to platform secret
+  let webhookSecret = pay?.webhook_secret
+  if (!webhookSecret) {
+    webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET
+  }
+  
+  if (!webhookSecret) return NextResponse.json({ error: 'secret_not_configured' }, { status: 400 })
 
   const body = {
     event: 'payment.captured',
@@ -26,9 +33,20 @@ export async function POST(request: Request) {
     },
   }
   const bodyText = JSON.stringify(body)
-  const secretBuf = typeof pay.webhook_secret === 'string' && pay.webhook_secret.startsWith('\\x')
-    ? Buffer.from(pay.webhook_secret.slice(2), 'hex')
-    : Buffer.isBuffer(pay.webhook_secret) ? pay.webhook_secret : Buffer.from(String(pay.webhook_secret))
+  
+  // Handle both tenant webhook secret (hex encoded) and platform webhook secret (plain text)
+  let secretBuf: Buffer
+  if (typeof webhookSecret === 'string' && webhookSecret.startsWith('\\x')) {
+    // Tenant webhook secret (hex encoded)
+    secretBuf = Buffer.from(webhookSecret.slice(2), 'hex')
+  } else if (Buffer.isBuffer(webhookSecret)) {
+    // Already a buffer
+    secretBuf = webhookSecret
+  } else {
+    // Platform webhook secret (plain text) or string
+    secretBuf = Buffer.from(String(webhookSecret))
+  }
+  
   const hmac = crypto.createHmac('sha256', secretBuf)
   hmac.update(bodyText)
   const signature = hmac.digest('hex')
