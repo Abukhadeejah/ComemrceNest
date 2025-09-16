@@ -49,6 +49,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: 'invalid_json' }, { status: 400 })
     }
 
+    // DEBUG: Log the actual payload structure
+    console.log('🔍 WEBHOOK DEBUG - Raw payload received:', JSON.stringify(payload, null, 2))
+    console.log('🔍 WEBHOOK DEBUG - Event type:', payload?.event)
+    console.log('🔍 WEBHOOK DEBUG - Payload keys:', Object.keys(payload))
+
     // Extract order ID from payload to resolve tenant
     let tenantId: string | null = null
     if (payload?.event === 'payment.captured' && (payload as { payload?: { order?: { entity?: { id?: string } } } })?.payload?.order?.entity?.id) {
@@ -88,8 +93,13 @@ export async function POST(req: Request) {
     // Payload already parsed above for tenant resolution
 
     // Handle payment.captured event
-    if (payload?.event === 'payment.captured' && (payload as { payload?: { order?: { entity?: { id?: string } } } })?.payload?.order?.entity?.id) {
-      const razorpayOrderId = (payload as { payload: { order: { entity: { id: string } } } }).payload.order.entity.id
+    console.log('🔍 WEBHOOK DEBUG - Checking payment.captured event...')
+    console.log('🔍 WEBHOOK DEBUG - Event match:', payload?.event === 'payment.captured')
+    console.log('🔍 WEBHOOK DEBUG - Payload structure check:', !!(payload as { payload?: { payment?: { entity?: { order_id?: string } } } })?.payload?.payment?.entity?.order_id)
+    
+    if (payload?.event === 'payment.captured' && (payload as { payload?: { payment?: { entity?: { order_id?: string } } } })?.payload?.payment?.entity?.order_id) {
+      const razorpayOrderId = (payload as { payload: { payment: { entity: { order_id: string } } } }).payload.payment.entity.order_id
+      console.log('🔍 WEBHOOK DEBUG - Extracted order ID:', razorpayOrderId)
       
       // Find the order in our database
       const { data: order } = await supabaseAdmin
@@ -172,10 +182,18 @@ export async function POST(req: Request) {
           console.log('Cashback credit result:', cashbackResult)
         }
       }
+    } else {
+      console.log('🔍 WEBHOOK DEBUG - Event not processed. Reasons:')
+      console.log('  - Event type:', payload?.event)
+      console.log('  - Is payment.captured?', payload?.event === 'payment.captured')
+      console.log('  - Has order ID?', !!(payload as { payload?: { order?: { entity?: { id?: string } } } })?.payload?.order?.entity?.id)
+      console.log('  - Full payload structure:', JSON.stringify(payload, null, 2))
     }
 
+    console.log('🔍 WEBHOOK DEBUG - Webhook processing completed, verified:', verified)
     return NextResponse.json({ ok: true, verified })
   } catch (err) {
+    console.error('🔍 WEBHOOK DEBUG - Error occurred:', err)
     return NextResponse.json({ ok: false, error: (err as Error).message }, { status: 500 })
   }
 }

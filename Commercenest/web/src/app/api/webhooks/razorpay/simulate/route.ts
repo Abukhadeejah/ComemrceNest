@@ -28,8 +28,13 @@ export async function POST(request: Request) {
   const body = {
     event: 'payment.captured',
     payload: {
-      order: { entity: { id: order.razorpay_order_id } },
-      payment: { entity: { id: `pay_${Date.now()}` } },
+      payment: { 
+        entity: { 
+          id: `pay_${Date.now()}`,
+          order_id: order.razorpay_order_id,
+          status: 'captured'
+        } 
+      },
     },
   }
   const bodyText = JSON.stringify(body)
