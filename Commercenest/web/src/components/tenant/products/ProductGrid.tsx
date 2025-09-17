@@ -62,7 +62,7 @@ export function ProductGrid({ products }: ProductGridProps) {
 
   return (
     <>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 items-stretch">
         {products.map((product) => (
           <ProductCard
             key={product.id}
@@ -96,15 +96,84 @@ function ProductCard({
 }) {
   const { addItem } = useCart()
   const [isWishlisted, setIsWishlisted] = useState(false)
+  const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({})
+  const [variantValidationError, setVariantValidationError] = useState<string>('')
+
+  // Get variant options from the product data
+  const variantOptions = product.product_variant_options || []
+
+  // Calculate current price based on selected variants
+  const calculateCurrentPrice = () => {
+    let currentPrice = product.price_cents
+    
+    variantOptions.forEach(option => {
+      const variantOption = option.variant_options
+      const selectedValue = selectedVariants[variantOption.name]
+      if (selectedValue) {
+        const optionValue = variantOption.variant_option_values.find(
+          val => val.value === selectedValue
+        )
+        if (optionValue?.price_adjustment_cents) {
+          currentPrice += optionValue.price_adjustment_cents
+        }
+      }
+    })
+    
+    return currentPrice
+  }
+
+  const currentPrice = calculateCurrentPrice()
+
+  // Validation function to check if all required variants are selected
+  const validateVariantSelection = (): { isValid: boolean; message: string } => {
+    // If no variants exist for this product, validation passes
+    if (!variantOptions || variantOptions.length === 0) {
+      return { isValid: true, message: '' }
+    }
+
+    const missingVariants: string[] = []
+    
+    variantOptions.forEach(option => {
+      const variantOption = option.variant_options
+      const selectedValue = selectedVariants[variantOption.name]
+      
+      if (!selectedValue) {
+        missingVariants.push(variantOption.display_name || variantOption.name)
+      }
+    })
+
+    if (missingVariants.length > 0) {
+      const message = missingVariants.length === 1 
+        ? `Please select ${missingVariants[0].toLowerCase()}`
+        : `Please select ${missingVariants.join(', ').toLowerCase()}`
+      
+      return { isValid: false, message }
+    }
+
+    return { isValid: true, message: '' }
+  }
 
   const handleAddToCart = () => {
+    // Clear any previous validation errors
+    setVariantValidationError('')
+    
+    // Validate variant selection
+    const validation = validateVariantSelection()
+    if (!validation.isValid) {
+      setVariantValidationError(validation.message)
+      return
+    }
+
     try {
       addItem({
         productId: String(product.id),
         name: String(product.name),
-        price: Number(product.price_cents || 0),
+        price: currentPrice, // Use calculated current price
         imageUrl: product.hero_image_url || undefined,
         quantity: 1,
+        variant: Object.keys(selectedVariants).length > 0
+          ? { id: `variant_${Object.values(selectedVariants).join('_')}`, name: 'Variant', options: selectedVariants }
+          : undefined,
       })
     } catch (e) {
       console.error('Failed to add to cart', e)
@@ -120,8 +189,15 @@ function ProductCard({
     }).format(priceCents / 100)
   }
 
-  // Calculate discount for price display
-  const hasDiscount = product.compare_at_price_cents && product.compare_at_price_cents > product.price_cents
+  // Calculate discount for price display - use current price instead of base price
+  const hasDiscount = product.compare_at_price_cents && product.compare_at_price_cents > currentPrice
+  
+  // Check if price varies by variant selection
+  const priceVariesByVariant = variantOptions.some(option => 
+    option.variant_options.variant_option_values.some(value => 
+      value.price_adjustment_cents && value.price_adjustment_cents !== 0
+    )
+  )
 
   // Generate badges using the new badge system
   const badgeConfig = {
@@ -157,7 +233,7 @@ function ProductCard({
   }
 
   return (
-    <div className="group bg-white rounded-2xl shadow-sm overflow-hidden hover:shadow-2xl transition-all duration-500 border border-gray-100 hover:border-gray-200 transform hover:-translate-y-1 flex flex-col">
+    <div className="group bg-white rounded-2xl shadow-sm overflow-hidden hover:shadow-2xl transition-all duration-500 border border-gray-100 hover:border-gray-200 transform hover:-translate-y-1 flex flex-col min-h-[520px]">
               {/* Product Image Container */}
         <div className="relative aspect-[4/5] overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
         {product.hero_image_url ? (
@@ -234,12 +310,14 @@ function ProductCard({
       </div>
 
       {/* Product Info - Using flexbox with consistent spacing */}
-      <div className="p-3 flex flex-col">
-        <Link href={tenantKey ? SITE_URLS.productDetail(product.slug, tenantKey) : `/products/${product.slug}`} className="block group">
-          <h3 className="text-sm font-medium text-gray-900 group-hover:text-indigo-600 transition-colors duration-200 line-clamp-2 mb-2 leading-tight min-h-[2rem]">
-            {product.name}
-          </h3>
-        </Link>
+      <div className="p-3 flex flex-col flex-1 justify-between">
+        {/* Top Content */}
+        <div className="flex-1">
+          <Link href={tenantKey ? SITE_URLS.productDetail(product.slug, tenantKey) : `/products/${product.slug}`} className="block group">
+            <h3 className="text-sm font-medium text-gray-900 group-hover:text-indigo-600 transition-colors duration-200 line-clamp-2 mb-2 leading-tight min-h-[2rem]">
+              {product.name}
+            </h3>
+          </Link>
         
         {/* Star Rating */}
         <div className="flex items-center mb-2">
@@ -263,33 +341,79 @@ function ProductCard({
                   {formatPrice(product.compare_at_price_cents!)}
                 </span>
                 <span className="text-lg font-bold text-gray-900 underline">
-                  {formatPrice(product.price_cents)}
+                  {formatPrice(currentPrice)}
                 </span>
               </>
             ) : (
               <span className="text-lg font-bold text-gray-900">
-                {formatPrice(product.price_cents)}
+                {formatPrice(currentPrice)}
               </span>
             )}
           </div>
           <div className="text-xs text-gray-500">
             Inclusive of all taxes
+            {priceVariesByVariant && Object.keys(selectedVariants).length === 0 && (
+              <span className="block text-orange-600 font-medium">Price varies by selected options</span>
+            )}
           </div>
         </div>
 
-        {/* Size Options Preview */}
-        <div className="flex gap-1 mb-3">
-          {['S', 'M', 'L', 'XL'].map((size) => (
-            <button
-              key={size}
-              className="text-xs px-2 py-1 border border-gray-200 rounded hover:border-gray-400 transition-colors duration-200 hover:bg-gray-50"
-            >
-              {size}
-            </button>
-          ))}
+        {/* Variant Options Preview */}
+        {variantOptions.length > 0 && (
+          <div className="space-y-2 mb-3">
+            {variantOptions.map((option) => {
+              const variantOption = option.variant_options
+              return (
+                <div key={variantOption.id} className="flex flex-col gap-1">
+                  <span className="text-xs text-gray-600 font-medium">
+                    {variantOption.display_name || variantOption.name}:
+                  </span>
+                  <div className="flex gap-1 flex-wrap">
+                    {variantOption.variant_option_values
+                      .sort((a, b) => a.sort_order - b.sort_order)
+                      .map((value) => (
+                        <button
+                          key={value.id}
+                          onClick={() => {
+                            setSelectedVariants(prev => ({
+                              ...prev,
+                              [variantOption.name]: value.value
+                            }))
+                            // Clear validation error when user makes a selection
+                            setVariantValidationError('')
+                          }}
+                          className={`text-xs px-2 py-1 border rounded transition-colors duration-200 ${
+                            selectedVariants[variantOption.name] === value.value
+                              ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                              : 'border-gray-200 text-gray-700 hover:border-gray-400 hover:bg-gray-50'
+                          }`}
+                        >
+                          {value.display_value || value.value}
+                        </button>
+                      ))}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+          {/* Variant Validation Error */}
+          {variantValidationError && (
+            <div className="bg-red-50 border border-red-200 rounded-md p-2 mb-3">
+              <div className="flex items-center">
+                <svg className="h-4 w-4 text-red-400 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+                <span className="text-red-800 text-xs font-medium">{variantValidationError}</span>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Stock Status & Add to Cart */}
+        {/* Bottom Actions */}
+        <div className="mt-auto">
+          {/* Stock Status & Add to Cart */}
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             {product.stock > 0 ? (
@@ -312,6 +436,7 @@ function ProductCard({
             <ShoppingBagIcon className="w-4 h-4" />
             <span>Add to Cart</span>
           </button>
+        </div>
         </div>
       </div>
     </div>

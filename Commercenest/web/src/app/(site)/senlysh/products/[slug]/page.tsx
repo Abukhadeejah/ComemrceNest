@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
-import { fetchProductBySlug, fetchProductImages } from '@/server/modules/products/service'
+import { fetchProductBySlug, fetchProductImages, fetchProductVariantOptions } from '@/server/modules/products/service'
 import { ProductDetail } from '@/components/tenant/products/ProductDetail'
 
 interface SenlyshProductPageProps {
@@ -24,11 +24,17 @@ export default async function SenlyshProductPage({ params }: SenlyshProductPageP
   }
 
   const images = await fetchProductImages(tenantId, product.id)
+  const variantOptions = await fetchProductVariantOptions(tenantId, product.id)
+
+  console.log('[SenlyshProductPage] Product:', product.name, 'ID:', product.id)
+  console.log('[SenlyshProductPage] Images count:', images?.length || 0)
+  console.log('[SenlyshProductPage] Variant options count:', variantOptions?.length || 0)
 
   return (
     <ProductDetail
       product={product as unknown as Parameters<typeof ProductDetail>[0]['product']}
       images={images || []}
+      variantOptions={(variantOptions as unknown as any[]) || []}
     />
   )
 }

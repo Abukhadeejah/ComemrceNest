@@ -4,11 +4,13 @@ import { useState, useTransition, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ADMIN_URLS } from '@/utils/admin-urls'
 import { useAdminTenantKey } from '@/components/admin/AdminBrandingWrapper'
+import { useDraftPersistence } from '@/hooks/useDraftPersistence'
 import { 
   createProduct, 
   updateProduct,
   uploadProductImage
 } from './actions'
+import { Category } from '@/utils/categoryUtils'
 import { BasicInformationSection } from './components/BasicInformationSection'
 import { PricingSection } from './components/PricingSection'
 import { InventorySection } from './components/InventorySection'
@@ -26,7 +28,7 @@ import { ProductFormData } from '@/types/product'
 interface ProductFormProps {
   mode: 'create' | 'edit'
   initialData?: Partial<ProductFormData> & { variantOptions?: unknown[]; variantCombinations?: unknown[] }
-  categories: Record<string, unknown>[]
+  categories: Category[]
 }
 
 export function ProductForm({ mode, initialData, categories }: ProductFormProps) {
@@ -81,6 +83,16 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
     badge_display_from: ''
   })
 
+  // Draft persistence
+  const draftKey = `product_${mode}${initialData?.id ? `_${initialData.id}` : ''}`
+  const { loadDraft, clearDraft, hasDraft } = useDraftPersistence({
+    draftKey,
+    formData,
+    enabled: true
+  })
+  
+  const [showDraftNotification, setShowDraftNotification] = useState(false)
+
   // State for images (can be File objects for new uploads or URL strings for existing images)
   const [imageFiles, setImageFiles] = useState<(File | string)[]>(initialData?.images || [])
 
@@ -115,6 +127,24 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
       }))
     }
   }, [initialData, mode])
+
+  // Load draft data on component mount
+  useEffect(() => {
+    if (hasDraft()) {
+      const draftData = loadDraft()
+      if (draftData) {
+        // Only load draft if we're not in edit mode with initial data
+        if (mode === 'create' || !initialData) {
+          setFormData(prev => ({
+            ...prev,
+            ...draftData
+          }))
+          setShowDraftNotification(true)
+          console.log('[ProductForm] Draft loaded successfully')
+        }
+      }
+    }
+  }, [hasDraft, loadDraft, mode, initialData])
 
   // Generate slug from name
   const generateSlug = (name: string) => {
@@ -213,6 +243,10 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
           }
         }
         
+        // Clear draft after successful submission
+        clearDraft()
+        console.log('[ProductForm] Draft cleared after successful submission')
+        
         // Small delay to ensure cache invalidation completes
         await new Promise(resolve => setTimeout(resolve, 100))
         
@@ -263,6 +297,30 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
+        {showDraftNotification && (
+          <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <svg className="h-5 w-5 text-blue-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div className="text-sm text-blue-800">
+                  <strong>Draft loaded:</strong> Your previous work has been restored automatically.
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDraftNotification(false)}
+                className="text-blue-400 hover:text-blue-600"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        )}
+        
         {errors.general && (
           <div className="bg-red-50 border border-red-200 rounded-md p-4">
             <div className="text-sm text-red-800">{errors.general}</div>

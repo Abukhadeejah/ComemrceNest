@@ -1,4 +1,4 @@
-import { fetchPublishedProductsPaged, ProductListItem } from '@/server/modules/products/service'
+import { fetchPublishedProductsPaged, fetchPublishedProductsPagedWithVariants, ProductListItem } from '@/server/modules/products/service'
 
 export interface GetProductsParams {
   tenantId: string | null
@@ -101,7 +101,7 @@ export async function getProducts(params: GetProductsParams): Promise<ProductLis
     is_sold_out
   }
 
-  const result = await fetchPublishedProductsPaged(tenantId, serviceParams)
+  const result = await fetchPublishedProductsPagedWithVariants(tenantId, serviceParams)
 
   // Handle potential error or null data
   if (result.error || !result.data) {

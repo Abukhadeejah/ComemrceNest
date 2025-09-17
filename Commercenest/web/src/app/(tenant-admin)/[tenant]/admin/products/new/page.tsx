@@ -24,7 +24,13 @@ export default async function NewProductPage() {
           </div>
           
           <ProductForm 
-            categories={categories || []}
+            categories={(categories || []).map(c => ({ 
+              id: c.id as string, 
+              name: c.name as string,
+              slug: (c as Record<string, unknown>).slug as string || '',
+              parent_id: (c as Record<string, unknown>).parent_id as string | null || null,
+              created_at: (c as Record<string, unknown>).created_at as string || new Date().toISOString()
+            }))}
             mode="create"
           />
         </div>

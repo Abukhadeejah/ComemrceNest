@@ -344,7 +344,9 @@ export async function createProduct(formData: FormData) {
               value: value.value as string,
               display_value: value.displayValue as string,
               color_hex: value.colorHex as string,
-              image_url: value.imageUrl as string
+              image_url: value.imageUrl as string,
+              price_adjustment_cents: value.priceAdjustmentCents ? parseInt(String(value.priceAdjustmentCents)) : 0,
+              cost_adjustment_cents: value.costAdjustmentCents ? parseInt(String(value.costAdjustmentCents)) : 0
             })
         })
         await Promise.all(valuePromises)
@@ -732,7 +734,9 @@ export async function updateProduct(productId: string, formData: FormData) {
                 value: value.value as string,
                 display_value: value.displayValue as string,
                 color_hex: value.colorHex as string,
-                image_url: value.imageUrl as string
+                image_url: value.imageUrl as string,
+                price_adjustment_cents: value.priceAdjustmentCents ? parseInt(String(value.priceAdjustmentCents)) : 0,
+                cost_adjustment_cents: value.costAdjustmentCents ? parseInt(String(value.costAdjustmentCents)) : 0
               })
           })
           await Promise.all(valuePromises)

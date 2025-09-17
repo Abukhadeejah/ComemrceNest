@@ -20,7 +20,19 @@ export default async function HomeServer() {
   const [{ data: products }, { data: categories }, { data: heroSlides }, { data: heroSettings }] = await Promise.all([
     supabaseAdmin
       .from('products')
-      .select('id, name, slug, description, price_cents, compare_at_price_cents, stock, currency, hero_image_url, status, is_featured, is_bestseller, is_on_sale, is_new_arrival')
+      .select(`
+        id, name, slug, description, price_cents, compare_at_price_cents, stock, currency, hero_image_url, status, 
+        is_featured, is_bestseller, is_on_sale, is_new_arrival,
+        product_variant_options(
+          variant_options(
+            id, name, display_name, type,
+            variant_option_values(
+              id, value, display_value, color_hex, image_url, 
+              price_adjustment_cents, cost_adjustment_cents, sort_order
+            )
+          )
+        )
+      `)
       .eq('tenant_id', tenantId)
       .eq('status', 'published')
       .order('updated_at', { ascending: false }),

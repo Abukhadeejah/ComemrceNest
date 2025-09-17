@@ -32,6 +32,26 @@ export type ProductListItem = {
   badge_priority?: number | null
   badge_display_until?: string | null
   badge_display_from?: string | null
+  // Variant options for PLP cards
+  product_variant_options?: {
+    variant_options: {
+      id: string
+      name: string
+      display_name: string
+      type: string
+      sort_order: number
+      variant_option_values: {
+        id: string
+        value: string
+        display_value: string
+        color_hex?: string
+        image_url?: string
+        sort_order: number
+        price_adjustment_cents?: number
+        cost_adjustment_cents?: number
+      }[]
+    }
+  }[]
 }
 
 export type ProductListParams = {
@@ -259,4 +279,223 @@ export async function fetchProductImages(tenantId: string, productId: string) {
   // Ensure consistent ordering after expansion
   transformed.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
   return transformed
+}
+
+export async function fetchProductVariantOptions(tenantId: string, productId: string) {
+  const { data, error } = await supabaseAdmin
+    .from('product_variant_options')
+    .select(`
+      variant_options(
+        id,
+        name,
+        display_name,
+        type,
+        variant_option_values(
+          id,
+          value,
+          display_value,
+          color_hex,
+          image_url,
+          sort_order,
+          price_adjustment_cents,
+          cost_adjustment_cents
+        )
+      )
+    `)
+    .eq('tenant_id', tenantId)
+    .eq('product_id', productId)
+    .order('sort_order', { ascending: true })
+
+  if (error) {
+    console.error('[fetchProductVariantOptions] query error', error)
+    return []
+  }
+
+  return data || []
+}
+
+export async function fetchProductVariants(tenantId: string, productId: string) {
+  const { data, error } = await supabaseAdmin
+    .from('product_variants')
+    .select(`
+      id,
+      name,
+      sku,
+      price_cents,
+      compare_at_price_cents,
+      cost_cents,
+      stock,
+      weight_grams,
+      barcode,
+      track_inventory,
+      allow_backorders,
+      is_active,
+      attributes
+    `)
+    .eq('tenant_id', tenantId)
+    .eq('product_id', productId)
+    .eq('is_active', true)
+    .order('name', { ascending: true })
+
+  if (error) {
+    console.error('[fetchProductVariants] query error', error)
+    return []
+  }
+
+  return data || []
+}
+
+// New function to fetch products with variant options for PLP
+export async function fetchPublishedProductsWithVariants(tenantId: string) {
+  const { data: products, error: productsError } = await supabaseAdmin
+    .from('products')
+    .select(`
+      id, name, slug, description, price_cents, compare_at_price_cents, stock, currency, 
+      hero_image_url, low_stock_threshold, is_featured, is_bestseller, is_new_arrival, 
+      is_on_sale, is_limited_edition, is_sold_out, custom_badge_text, badge_color, 
+      badge_priority, badge_display_until, badge_display_from,
+      product_variant_options(
+        variant_options(
+          id, name, display_name, type, sort_order,
+          variant_option_values(
+            id, value, display_value, color_hex, image_url, sort_order,
+            price_adjustment_cents, cost_adjustment_cents
+          )
+        )
+      )
+    `)
+    .eq('tenant_id', tenantId)
+    .eq('status', 'published')
+    .order('updated_at', { ascending: false })
+
+  if (productsError) {
+    console.error('[fetchPublishedProductsWithVariants] error:', productsError)
+    return { data: [], error: productsError }
+  }
+
+  return { data: products || [], error: null }
+}
+
+// Enhanced function to fetch paginated products with variant options for PLP
+export async function fetchPublishedProductsPagedWithVariants(
+  tenantId: string,
+  params: ProductListParams & { categoryId?: string }
+) {
+  const { 
+    sort = 'updated_at', 
+    dir = 'desc', 
+    page = 1, 
+    pageSize = 12, 
+    q, 
+    minPriceCents, 
+    maxPriceCents, 
+    categoryId,
+    is_featured,
+    is_bestseller,
+    is_new_arrival,
+    is_on_sale,
+    is_limited_edition,
+    is_sold_out,
+    tag,
+    tags,
+    filter
+  } = params
+  
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
+  
+  let selectCols = `
+    id, name, slug, description, price_cents, compare_at_price_cents, stock, currency, 
+    hero_image_url, low_stock_threshold, is_featured, is_bestseller, is_new_arrival, 
+    is_on_sale, is_limited_edition, is_sold_out, custom_badge_text, badge_color, 
+    badge_priority, badge_display_until, badge_display_from, tags,
+    product_variant_options(
+      variant_options(
+        id, name, display_name, type, sort_order,
+        variant_option_values(
+          id, value, display_value, color_hex, image_url, sort_order,
+          price_adjustment_cents, cost_adjustment_cents
+        )
+      )
+    )
+  `
+  
+  if (categoryId) {
+    selectCols += ', product_categories!inner(category_id)'
+  }
+  
+  let query = supabaseAdmin
+    .from('products')
+    .select(selectCols, { count: 'exact' })
+    .eq('tenant_id', tenantId)
+    .eq('status', 'published')
+    
+  if (categoryId) {
+    query = query.eq('product_categories.category_id', categoryId)
+  }
+  
+  if (q && q.trim()) {
+    query = query.ilike('name', `%${q.trim()}%`)
+  }
+  
+  if (typeof minPriceCents === 'number' && !Number.isNaN(minPriceCents)) {
+    query = query.gte('price_cents', minPriceCents)
+  }
+  
+  if (typeof maxPriceCents === 'number' && !Number.isNaN(maxPriceCents)) {
+    query = query.lte('price_cents', maxPriceCents)
+  }
+  
+  // Badge filters
+  if (is_featured !== undefined) {
+    query = query.eq('is_featured', is_featured)
+  }
+  if (is_bestseller !== undefined) {
+    query = query.eq('is_bestseller', is_bestseller)
+  }
+  if (is_new_arrival !== undefined) {
+    query = query.eq('is_new_arrival', is_new_arrival)
+  }
+  if (is_on_sale !== undefined) {
+    query = query.eq('is_on_sale', is_on_sale)
+  }
+  if (is_limited_edition !== undefined) {
+    query = query.eq('is_limited_edition', is_limited_edition)
+  }
+  if (is_sold_out !== undefined) {
+    query = query.eq('is_sold_out', is_sold_out)
+  }
+  
+  // Tag filters
+  if (tag) {
+    query = query.contains('tags', [tag])
+  }
+  if (tags && tags.length > 0) {
+    query = query.overlaps('tags', tags)
+  }
+  
+  // Filter presets
+  if (filter) {
+    switch (filter) {
+      case 'featured':
+        query = query.eq('is_featured', true)
+        break
+      case 'new-arrivals':
+        query = query.eq('is_new_arrival', true)
+        break
+      case 'sale':
+        query = query.eq('is_on_sale', true)
+        break
+      case 'bestsellers':
+        query = query.eq('is_bestseller', true)
+        break
+    }
+  }
+  
+  // Apply sorting and pagination
+  query = query.order(sort, { ascending: dir === 'asc' }).range(from, to)
+  
+  const { data, count, error } = await query
+  
+  return { data, count, error }
 }

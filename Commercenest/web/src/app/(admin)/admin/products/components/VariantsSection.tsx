@@ -18,6 +18,8 @@ interface VariantOptionValue {
   displayValue: string
   colorHex?: string
   imageUrl?: string
+  priceAdjustmentCents?: number
+  costAdjustmentCents?: number
 }
 
 interface VariantCombination {
@@ -97,6 +99,24 @@ export function VariantsSection({
           displayValue
         }
         return { ...option, values: [...option.values, newValue] }
+      }
+      return option
+    })
+    onVariantOptionsChange(updatedOptions)
+  }
+
+  const updateOptionValue = (optionId: string, valueId: string, field: keyof VariantOptionValue, value: string | number) => {
+    const updatedOptions = variantOptions.map(option => {
+      if (option.id === optionId) {
+        return {
+          ...option,
+          values: option.values.map(v => {
+            if (v.id === valueId) {
+              return { ...v, [field]: value }
+            }
+            return v
+          })
+        }
       }
       return option
     })
@@ -299,17 +319,43 @@ export function VariantsSection({
                           />
                         </div>
 
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                        <div className="space-y-2">
                           {option.values.map((value) => (
-                            <div key={value.id} className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-md">
-                              <span className="text-sm text-gray-700">{value.displayValue}</span>
-                              <button
-                                type="button"
-                                onClick={() => removeOptionValue(option.id, value.id)}
-                                className="text-red-500 hover:text-red-700"
-                              >
-                                <XMarkIcon className="h-3 w-3" />
-                              </button>
+                            <div key={value.id} className="bg-gray-50 px-3 py-2 rounded-md">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-sm font-medium text-gray-700">{value.displayValue}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => removeOptionValue(option.id, value.id)}
+                                  className="text-red-500 hover:text-red-700"
+                                >
+                                  <XMarkIcon className="h-3 w-3" />
+                                </button>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <label className="text-xs text-gray-500">Price Adjustment (₹)</label>
+                                  <input
+                                    type="number"
+                                    value={value.priceAdjustmentCents ? value.priceAdjustmentCents / 100 : 0}
+                                    onChange={(e) => updateOptionValue(option.id, value.id, 'priceAdjustmentCents', parseFloat(e.target.value) * 100)}
+                                    className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-indigo-500 focus:border-indigo-500"
+                                    placeholder="0.00"
+                                    step="0.01"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-xs text-gray-500">Cost Adjustment (₹)</label>
+                                  <input
+                                    type="number"
+                                    value={value.costAdjustmentCents ? value.costAdjustmentCents / 100 : 0}
+                                    onChange={(e) => updateOptionValue(option.id, value.id, 'costAdjustmentCents', parseFloat(e.target.value) * 100)}
+                                    className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-indigo-500 focus:border-indigo-500"
+                                    placeholder="0.00"
+                                    step="0.01"
+                                  />
+                                </div>
+                              </div>
                             </div>
                           ))}
                         </div>

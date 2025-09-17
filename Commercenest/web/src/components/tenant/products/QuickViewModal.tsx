@@ -21,6 +21,11 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
   const [viewingCount, setViewingCount] = useState(0)
   const [recentPurchases, setRecentPurchases] = useState<string[]>([])
   
+  // Variant Selection State
+  const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({})
+  const [variantValidationError, setVariantValidationError] = useState<string>('')
+  const [, forceUpdate] = useState({})
+  
   // Limited Time Offer States
   const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 })
   const [flashSaleActive, setFlashSaleActive] = useState(false)
@@ -80,7 +85,45 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
     }
   }, [isOpen, flashSaleActive])
 
+  // Force re-render when selectedVariants changes to update price display
+  useEffect(() => {
+    forceUpdate({});
+  }, [selectedVariants]);
+
+  // Calculate current price based on selected variants
+  const calculateCurrentPrice = () => {
+    if (!product) return 0;
+    
+    let currentPrice = product.price_cents / 100; // Convert cents to rupees
+    
+    if (product.product_variant_options && product.product_variant_options.length > 0) {
+      let adjustmentCents = 0;
+      product.product_variant_options.forEach(option => {
+        const variantOption = option.variant_options;
+        const selectedValue = selectedVariants[variantOption.name];
+        if (selectedValue) {
+          const valueObj = variantOption.variant_option_values.find(v => v.value === selectedValue);
+          if (valueObj) {
+            adjustmentCents += valueObj.price_adjustment_cents || 0;
+          }
+        }
+      });
+      currentPrice = (product.price_cents + adjustmentCents) / 100;
+      console.log('QuickView Price updated:', product.name, 'from ₹' + (product.price_cents / 100), 'to ₹' + currentPrice, 'adjustment:', adjustmentCents);
+    }
+    
+    return currentPrice;
+  };
+
+  const handleVariantSelect = (optionName: string, value: string) => {
+    console.log('QuickView Variant selected:', product?.name, optionName + ':', value);
+    setSelectedVariants(prev => ({ ...prev, [optionName]: value }));
+    setVariantValidationError(''); // Clear error when variant is selected
+  };
+
   if (!product) return null
+
+  const currentPrice = calculateCurrentPrice();
 
   const formatPrice = (priceCents: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -101,8 +144,38 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
   }
 
   const handleAddToCart = () => {
-    // TODO: Implement add to cart functionality
-    console.log('Adding to cart:', { product: product.name, size: selectedSize, quantity })
+    if (!product) return;
+    
+    // Validate variants if product has variants
+    if (product.product_variant_options && product.product_variant_options.length > 0) {
+      const missingVariants: string[] = [];
+      product.product_variant_options.forEach(option => {
+        const variantOption = option.variant_options;
+        const selectedValue = selectedVariants[variantOption.name];
+        if (!selectedValue) {
+          missingVariants.push(variantOption.display_name || variantOption.name);
+        }
+      });
+
+      if (missingVariants.length > 0) {
+        const message = missingVariants.length === 1
+          ? `Please select ${missingVariants[0].toLowerCase()}`
+          : `Please select ${missingVariants.join(', ').toLowerCase()}`;
+        setVariantValidationError(message);
+        return;
+      }
+    }
+    
+    // Clear validation error and proceed with add to cart
+    setVariantValidationError('');
+    console.log('QuickView Adding to cart:', { 
+      product: product.name, 
+      selectedVariants, 
+      selectedSize, 
+      quantity,
+      finalPrice: currentPrice
+    });
+    // TODO: Implement actual add to cart functionality
   }
 
   const handleQuantityChange = (newQuantity: number) => {
@@ -314,7 +387,7 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
                         <div className="space-y-1">
                           <div className="flex items-center space-x-3">
                             <span className="text-2xl font-bold text-gray-900">
-                              {formatPrice(product.price_cents)}
+                              ₹{currentPrice}
                             </span>
                             {hasDiscount && (
                               <>
@@ -330,6 +403,14 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
                           <div className="text-sm text-gray-600">
                             Inclusive of all taxes
                           </div>
+                          {product.product_variant_options && product.product_variant_options.length > 0 && (
+                            <div className="text-sm text-indigo-600 font-medium">
+                              {Object.keys(selectedVariants).length > 0 ? 
+                                `Price for selected ${Object.entries(selectedVariants).map(([key, value]) => `${key}: ${value}`).join(', ')}` :
+                                'Select options to see final price'
+                              }
+                            </div>
+                          )}
                         </div>
 
                         {/* Enhanced Stock Status with Urgency */}
@@ -375,25 +456,63 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
                           )}
                         </div>
 
-                        {/* Size Selection */}
-                        <div>
-                          <h3 className="text-sm font-medium text-gray-900 mb-2">Select Size</h3>
-                          <div className="flex space-x-2">
-                            {['S', 'M', 'L', 'XL'].map((size) => (
-                              <button
-                                key={size}
-                                onClick={() => setSelectedSize(size)}
-                                className={`px-4 py-2 text-sm font-medium rounded-lg border transition-colors duration-200 ${
-                                  selectedSize === size
-                                    ? 'border-indigo-600 bg-indigo-50 text-indigo-600'
-                                    : 'border-gray-300 text-gray-700 hover:border-gray-400'
-                                }`}
-                              >
-                                {size}
-                              </button>
-                            ))}
+                        {/* Variant Selection */}
+                        {product.product_variant_options && product.product_variant_options.length > 0 ? (
+                          <div className="space-y-4">
+                            {product.product_variant_options.map((option) => {
+                              const variantOption = option.variant_options;
+                              return (
+                                <div key={variantOption.id}>
+                                  <h3 className="text-sm font-medium text-gray-900 mb-2">
+                                    Select {variantOption.display_name || variantOption.name}
+                                  </h3>
+                                  <div className="flex flex-wrap gap-2">
+                                    {variantOption.variant_option_values.map((value) => (
+                                      <button
+                                        key={value.id}
+                                        onClick={() => handleVariantSelect(variantOption.name, value.value)}
+                                        className={`px-4 py-2 text-sm font-medium rounded-lg border transition-colors duration-200 ${
+                                          selectedVariants[variantOption.name] === value.value
+                                            ? 'border-indigo-600 bg-indigo-50 text-indigo-600'
+                                            : 'border-gray-300 text-gray-700 hover:border-gray-400'
+                                        }`}
+                                      >
+                                        {value.display_value}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                            
+                            {/* Variant Validation Error */}
+                            {variantValidationError && (
+                              <div className="text-sm text-red-600 font-medium bg-red-50 p-3 rounded-lg border border-red-200">
+                                {variantValidationError}
+                              </div>
+                            )}
                           </div>
-                        </div>
+                        ) : (
+                          // Fallback to original size selection for products without variants
+                          <div>
+                            <h3 className="text-sm font-medium text-gray-900 mb-2">Select Size</h3>
+                            <div className="flex space-x-2">
+                              {['S', 'M', 'L', 'XL'].map((size) => (
+                                <button
+                                  key={size}
+                                  onClick={() => setSelectedSize(size)}
+                                  className={`px-4 py-2 text-sm font-medium rounded-lg border transition-colors duration-200 ${
+                                    selectedSize === size
+                                      ? 'border-indigo-600 bg-indigo-50 text-indigo-600'
+                                      : 'border-gray-300 text-gray-700 hover:border-gray-400'
+                                  }`}
+                                >
+                                  {size}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
 
                         {/* Quantity */}
                         <div>

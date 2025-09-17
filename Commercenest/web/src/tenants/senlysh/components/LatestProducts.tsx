@@ -21,6 +21,25 @@ interface Product {
   // New badge system fields
   allBadges?: Array<{ text: string; className: string; priority: number; icon?: string }>;
   badgeColor?: string;
+  // Variant support
+  id: string;
+  hasVariants: boolean;
+  variantOptions?: Array<{
+    id: string;
+    name: string;
+    display_name: string;
+    type: string;
+    values: Array<{
+      id: string;
+      value: string;
+      display_value: string;
+      color_hex?: string;
+      image_url?: string;
+      price_adjustment_cents: number;
+      cost_adjustment_cents: number;
+      sort_order: number;
+    }>;
+  }>;
 }
 
 interface ApiProduct {
@@ -49,6 +68,25 @@ interface ApiProduct {
   badge_display_from?: string;
   // Known DB field used as primary image
   hero_image_url?: string;
+  // Variant support
+  product_variant_options?: Array<{
+    variant_options: {
+      id: string;
+      name: string;
+      display_name: string;
+      type: string;
+      variant_option_values: Array<{
+        id: string;
+        value: string;
+        display_value: string;
+        color_hex?: string;
+        image_url?: string;
+        price_adjustment_cents: number;
+        cost_adjustment_cents: number;
+        sort_order: number;
+      }>;
+    };
+  }>;
 }
 
 interface LatestProductsProps {
@@ -67,6 +105,13 @@ const LatestProducts: React.FC<LatestProductsProps> = ({
   bgColor = "bg-white",
   apiProducts: propApiProducts
 }) => {
+  // Debug logging to understand data flow
+  console.log('LatestProducts received data:', {
+    propProductsLength: propProducts?.length || 0,
+    propApiProductsLength: propApiProducts?.length || 0,
+    sampleApiProduct: propApiProducts?.[0]
+  });
+
   const [products, setProducts] = useState<Product[]>(propProducts || []); // PRODUCTION READY: No default products - only database data
   const [hoveredProduct, setHoveredProduct] = useState<string | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState<{ [key: string]: number }>({});
@@ -91,13 +136,33 @@ const LatestProducts: React.FC<LatestProductsProps> = ({
     is_on_sale: apiProduct.is_on_sale,
     is_limited_edition: apiProduct.is_limited_edition,
     is_sold_out: apiProduct.is_sold_out,
+    // Include variant information for QuickViewModal - fix structure to match ProductListItem
+    product_variant_options: apiProduct.product_variant_options?.map(optionGroup => ({
+      variant_options: {
+        ...optionGroup.variant_options,
+        sort_order: 0 // Add missing sort_order field
+      }
+    })),
   });
   const { addItem } = useCart();
 
   useEffect(() => {
+    console.log('LatestProducts useEffect triggered:', {
+      propApiProductsExists: !!propApiProducts,
+      isArray: Array.isArray(propApiProducts),
+      length: propApiProducts?.length || 0
+    });
+
     if (propApiProducts && Array.isArray(propApiProducts) && propApiProducts.length > 0) {
+      console.log('Starting transformation of', propApiProducts.length, 'products');
       const transformedProducts = propApiProducts.slice(0, 8).map(product => {
+        console.log('Transforming product:', product?.name, {
+          hasVariantOptions: !!product.product_variant_options,
+          variantOptionsLength: product.product_variant_options?.length || 0,
+          variantOptions: product.product_variant_options
+        });
         if (!product || typeof product !== 'object') {
+          console.log('Skipping invalid product:', product);
           return null;
         }
         
@@ -157,24 +222,66 @@ const LatestProducts: React.FC<LatestProductsProps> = ({
 
         const productSlug = product.slug || generateSlug(product.name || 'unnamed-product');
 
+        // Transform variant options
+        const variantOptions = product.product_variant_options?.map(pvo => ({
+          id: pvo.variant_options.id,
+          name: pvo.variant_options.name,
+          display_name: pvo.variant_options.display_name,
+          type: pvo.variant_options.type,
+          values: pvo.variant_options.variant_option_values.map(value => ({
+            id: value.id,
+            value: value.value,
+            display_value: value.display_value,
+            color_hex: value.color_hex,
+            image_url: value.image_url,
+            price_adjustment_cents: value.price_adjustment_cents,
+            cost_adjustment_cents: value.cost_adjustment_cents,
+            sort_order: value.sort_order
+          }))
+        })) || [];
+
+        const hasVariants = variantOptions.length > 0;
+
+        console.log('Product variant transformation result:', product?.name, {
+          hasVariants,
+          variantOptionsCount: variantOptions.length,
+          variantOptions: variantOptions
+        });
+
         return {
+          id: product.id,
           name: product.name || 'Unnamed Product',
           images: resolvedImages,
           price: price,
           originalPrice: originalPrice,
           badge: primaryBadge.text,
           url: `/senlysh/products/${productSlug}`,
-          sizes: ['M-38', 'L-40', 'XL-42'],
+          sizes: ['M-38', 'L-40', 'XL-42'], // Fallback for products without variants
           isNew: product.is_new_arrival || (product.status === 'published' && Math.random() > 0.7),
           isTrending: product.is_bestseller || Math.random() > 0.8,
           discount: discount,
           // Store all badges for rendering
           allBadges: badges,
-          badgeColor: product.badge_color
+          badgeColor: product.badge_color,
+          // Variant support
+          hasVariants: hasVariants,
+          variantOptions: variantOptions
         };
       }).filter(product => product !== null) as Product[]; // Remove any null entries
       
+      console.log('Transformation complete:', {
+        originalCount: propApiProducts.length,
+        transformedCount: transformedProducts.length,
+        transformedProducts: transformedProducts.map(p => ({ name: p.name, price: p.price }))
+      });
+      
       setProducts(transformedProducts);
+    } else {
+      console.log('No products to transform:', {
+        propApiProductsExists: !!propApiProducts,
+        isArray: Array.isArray(propApiProducts),
+        length: propApiProducts?.length || 0
+      });
     }
   }, [propApiProducts]);
 
@@ -235,6 +342,69 @@ const LatestProducts: React.FC<LatestProductsProps> = ({
     }
   };
 
+  const handleAddToCartWithVariants = (product: Product, selectedVariants?: Record<string, string>) => {
+    // Find the original API product data
+    const apiProduct = propApiProducts?.find(p => p.name === product.name);
+    if (apiProduct) {
+      // If product has variants, validate selection
+      if (product.hasVariants && product.variantOptions && product.variantOptions.length > 0) {
+        const missingVariants: string[] = [];
+        product.variantOptions.forEach(option => {
+          const selectedValue = selectedVariants?.[option.name];
+          if (!selectedValue) {
+            missingVariants.push(option.display_name || option.name);
+          }
+        });
+
+        if (missingVariants.length > 0) {
+          const message = missingVariants.length === 1
+            ? `Please select ${missingVariants[0].toLowerCase()}`
+            : `Please select ${missingVariants.join(', ').toLowerCase()}`;
+          alert(message); // Simple alert for now
+          return false;
+        }
+
+        // Calculate final price with variant adjustments
+        let finalPrice = product.price * 100; // Convert to cents
+        if (selectedVariants) {
+          product.variantOptions.forEach(option => {
+            const selectedValue = selectedVariants[option.name];
+            if (selectedValue) {
+              const valueObj = option.values.find(v => v.value === selectedValue);
+              if (valueObj) {
+                finalPrice += valueObj.price_adjustment_cents;
+              }
+            }
+          });
+        }
+
+        addItem({
+          productId: apiProduct.id,
+          name: product.name,
+          price: finalPrice,
+          imageUrl: product.images[0],
+          quantity: 1,
+          variant: Object.keys(selectedVariants || {}).length > 0
+            ? { id: `variant_${Object.values(selectedVariants || {}).join('_')}`, name: 'Variant', options: selectedVariants || {} }
+            : undefined
+        });
+      } else {
+        // No variants, use regular add to cart
+        addItem({
+          productId: apiProduct.id,
+          name: product.name,
+          price: product.price * 100,
+          imageUrl: product.images[0],
+          quantity: 1
+        });
+      }
+      
+      console.log('Added to cart:', product.name, selectedVariants);
+      return true;
+    }
+    return false;
+  };
+
   const closeQuickView = () => {
     setIsQuickViewOpen(false);
     setQuickViewProduct(null);
@@ -261,233 +431,19 @@ const LatestProducts: React.FC<LatestProductsProps> = ({
           className="px-4"
           itemClassName="animate-fade-in-up"
         >
-            {products.map((product, index) => {
-              const imageIndex = currentImageIndex[product.name] || 0;
-
-              return (
-                <div 
-                  key={product.name} 
-                className="group relative w-full animate-fade-in-up px-2"
-                  style={{ animationDelay: `${index * 100}ms` }}
-                  onMouseEnter={() => handleMouseEnter(product.name)}
-                  onMouseLeave={handleMouseLeave}
-                >
-                  {/* Product Card Container - Fixed Height */}
-                  <div className="relative overflow-hidden rounded-lg shadow-lg h-full flex flex-col
-                    transition-all duration-300 ease-out will-change-transform
-                    group-hover:scale-105 group-hover:shadow-xl
-                    group-hover:-translate-y-1 motion-reduce:transition-none
-                    hover:z-10">
-                    
-                    {/* Image Container - Fixed Height */}
-                    <div className="relative h-48 sm:h-56 md:h-64 overflow-hidden flex-shrink-0">
-                      {/* All Product Images (for smooth transitions) */}
-                      {product.images.map((image, imgIndex) => (
-                        <div
-                          key={imgIndex}
-                          className={`absolute inset-0 transition-opacity duration-500 ease-in-out ${
-                            imgIndex === imageIndex ? 'opacity-100' : 'opacity-0'
-                          }`}
-                        >
-                          <Image
-                            src={image}
-                            alt={`${product.name} - View ${imgIndex + 1}`}
-                            fill
-                            loading="lazy"
-                            className="object-cover transition-transform duration-700 ease-out
-                              group-hover:scale-110 motion-reduce:transition-none"
-                            onError={(e) => {
-                              console.error('LatestProducts image failed to load:', image);
-                              const fallbackImages = [
-                                'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=400&fit=crop&crop=center',
-                                'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=400&h=400&fit=crop&crop=center',
-                                'https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?w=400&h=400&fit=crop&crop=center'
-                              ];
-                              e.currentTarget.src = fallbackImages[Math.floor(Math.random() * fallbackImages.length)];
-                            }}
-                            onLoad={() => {
-                              console.log('LatestProducts image loaded successfully:', image);
-                            }}
-                          />
-                        </div>
-                      ))}
-                      
-                      {/* Image Overlay */}
-                      <div className="absolute inset-0 
-                        bg-gradient-to-t from-black/20 via-transparent to-transparent
-                        opacity-0 group-hover:opacity-100
-                        transition-opacity duration-300 motion-reduce:transition-none"></div>
-
-                      {/* Badge with enhanced animations */}
-                      <div className="absolute top-2 left-2 flex flex-col gap-1">
-                        {product.allBadges && product.allBadges.length > 0 ? (
-                          product.allBadges.map((badge, badgeIndex) => (
-                            <span 
-                              key={badgeIndex}
-                              className={`text-xs px-2 py-1 rounded-full font-semibold
-                                transition-all duration-200 hover:scale-110 hover:shadow-lg
-                                motion-reduce:animate-none ${getBadgeClassName(badge, product.badgeColor)}`}
-                              style={getBadgeStyle(badge, product.badgeColor)}
-                            >
-                              {badge.icon && <span className="mr-1">{badge.icon}</span>}
-                              {badge.text}
-                            </span>
-                          ))
-                        ) : (
-                          // Fallback to old badge system for backward compatibility
-                          <>
-                            {product.isNew && (
-                              <span className="bg-green-500 text-white text-xs px-2 py-1 rounded-full font-semibold
-                                animate-bounce hover:animate-pulse transition-all duration-200
-                                hover:scale-110 hover:shadow-lg motion-reduce:animate-none">
-                                ✨ New
-                              </span>
-                            )}
-                            {product.isTrending && (
-                              <span className="bg-orange-500 text-white text-xs px-2 py-1 rounded-full font-semibold 
-                                animate-pulse hover:animate-bounce transition-all duration-200
-                                hover:scale-110 hover:shadow-lg motion-reduce:animate-none">
-                                🔥 Trending
-                              </span>
-                            )}
-                            <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-semibold
-                              transition-all duration-200 hover:scale-110 hover:shadow-lg
-                              group-hover:bg-red-400">
-                              {product.badge}
-                            </span>
-                          </>
-                        )}
-                      </div>
-
-                      {/* Wishlist Button with enhanced hover */}
-                      <Link href="/wishlist" className="absolute top-2 right-2 bg-white p-3 rounded-full shadow-lg
-                        hover:bg-gray-100 transition-all duration-300 transform hover:scale-110 
-                        motion-reduce:transition-none z-10 hover:shadow-xl
-                        hover:-translate-y-0.5 min-w-[44px] min-h-[44px] flex items-center justify-center">
-                        <svg className="h-4 w-4 text-gray-600 transition-transform duration-200
-                          group-hover:rotate-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                        </svg>
-                      </Link>
-
-                      {/* Quick Actions on Hover with staggered animation */}
-                      <div className="absolute bottom-2 left-2 right-2 flex justify-center gap-2 opacity-0 group-hover:opacity-100 
-                        transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 
-                        motion-reduce:transition-none z-10">
-                      <button 
-                        onClick={() => handleQuickView(product)}
-                        className="bg-white text-gray-800 px-4 py-2 rounded-full text-sm font-semibold
-                          shadow-lg hover:bg-gray-100 transition-all duration-200 hover:scale-105
-                        hover:shadow-xl hover:-translate-y-0.5 min-h-[44px] flex items-center justify-center">
-                          Quick View
-                        </button>
-                      <button 
-                        onClick={() => handleAddToCart(product)}
-                        className="bg-purple-600 text-white px-4 py-2 rounded-full text-sm font-semibold
-                          shadow-lg hover:bg-purple-700 transition-all duration-200 hover:scale-105
-                        hover:shadow-xl hover:-translate-y-0.5 min-h-[44px] flex items-center justify-center">
-                          Add to Cart
-                        </button>
-                      </div>
-
-                      {/* Image Navigation Dots with enhanced interaction */}
-                      {product.images.length > 1 && (
-                        <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex gap-1 
-                          opacity-0 group-hover:opacity-100 transition-opacity duration-300 
-                          motion-reduce:transition-none z-10">
-                          {product.images.map((_, dotIndex) => (
-                            <button
-                              key={dotIndex}
-                              onClick={() => handleImageClick(product.name, dotIndex)}
-                              className={`w-2 h-2 rounded-full transition-all duration-200 cursor-pointer
-                                hover:scale-125 hover:shadow-sm ${
-                                dotIndex === imageIndex 
-                                  ? 'bg-white scale-125 shadow-sm' 
-                                  : 'bg-white/50 hover:bg-white/75'
-                              }`}
-                            />
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Subtle shine effect on hover */}
-                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 
-                        transition-opacity duration-700 ease-out pointer-events-none
-                        bg-gradient-to-r from-transparent via-white/20 to-transparent
-                        transform -skew-x-12 -translate-x-full group-hover:translate-x-full
-                        motion-reduce:transition-none"></div>
-                    </div>
-
-                    {/* Product Info - Flex Grow to Fill Space */}
-                    <div className="p-3 sm:p-4 flex flex-col flex-grow">
-                      <Link href={product.url} className="block flex-grow">
-                        <h3 className="text-sm sm:text-base font-semibold text-gray-800 mb-2 
-                          hover:text-purple-600 transition-colors duration-200 line-clamp-2 
-                          motion-reduce:transition-none min-h-[2.5rem] sm:min-h-[3rem]
-                          group-hover:scale-[1.02] transform-gpu">
-                          {product.name}
-                        </h3>
-                        
-                        {/* Price Section with enhanced hover */}
-                        <div className="space-y-1 mb-2">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                              <span className="text-base sm:text-lg font-bold text-gray-800 
-                                transition-colors duration-200 group-hover:text-purple-600">
-                                ₹{product.price}
-                              </span>
-                              <span className="text-sm text-gray-500 line-through 
-                                transition-opacity duration-200 group-hover:opacity-75">
-                                ₹{product.originalPrice}
-                              </span>
-                            </div>
-                            {product.discount && (
-                              <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full font-semibold
-                                transition-all duration-200 hover:scale-110 hover:shadow-sm
-                                group-hover:bg-red-200">
-                                {product.discount}% OFF
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            Inclusive of all taxes
-                          </div>
-                        </div>
-                      </Link>
-
-                      {/* Size Options - Fixed Height with enhanced interactions */}
-                      <div className="mt-auto">
-                        {product.sizes && (
-                          <div className="flex flex-wrap gap-2 mt-2 min-h-[2rem]">
-                            {product.sizes.map((size) => (
-                              <Link 
-                                key={size} 
-                                href="#" 
-                                className="text-sm text-gray-600 hover:text-purple-600 border border-gray-300
-                                  px-3 py-2 rounded transition-all duration-200 hover:border-purple-300
-                                  motion-reduce:transition-none hover:scale-105 hover:shadow-sm
-                                  hover:-translate-y-0.5 transform-gpu min-w-[44px] min-h-[44px]
-                                  flex items-center justify-center"
-                              >
-                                {size}
-                              </Link>
-                            ))}
-                          </div>
-                        )}
-                        {/* Spacer for products without sizes */}
-                        {!product.sizes && <div className="min-h-[1.5rem]"></div>}
-                      </div>
-                    </div>
-
-                    {/* Enhanced Hover Effect Overlay */}
-                    <div className="absolute inset-0 
-                      bg-gradient-to-t from-purple-500/10 via-purple-500/5 to-transparent 
-                      opacity-0 group-hover:opacity-100 
-                      transition-opacity duration-300 motion-reduce:transition-none"></div>
-                  </div>
-                </div>
-              );
-            })}
+            {products.map((product, index) => (
+              <ProductCardWithVariants
+                key={product.id}
+                product={product}
+                index={index}
+                currentImageIndex={currentImageIndex[product.name] || 0}
+                onMouseEnter={() => handleMouseEnter(product.name)}
+                onMouseLeave={handleMouseLeave}
+                onImageClick={(productName, imgIndex) => handleImageClick(productName, imgIndex)}
+                onQuickView={() => handleQuickView(product)}
+                onAddToCart={(selectedVariants) => handleAddToCartWithVariants(product, selectedVariants)}
+              />
+            ))}
         </AutoCarousel>
       </div>
       
@@ -498,6 +454,374 @@ const LatestProducts: React.FC<LatestProductsProps> = ({
         onClose={closeQuickView}
       />
     </section>
+  );
+};
+
+// Product Card Component with Variant Support
+interface ProductCardProps {
+  product: Product;
+  index: number;
+  currentImageIndex: number;
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
+  onImageClick: (productName: string, imgIndex: number) => void;
+  onQuickView: () => void;
+  onAddToCart: (selectedVariants?: Record<string, string>) => boolean;
+}
+
+const ProductCardWithVariants: React.FC<ProductCardProps> = ({
+  product,
+  index,
+  currentImageIndex,
+  onMouseEnter,
+  onMouseLeave,
+  onImageClick,
+  onQuickView,
+  onAddToCart
+}) => {
+  const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
+  const [variantValidationError, setVariantValidationError] = useState<string>('');
+  const [, forceUpdate] = useState({});
+
+  // Force re-render when selectedVariants changes to update price display
+  useEffect(() => {
+    forceUpdate({});
+  }, [selectedVariants]);
+
+  // Debug logging for ProductCardWithVariants (reduced for performance)
+  console.log('ProductCardWithVariants:', product.name, 'hasVariants:', product.hasVariants);
+
+  // Calculate current price based on selected variants
+  const calculateCurrentPrice = () => {
+    let currentPrice = product.price;
+    
+    if (product.hasVariants && product.variantOptions) {
+      let adjustmentCents = 0;
+      product.variantOptions.forEach(option => {
+        const selectedValue = selectedVariants[option.name];
+        if (selectedValue) {
+          const valueObj = option.values.find(v => v.value === selectedValue);
+          if (valueObj) {
+            adjustmentCents += valueObj.price_adjustment_cents;
+          }
+        }
+      });
+      currentPrice = (product.price * 100 + adjustmentCents) / 100;
+      console.log('Price updated:', product.name, 'from ₹' + product.price, 'to ₹' + currentPrice, 'adjustment:', adjustmentCents);
+    }
+    
+    return currentPrice;
+  };
+
+  const currentPrice = calculateCurrentPrice();
+
+  const handleVariantSelect = (optionName: string, value: string) => {
+    console.log('Variant selected:', product.name, optionName + ':', value);
+    setSelectedVariants(prev => ({ ...prev, [optionName]: value }));
+    setVariantValidationError(''); // Clear error when variant is selected
+  };
+
+  const handleAddToCartClick = () => {
+    console.log('handleAddToCartClick called for:', product.name, {
+      hasVariants: product.hasVariants,
+      variantOptionsLength: product.variantOptions?.length || 0,
+      selectedVariants: selectedVariants,
+      variantOptions: product.variantOptions
+    });
+    
+    if (product.hasVariants && product.variantOptions && product.variantOptions.length > 0) {
+      const missingVariants: string[] = [];
+      product.variantOptions.forEach(option => {
+        const selectedValue = selectedVariants[option.name];
+        console.log(`Checking variant option: ${option.name}, selectedValue: ${selectedValue}`);
+        if (!selectedValue) {
+          missingVariants.push(option.display_name || option.name);
+        }
+      });
+
+      if (missingVariants.length > 0) {
+        const message = missingVariants.length === 1
+          ? `Please select ${missingVariants[0].toLowerCase()}`
+          : `Please select ${missingVariants.join(', ').toLowerCase()}`;
+        console.log('Validation failed, missing variants:', missingVariants, 'message:', message);
+        setVariantValidationError(message);
+        return;
+      }
+    }
+    
+    console.log('Validation passed, calling onAddToCart with:', selectedVariants);
+    const success = onAddToCart(selectedVariants);
+    if (success) {
+      setVariantValidationError('');
+    }
+  };
+
+  return (
+    <div 
+      className="group relative w-full animate-fade-in-up px-2"
+      style={{ animationDelay: `${index * 100}ms` }}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
+      {/* Product Card Container - Fixed Height */}
+      <div className="relative overflow-hidden rounded-lg shadow-lg h-full flex flex-col
+        transition-all duration-300 ease-out will-change-transform
+        group-hover:scale-105 group-hover:shadow-xl
+        group-hover:-translate-y-1 motion-reduce:transition-none
+        hover:z-10">
+        
+        {/* Image Container - Fixed Height */}
+        <div className="relative h-48 sm:h-56 md:h-64 overflow-hidden flex-shrink-0">
+          {/* All Product Images (for smooth transitions) */}
+          {product.images.map((image, imgIndex) => (
+            <div
+              key={imgIndex}
+              className={`absolute inset-0 transition-opacity duration-500 ease-in-out ${
+                imgIndex === currentImageIndex ? 'opacity-100' : 'opacity-0'
+              }`}
+            >
+              <Image
+                src={image}
+                alt={`${product.name} - View ${imgIndex + 1}`}
+                fill
+                loading="lazy"
+                className="object-cover transition-transform duration-700 ease-out
+                  group-hover:scale-110 motion-reduce:transition-none"
+                onError={(e) => {
+                  console.error('LatestProducts image failed to load:', image);
+                  const fallbackImages = [
+                    'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=400&fit=crop&crop=center',
+                    'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=400&h=400&fit=crop&crop=center',
+                    'https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?w=400&h=400&fit=crop&crop=center'
+                  ];
+                  e.currentTarget.src = fallbackImages[Math.floor(Math.random() * fallbackImages.length)];
+                }}
+                onLoad={() => {
+                  console.log('LatestProducts image loaded successfully:', image);
+                }}
+              />
+            </div>
+          ))}
+          
+          {/* Image Overlay */}
+          <div className="absolute inset-0 
+            bg-gradient-to-t from-black/20 via-transparent to-transparent
+            opacity-0 group-hover:opacity-100
+            transition-opacity duration-300 motion-reduce:transition-none"></div>
+
+          {/* Badge with enhanced animations */}
+          <div className="absolute top-2 left-2 flex flex-col gap-1">
+            {product.allBadges && product.allBadges.length > 0 ? (
+              product.allBadges.map((badge, badgeIndex) => (
+                <span 
+                  key={badgeIndex}
+                  className={`text-xs px-2 py-1 rounded-full font-semibold
+                    transition-all duration-200 hover:scale-110 hover:shadow-lg
+                    motion-reduce:animate-none ${getBadgeClassName(badge, product.badgeColor)}`}
+                  style={getBadgeStyle(badge, product.badgeColor)}
+                >
+                  {badge.icon && <span className="mr-1">{badge.icon}</span>}
+                  {badge.text}
+                </span>
+              ))
+            ) : (
+              // Fallback to old badge system for backward compatibility
+              <>
+                {product.isNew && (
+                  <span className="bg-green-500 text-white text-xs px-2 py-1 rounded-full font-semibold
+                    animate-bounce hover:animate-pulse transition-all duration-200
+                    hover:scale-110 hover:shadow-lg motion-reduce:animate-none">
+                    ✨ New
+                  </span>
+                )}
+                {product.isTrending && (
+                  <span className="bg-orange-500 text-white text-xs px-2 py-1 rounded-full font-semibold 
+                    animate-pulse hover:animate-bounce transition-all duration-200
+                    hover:scale-110 hover:shadow-lg motion-reduce:animate-none">
+                    🔥 Trending
+                  </span>
+                )}
+                <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-semibold
+                  transition-all duration-200 hover:scale-110 hover:shadow-lg
+                  group-hover:bg-red-400">
+                  {product.badge}
+                </span>
+              </>
+            )}
+          </div>
+
+          {/* Wishlist Button with enhanced hover */}
+          <Link href="/wishlist" className="absolute top-2 right-2 bg-white p-3 rounded-full shadow-lg
+            hover:bg-gray-100 transition-all duration-300 transform hover:scale-110 
+            motion-reduce:transition-none z-10 hover:shadow-xl
+            hover:-translate-y-0.5 min-w-[44px] min-h-[44px] flex items-center justify-center">
+            <svg className="h-4 w-4 text-gray-600 transition-transform duration-200
+              group-hover:rotate-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+            </svg>
+          </Link>
+
+          {/* Quick Actions on Hover with staggered animation */}
+          <div className="absolute bottom-2 left-2 right-2 flex justify-center gap-2 opacity-0 group-hover:opacity-100 
+            transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 
+            motion-reduce:transition-none z-10">
+          <button 
+            onClick={onQuickView}
+            className="bg-white text-gray-800 px-4 py-2 rounded-full text-sm font-semibold
+              shadow-lg hover:bg-gray-100 transition-all duration-200 hover:scale-105
+            hover:shadow-xl hover:-translate-y-0.5 min-h-[44px] flex items-center justify-center">
+              Quick View
+            </button>
+          <button 
+            onClick={handleAddToCartClick}
+            className="bg-purple-600 text-white px-4 py-2 rounded-full text-sm font-semibold
+              shadow-lg hover:bg-purple-700 transition-all duration-200 hover:scale-105
+            hover:shadow-xl hover:-translate-y-0.5 min-h-[44px] flex items-center justify-center">
+              Add to Cart
+            </button>
+          </div>
+
+          {/* Image Navigation Dots with enhanced interaction */}
+          {product.images.length > 1 && (
+            <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex gap-1 
+              opacity-0 group-hover:opacity-100 transition-opacity duration-300 
+              motion-reduce:transition-none z-10">
+              {product.images.map((_, dotIndex) => (
+                <button
+                  key={dotIndex}
+                  onClick={() => onImageClick(product.name, dotIndex)}
+                  className={`w-2 h-2 rounded-full transition-all duration-200 cursor-pointer
+                    hover:scale-125 hover:shadow-sm ${
+                    dotIndex === currentImageIndex 
+                      ? 'bg-white scale-125 shadow-sm' 
+                      : 'bg-white/50 hover:bg-white/75'
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Subtle shine effect on hover */}
+          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 
+            transition-opacity duration-700 ease-out pointer-events-none
+            bg-gradient-to-r from-transparent via-white/20 to-transparent
+            transform -skew-x-12 -translate-x-full group-hover:translate-x-full
+            motion-reduce:transition-none"></div>
+        </div>
+
+        {/* Product Info - Flex Grow to Fill Space */}
+        <div className="p-3 sm:p-4 flex flex-col flex-grow">
+          <Link href={product.url} className="block flex-grow">
+            <h3 className="text-sm sm:text-base font-semibold text-gray-800 mb-2 
+              hover:text-purple-600 transition-colors duration-200 line-clamp-2 
+              motion-reduce:transition-none min-h-[2.5rem] sm:min-h-[3rem]
+              group-hover:scale-[1.02] transform-gpu">
+              {product.name}
+            </h3>
+            
+            {/* Enhanced Price Section with Variant Support */}
+            <div className="space-y-1 mb-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <span className="text-base sm:text-lg font-bold text-gray-800 
+                    transition-colors duration-200 group-hover:text-purple-600">
+                    {product.hasVariants ? `₹${currentPrice}` : `₹${currentPrice}`}
+                  </span>
+                  <span className="text-sm text-gray-500 line-through 
+                    transition-opacity duration-200 group-hover:opacity-75">
+                    ₹{product.originalPrice}
+                  </span>
+                </div>
+                {product.discount && (
+                  <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full font-semibold
+                    transition-all duration-200 hover:scale-110 hover:shadow-sm
+                    group-hover:bg-red-200">
+                    {product.discount}% OFF
+                  </span>
+                )}
+              </div>
+              <div className="text-xs text-gray-500">
+                Inclusive of all taxes
+              </div>
+              {product.hasVariants && (
+                <div className="text-xs text-purple-600 font-medium">
+                  {Object.keys(selectedVariants).length > 0 ? 
+                    `Price for selected ${Object.entries(selectedVariants).map(([key, value]) => `${key}: ${value}`).join(', ')}` :
+                    'Select options to see final price'
+                  }
+                </div>
+              )}
+            </div>
+          </Link>
+
+          {/* Variant Selection - Preserving Original Size Design */}
+          <div className="mt-auto relative z-10">
+            {product.hasVariants && product.variantOptions ? (
+              <div className="space-y-2">
+                {product.variantOptions.map((option) => (
+                  <div key={option.id}>
+                    {/* Show all variant types for now to debug */}
+                    <div className="flex flex-wrap gap-2 min-h-[2rem]">
+                      {option.values.map((value) => (
+                        <button
+                          key={value.id}
+                          onClick={() => handleVariantSelect(option.name, value.value)}
+                          className={`text-sm border px-3 py-2 rounded transition-all duration-200
+                            hover:border-purple-300 motion-reduce:transition-none hover:scale-105 hover:shadow-sm
+                            hover:-translate-y-0.5 transform-gpu min-w-[44px] min-h-[44px]
+                            flex items-center justify-center relative z-20 ${
+                            selectedVariants[option.name] === value.value
+                              ? 'text-purple-600 border-purple-600 bg-purple-50'
+                              : 'text-gray-600 hover:text-purple-600 border-gray-300'
+                          }`}
+                        >
+                          {value.display_value}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                
+                {/* Variant Validation Error */}
+                {variantValidationError && (
+                  <div className="text-xs text-red-600 font-medium bg-red-50 p-2 rounded border border-red-200 relative z-10">
+                    {variantValidationError}
+                  </div>
+                )}
+              </div>
+            ) : (
+              // Fallback to original sizes for products without variants
+              product.sizes && (
+                <div className="flex flex-wrap gap-2 mt-2 min-h-[2rem]">
+                  {product.sizes.map((size) => (
+                    <Link 
+                      key={size} 
+                      href="#" 
+                      className="text-sm text-gray-600 hover:text-purple-600 border border-gray-300
+                        px-3 py-2 rounded transition-all duration-200 hover:border-purple-300
+                        motion-reduce:transition-none hover:scale-105 hover:shadow-sm
+                        hover:-translate-y-0.5 transform-gpu min-w-[44px] min-h-[44px]
+                        flex items-center justify-center"
+                    >
+                      {size}
+                    </Link>
+                  ))}
+                </div>
+              )
+            )}
+            {/* Spacer for products without sizes */}
+            {!product.hasVariants && !product.sizes && <div className="min-h-[1.5rem]"></div>}
+          </div>
+        </div>
+
+          {/* Enhanced Hover Effect Overlay - Allow clicks to pass through */}
+          <div className="absolute inset-0 
+            bg-gradient-to-t from-purple-500/10 via-purple-500/5 to-transparent 
+            opacity-0 group-hover:opacity-100 
+            transition-opacity duration-300 motion-reduce:transition-none
+            pointer-events-none"></div>
+      </div>
+    </div>
   );
 };
 

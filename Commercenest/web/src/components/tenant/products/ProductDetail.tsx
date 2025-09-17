@@ -35,23 +35,54 @@ type TenantConfigWithExtras = {
   [key: string]: unknown
 }
 
+interface VariantOptionValue {
+  id: string
+  value: string
+  display_value: string
+  color_hex?: string
+  image_url?: string
+  sort_order: number
+  price_adjustment_cents?: number
+  cost_adjustment_cents?: number
+}
+
+interface VariantOptionData {
+  id: string
+  name: string
+  display_name: string
+  type: 'text' | 'color' | 'image'
+  variant_option_values: VariantOptionValue[]
+}
+
+interface VariantOption {
+  variant_options: VariantOptionData
+}
+
 interface ProductDetailProps {
   product: ProductServerResponse
   images: Record<string, unknown>[]
+  variantOptions?: VariantOption[]
 }
 
-export function ProductDetail({ product, images }: ProductDetailProps) {
+export function ProductDetail({ product, images, variantOptions = [] }: ProductDetailProps) {
   const { addItem } = useCart()
   const tenant = useTenant()
-  const [selectedSize] = useState('')
+  const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({})
   const [quantity, setQuantity] = useState(1)
   const [activeImage, setActiveImage] = useState(0)
   const [activeTab, setActiveTab] = useState('description')
+  const [variantValidationError, setVariantValidationError] = useState<string>('')
   const [isAutoScrolling, setIsAutoScrolling] = useState(true)
   const [showSizeGuide, setShowSizeGuide] = useState(false)
   const [showDeliveryReturns, setShowDeliveryReturns] = useState(false)
   const [showAskQuestion, setShowAskQuestion] = useState(false)
   const [peopleViewing, setPeopleViewing] = useState(29)
+
+  console.log('[ProductDetail] Rendering with:', { 
+    productName: product?.name, 
+    imagesCount: images?.length, 
+    variantOptionsCount: variantOptions?.length 
+  })
 
   const formatPrice = (priceCents: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -61,6 +92,58 @@ export function ProductDetail({ product, images }: ProductDetailProps) {
       maximumFractionDigits: 0,
     }).format(priceCents / 100)
   }
+
+  // Calculate current price based on selected variants
+  const calculateCurrentPrice = () => {
+    let currentPrice = product.price_cents
+    
+    // Add price adjustments from selected variants
+    variantOptions?.forEach(option => {
+      const variantOption = option.variant_options
+      const selectedValue = selectedVariants[variantOption.name]
+      if (selectedValue) {
+        const optionValue = variantOption.variant_option_values.find(
+          val => val.value === selectedValue
+        )
+        if (optionValue?.price_adjustment_cents) {
+          currentPrice += optionValue.price_adjustment_cents
+        }
+      }
+    })
+    
+    return currentPrice
+  }
+
+  // Validation function to check if all required variants are selected
+  const validateVariantSelection = (): { isValid: boolean; message: string } => {
+    // If no variants exist for this product, validation passes
+    if (!variantOptions || variantOptions.length === 0) {
+      return { isValid: true, message: '' }
+    }
+
+    const missingVariants: string[] = []
+    
+    variantOptions.forEach(option => {
+      const variantOption = option.variant_options
+      const selectedValue = selectedVariants[variantOption.name]
+      
+      if (!selectedValue) {
+        missingVariants.push(variantOption.display_name || variantOption.name)
+      }
+    })
+
+    if (missingVariants.length > 0) {
+      const message = missingVariants.length === 1 
+        ? `Please select ${missingVariants[0].toLowerCase()}`
+        : `Please select ${missingVariants.join(', ').toLowerCase()}`
+      
+      return { isValid: false, message }
+    }
+
+    return { isValid: true, message: '' }
+  }
+
+  const currentPrice = calculateCurrentPrice()
 
   const hasDiscount = product.compare_at_price_cents && product.compare_at_price_cents > product.price_cents
 
@@ -103,15 +186,25 @@ export function ProductDetail({ product, images }: ProductDetailProps) {
   }
 
   const handleAddToCart = () => {
+    // Clear any previous validation errors
+    setVariantValidationError('')
+    
+    // Validate variant selection
+    const validation = validateVariantSelection()
+    if (!validation.isValid) {
+      setVariantValidationError(validation.message)
+      return
+    }
+
     try {
       addItem({
         productId: String(product.id),
         name: String(product.name),
-        price: Number(product.price_cents || 0),
+        price: currentPrice, // Use calculated current price
         imageUrl: allImages[0] as string | undefined,
         quantity,
-        variant: selectedSize
-          ? { id: `size_${selectedSize}`, name: 'Size', options: { size: selectedSize } }
+        variant: Object.keys(selectedVariants).length > 0
+          ? { id: `variant_${Object.values(selectedVariants).join('_')}`, name: 'Variant', options: selectedVariants }
           : undefined,
       })
     } catch (e) {
@@ -120,16 +213,26 @@ export function ProductDetail({ product, images }: ProductDetailProps) {
   }
 
   const handleBuyNow = () => {
+    // Clear any previous validation errors
+    setVariantValidationError('')
+    
+    // Validate variant selection
+    const validation = validateVariantSelection()
+    if (!validation.isValid) {
+      setVariantValidationError(validation.message)
+      return
+    }
+
     try {
       // Add to cart first
       addItem({
         productId: String(product.id),
         name: String(product.name),
-        price: Number(product.price_cents || 0),
+        price: currentPrice, // Use calculated current price
         imageUrl: allImages[0] as string | undefined,
         quantity,
-        variant: selectedSize
-          ? { id: `size_${selectedSize}`, name: 'Size', options: { size: selectedSize } }
+        variant: Object.keys(selectedVariants).length > 0
+          ? { id: `variant_${Object.values(selectedVariants).join('_')}`, name: 'Variant', options: selectedVariants }
           : undefined,
       })
       
@@ -140,8 +243,9 @@ export function ProductDetail({ product, images }: ProductDetailProps) {
     }
   }
 
-  return (
-    <div className="bg-white">
+  try {
+    return (
+      <div className="bg-white">
       {/* Breadcrumb */}
       <div className="px-4 py-3 border-b border-gray-200">
         <nav className="flex items-center space-x-2 text-sm text-gray-500">
@@ -217,23 +321,87 @@ export function ProductDetail({ product, images }: ProductDetailProps) {
                         {formatPrice(product.compare_at_price_cents || 0)}
                       </span>
                       <span className="text-2xl font-bold text-black underline">
-                        {formatPrice(product.price_cents)}
+                        {formatPrice(currentPrice)}
                       </span>
                     </>
                   ) : (
                     <span className="text-2xl font-bold text-black">
-                      {formatPrice(product.price_cents)}
+                      {formatPrice(currentPrice)}
                     </span>
                   )}
                 </div>
                 <div className="text-sm text-gray-600">
                   Inclusive of all taxes
                 </div>
+                {currentPrice !== product.price_cents && (
+                  <div className="text-sm text-blue-600">
+                    Price varies by selected options
+                  </div>
+                )}
               </div>
 
               {/* Stock Status */}
               <div className="text-black font-normal mb-4">In stock</div>
             </div>
+
+            {/* Variant Selection */}
+            {variantOptions && variantOptions.length > 0 && (
+              <div className="space-y-4 mb-6">
+                {variantOptions.map((option, optionIndex) => {
+                  try {
+                    const variantOption = option?.variant_options
+                    if (!variantOption || !variantOption.variant_option_values) {
+                      console.warn('Invalid variant option:', option)
+                      return null
+                    }
+                    
+                    return (
+                      <div key={`${optionIndex}-${variantOption.id || 'unknown'}`} className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700">
+                          {variantOption.display_name || variantOption.name}
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                          {variantOption.variant_option_values
+                            .sort((a, b) => a.sort_order - b.sort_order)
+                            .map((value) => (
+                              <button
+                                key={value.id}
+                                onClick={() => {
+                                  setSelectedVariants(prev => ({
+                                    ...prev,
+                                    [variantOption.name]: value.value
+                                  }))
+                                  // Clear validation error when user makes a selection
+                                  setVariantValidationError('')
+                                }}
+                                className={`px-3 py-2 border rounded-md text-sm font-medium transition-colors ${
+                                  selectedVariants[variantOption.name] === value.value
+                                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                    : 'border-gray-300 text-gray-700 hover:border-gray-400'
+                                }`}
+                                style={{
+                                  backgroundColor: variantOption.type === 'color' && value.color_hex 
+                                    ? value.color_hex 
+                                    : undefined
+                                }}
+                              >
+                                {variantOption.type === 'color' && value.color_hex ? (
+                                  <span className="sr-only">{value.display_value}</span>
+                                ) : (
+                                  value.display_value
+                                )}
+                              </button>
+                            ))}
+                        </div>
+                      </div>
+                    )
+                  } catch (error) {
+                    console.error('Error rendering variant option:', error, option)
+                    return null
+                  }
+                })}
+              </div>
+            )}
 
             {/* Quantity Selector and Action Buttons */}
             <div className="space-y-4">
@@ -263,6 +431,18 @@ export function ProductDetail({ product, images }: ProductDetailProps) {
                   </div>
                 </div>
               </div>
+
+              {/* Variant Validation Error */}
+              {variantValidationError && (
+                <div className="bg-red-50 border border-red-200 rounded-md p-3 mb-4">
+                  <div className="flex items-center">
+                    <svg className="h-5 w-5 text-red-400 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-red-800 text-sm font-medium">{variantValidationError}</span>
+                  </div>
+                </div>
+              )}
 
               {/* Action Buttons */}
               <div className="flex space-x-3">
@@ -673,4 +853,25 @@ export function ProductDetail({ product, images }: ProductDetailProps) {
       )}
     </div>
   )
+  } catch (error) {
+    console.error('[ProductDetail] Error rendering component:', error)
+    return (
+      <div className="bg-white min-h-screen p-8">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Product Details</h1>
+          <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-4">
+            <p className="text-red-700">
+              There was an error loading the product details. Please try refreshing the page.
+            </p>
+          </div>
+          <div className="bg-gray-50 rounded-md p-4">
+            <h2 className="text-lg font-semibold mb-2">{product?.name || 'Product'}</h2>
+            <p className="text-gray-600">
+              Price: {product?.price_cents ? `₹${(product.price_cents / 100).toFixed(0)}` : 'N/A'}
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 }

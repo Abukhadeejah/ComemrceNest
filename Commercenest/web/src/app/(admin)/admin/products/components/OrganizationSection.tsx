@@ -2,15 +2,25 @@
 
 import Link from 'next/link'
 import { ProductFormData } from '@/types/product'
+import { buildCategoryTree, flattenCategoryTreeForSelect, getCategoryPath, type Category } from '@/utils/categoryUtils'
 
 interface OrganizationSectionProps {
   formData: ProductFormData
   errors: Record<string, string>
   onInputChange: (field: keyof ProductFormData, value: string | number | boolean | null | unknown[]) => void
-  categories: Record<string, unknown>[]
+  categories: Category[]
 }
 
 export function OrganizationSection({ formData, errors, categories, onInputChange }: OrganizationSectionProps) {
+  // Build hierarchical category tree and flatten for select display
+  const categoryTree = buildCategoryTree(categories)
+  const flattenedCategories = flattenCategoryTreeForSelect(categoryTree)
+  
+  // Get current category path for display
+  const selectedCategoryPath = formData.category_id 
+    ? getCategoryPath(formData.category_id, categories) 
+    : []
+
   return (
     <div>
       <h3 className="text-lg font-medium text-gray-900 mb-4">Organization</h3>
@@ -18,22 +28,31 @@ export function OrganizationSection({ formData, errors, categories, onInputChang
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Category
+            {selectedCategoryPath.length > 0 && (
+              <span className="text-xs text-gray-500 ml-2">
+                ({selectedCategoryPath.join(' → ')})
+              </span>
+            )}
           </label>
           <select
             value={String(formData.category_id || '')}
             onChange={(e) => onInputChange('category_id', e.target.value)}
-            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm font-mono"
+            style={{ fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace' }}
           >
             <option value="">Select a category</option>
-            {categories.map((category: Record<string, unknown>) => (
-              <option key={String(category.id)} value={String(category.id)}>
-                {String(category.name)}
+            {flattenedCategories.map((categoryOption) => (
+              <option key={categoryOption.id} value={categoryOption.id}>
+                {categoryOption.name}
               </option>
             ))}
           </select>
           {errors.category_id && (
             <p className="mt-1 text-sm text-red-600">{errors.category_id}</p>
           )}
+          <p className="mt-1 text-xs text-gray-500">
+            Categories are displayed hierarchically. Subcategories are shown with indentation.
+          </p>
         </div>
 
         <div>
