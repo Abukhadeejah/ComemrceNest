@@ -25,7 +25,7 @@ export default async function SenlyshProductPage({ params }: SenlyshProductPageP
   }
 
   const images = await fetchProductImages(tenantId, product.id)
-  const variantOptions = await fetchProductVariantOptions(tenantId, product.id)
+  const variantOptions = await fetchProductVariantOptions(tenantId, product.id) as any[]
 
   console.log('[SenlyshProductPage] Product:', product.name, 'ID:', product.id)
   console.log('[SenlyshProductPage] Images count:', images?.length || 0)
