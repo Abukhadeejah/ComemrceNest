@@ -82,7 +82,7 @@ export default async function ProductViewPage({ params }: ProductViewPageProps) 
     }
 
     const categoryName = product.categories?.[0]?.category?.name || 'No category'
-    const sortedImages = product.images?.sort((a: ProductImage, b: ProductImage) => a.sort_order - b.sort_order) || []
+    const sortedImages = product.images?.sort((a, b) => a.sort_order - b.sort_order) || []
 
     return (
       <div className="p-6">
@@ -118,7 +118,7 @@ export default async function ProductViewPage({ params }: ProductViewPageProps) 
                 <div className="bg-white rounded-lg shadow p-6">
                   <h3 className="text-lg font-medium text-gray-900 mb-4">Product Images</h3>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {sortedImages.map((image: ProductImage, index: number) => (
+                    {sortedImages.map((image, index) => (
                       <div key={index} className="relative">
                         <Image
                           src={image.url}
@@ -216,7 +216,7 @@ export default async function ProductViewPage({ params }: ProductViewPageProps) 
                   <div>
                     <dt className="text-sm font-medium text-gray-500">Stock Quantity</dt>
                     <dd className="mt-1 text-2xl font-bold text-gray-900">
-                      {product.stock_quantity || 0}
+                      {product.stock || 0}
                     </dd>
                   </div>
                   <div>

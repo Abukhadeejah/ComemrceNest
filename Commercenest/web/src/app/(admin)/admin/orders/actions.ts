@@ -25,7 +25,12 @@ async function _getOrdersFromDB(searchParams: {
 
   // Apply status filter
   if (searchParams.status && searchParams.status !== 'all') {
-    query = query.eq('status', searchParams.status)
+    const allowed = ['pending','paid','failed','fulfilled','cancelled'] as const
+    type OrderStatus = typeof allowed[number]
+    const isAllowed = (val: string): val is OrderStatus => (allowed as readonly string[]).includes(val)
+    if (isAllowed(searchParams.status)) {
+      query = query.eq('status', searchParams.status)
+    }
   }
 
   const { data, error, count } = await query

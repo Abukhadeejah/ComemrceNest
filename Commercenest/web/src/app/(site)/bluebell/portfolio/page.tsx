@@ -3,6 +3,7 @@ import { fetchCompanyProfileByTenantId } from '@/server/settings'
 import { resolveTenantIdFromRequest, getPrimaryHostnameForTenant, getRequestHostname, getTenantConfig } from '@/server/tenant'
 import { fetchPublishedProjects } from '@/server/modules/portfolio/service'
 import { TenantPortfolio } from '@/components/tenant/TenantPortfolio'
+import { adaptProjects } from '@/utils/typeAdapters'
 
 export default async function BluebellPortfolioPage() {
   const tenantId = await resolveTenantIdFromRequest()
@@ -28,7 +29,17 @@ export default async function BluebellPortfolioPage() {
     )
   }
 
-  return <TenantPortfolio projects={projects || []} tenantConfig={tenantConfig} basePath={basePath} />
+  const uiProjects = adaptProjects(projects || []).map(p => ({
+    id: p.id,
+    title: p.title,
+    slug: p.slug,
+    hero_image_url: p.hero_image_url ?? undefined,
+    description: p.description,
+    location: p.location,
+    featured: undefined
+  }))
+
+  return <TenantPortfolio projects={uiProjects} tenantConfig={tenantConfig} basePath={basePath} />
 }
 
 export async function generateMetadata(): Promise<Metadata> {

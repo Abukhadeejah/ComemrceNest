@@ -172,3 +172,27 @@ export interface SizeGuide {
   gender: string
   measurements: Record<string, Record<string, string>>
 }
+
+export interface ProductListItem {
+  id: string
+  name: string
+  slug: string
+  description?: string
+  price_cents: number
+  compare_at_price_cents?: number
+  stock: number
+  currency: string
+  hero_image_url?: string
+  is_featured?: boolean
+  badge_text?: string
+  badge_color?: string
+  badge_display_from?: string
+  badge_display_until?: string
+  status: 'draft' | 'published'
+}
+
+export interface ProductImage {
+  url: string
+  alt: string | null
+  sort_order: number
+}

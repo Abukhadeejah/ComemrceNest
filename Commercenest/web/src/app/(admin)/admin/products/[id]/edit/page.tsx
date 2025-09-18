@@ -108,6 +108,15 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
     }))
 
     // Transform product data to match ProductForm expectations
+    const categoryId = (() => {
+      const first = Array.isArray(product.categories) ? product.categories[0] as unknown : undefined
+      if (first && typeof first === 'object' && 'category' in (first as Record<string, unknown>)) {
+        const cat = (first as Record<string, unknown> & { category?: { id?: unknown } }).category
+        if (cat && typeof cat.id === 'string') return cat.id
+      }
+      return ''
+    })()
+
     const formData = {
       id: product.id,
       name: product.name || '',
@@ -129,16 +138,16 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
       hs_code: product.hs_code || '',
       meta_title: product.meta_title || '',
       meta_description: product.meta_description || '',
-      category_id: product.categories?.[0]?.category?.id || '',
-      images: product.images?.map((img: Record<string, unknown>) => img.url) || [],
+      category_id: categoryId,
+      images: (product.images?.map((img: Record<string, unknown>) => String(img.url)).filter(Boolean) as string[]) || [],
       variantOptions,
       variantCombinations,
       // Fashion-specific fields
       material_composition: product.material_composition || '',
       care_instructions: product.care_instructions || '',
       fit_type: product.fit_type || '',
-      model_height_cm: product.model_height_cm || 0,
-      model_weight_kg: product.model_weight_kg || 0,
+      model_height_cm: product.model_height_cm ?? 0,
+      model_weight_kg: product.model_weight_kg ?? 0,
       model_wearing_size: product.model_wearing_size || '',
       is_gift_card: product.is_gift_card || false,
       gift_card_amount_cents: product.gift_card_amount_cents || 0,

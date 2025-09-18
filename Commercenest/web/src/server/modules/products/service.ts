@@ -3,7 +3,7 @@ import { supabaseAdmin } from '@/server/supabaseAdmin'
 export async function fetchPublishedProducts(tenantId: string) {
   return supabaseAdmin
     .from('products')
-    .select('id, name, slug, description, price_cents, compare_at_price_cents, stock, currency, hero_image_url, low_stock_threshold, is_featured, is_bestseller, is_new_arrival, is_on_sale, is_limited_edition, is_sold_out, custom_badge_text, badge_color, badge_priority, badge_display_until, badge_display_from')
+    .select('id, name, slug, description, price_cents, compare_at_price_cents, stock, currency, hero_image_url, low_stock_threshold, is_featured, is_bestseller, is_new_arrival, is_on_sale, is_limited_edition, is_sold_out, custom_badge_text, badge_color, badge_priority, badge_display_until, badge_display_from, status')
     .eq('tenant_id', tenantId)
     .eq('status', 'published')
     .order('updated_at', { ascending: false })
@@ -311,7 +311,30 @@ export async function fetchProductVariantOptions(tenantId: string, productId: st
     return []
   }
 
-  return data || []
+  // Transform the nested Supabase result to match component expectations
+  if (!data) return []
+
+  return data.map(item => {
+    const variantOption = (item as unknown as { variant_options: { id: string; name: string; display_name: string; type: string; sort_order: number; variant_option_values?: Array<{ id: string; value: string; display_value: string; color_hex?: string | null; image_url?: string | null; sort_order: number; price_adjustment_cents?: number | null; cost_adjustment_cents?: number | null }>} }).variant_options
+    return {
+      variant_options: {
+        id: variantOption.id,
+        name: variantOption.name,
+        display_name: variantOption.display_name,
+        type: variantOption.type,
+        variant_option_values: variantOption.variant_option_values?.map((value: { id: string; value: string; display_value: string; color_hex?: string | null; image_url?: string | null; sort_order: number; price_adjustment_cents?: number | null; cost_adjustment_cents?: number | null }) => ({
+          id: value.id,
+          value: value.value,
+          display_value: value.display_value,
+          color_hex: value.color_hex,
+          image_url: value.image_url,
+          sort_order: value.sort_order,
+          price_adjustment_cents: value.price_adjustment_cents,
+          cost_adjustment_cents: value.cost_adjustment_cents
+        })) || []
+      }
+    }
+  })
 }
 
 export async function fetchProductVariants(tenantId: string, productId: string) {

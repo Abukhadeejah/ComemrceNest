@@ -11,6 +11,7 @@ import {
 import { HeroSlideForm } from './HeroSlideForm'
 import { HeroSettingsForm } from './HeroSettingsForm'
 import { HeroSlide, HeroSettings } from '@/types/hero'
+import { adaptHeroSlide, adaptHeroSettings } from '@/utils/typeAdapters'
 
 interface HeroManagementProps {
   initialSlides: HeroSlide[]
@@ -31,7 +32,7 @@ export function HeroManagement({ initialSlides, initialSettings, tenantId: _tena
       try {
         setError(null)
         const newSlide = await createHeroSlide(data)
-        setSlides(prev => [...prev, newSlide])
+        setSlides(prev => [...prev, adaptHeroSlide(newSlide)])
         setSuccess('Hero slide created successfully!')
         setTimeout(() => setSuccess(null), 3000)
       } catch (err) {
@@ -46,7 +47,7 @@ export function HeroManagement({ initialSlides, initialSettings, tenantId: _tena
         setError(null)
         const updatedSlide = await updateHeroSlide(id, data)
         setSlides(prev => prev.map(slide => 
-          slide.id === id ? updatedSlide : slide
+          slide.id === id ? adaptHeroSlide(updatedSlide) : slide
         ))
         setEditingSlide(null)
         setSuccess('Hero slide updated successfully!')
@@ -93,7 +94,7 @@ export function HeroManagement({ initialSlides, initialSettings, tenantId: _tena
       try {
         setError(null)
         const updatedSettings = await updateHeroSettings(data)
-        setSettings(updatedSettings)
+        setSettings(adaptHeroSettings(updatedSettings))
         setSuccess('Hero settings updated successfully!')
         setTimeout(() => setSuccess(null), 3000)
       } catch (err) {

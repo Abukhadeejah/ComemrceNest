@@ -14,6 +14,8 @@ export interface CashbackResult {
   rule: {
     rate: number
     capRate: number
+    minOrderCents?: number
+    maxCashbackCents?: number
   }
   reason: string
   metadata: Record<string, unknown>
@@ -64,12 +66,15 @@ export async function getTenantRewardConfig(tenantId: string): Promise<TenantRew
       .eq('enabled', true)
       .maybeSingle()
 
-    if (config?.config?.rewards) {
+    const cfg = (config && typeof (config as Record<string, unknown>).config === 'object') ? (config as Record<string, unknown>).config as Record<string, unknown> : undefined
+    const rewards = (cfg && typeof (cfg as Record<string, unknown>).rewards === 'object') ? (cfg as Record<string, unknown> & { rewards?: Record<string, unknown> }).rewards as Record<string, unknown> : undefined
+
+    if (rewards) {
       return {
-        rate: config.config.rewards.rate || 0.20,
-        capRate: config.config.rewards.capRate || 0.15,
-        minOrderCents: config.config.rewards.minOrderCents,
-        maxCashbackCents: config.config.rewards.maxCashbackCents,
+        rate: typeof rewards.rate === 'number' ? rewards.rate : 0.20,
+        capRate: typeof rewards.capRate === 'number' ? rewards.capRate : 0.15,
+        minOrderCents: typeof rewards.minOrderCents === 'number' ? rewards.minOrderCents : undefined,
+        maxCashbackCents: typeof rewards.maxCashbackCents === 'number' ? rewards.maxCashbackCents : undefined,
       }
     }
 
@@ -151,7 +156,7 @@ export async function calculateCashback(
   let cashback_cents = Math.min(raw_cashback, cap_cashback)
 
   // Apply maximum cashback limit if configured
-  if (config.maxCashbackCents && cashback_cents > config.maxCashbackCents) {
+  if (typeof config.maxCashbackCents === 'number' && cashback_cents > config.maxCashbackCents) {
     cashback_cents = config.maxCashbackCents
   }
 
@@ -172,7 +177,7 @@ export async function calculateCashback(
       raw_cashback,
       cap_cashback,
       applied_cap: raw_cashback > cap_cashback,
-      applied_max_limit: config.maxCashbackCents && cashback_cents >= config.maxCashbackCents,
+      applied_max_limit: typeof config.maxCashbackCents === 'number' && cashback_cents >= config.maxCashbackCents,
     }
   }
 }
@@ -229,14 +234,14 @@ export async function creditOrderCashback(
           ...cashbackResult.metadata,
           reason: cashbackResult.reason,
           rule: cashbackResult.rule,
-        }
+        } as unknown as import('@/types/supabase').Json
       })
       .select()
       .maybeSingle()
 
     if (error) {
       // Check if it's a duplicate key error (idempotent)
-      if (error.code === '23505') {
+      if ((error as unknown as { code?: string }).code === '23505') {
         return {
           success: true,
           error: 'Cashback already credited (idempotent)'
@@ -244,13 +249,13 @@ export async function creditOrderCashback(
       }
       return {
         success: false,
-        error: error.message
+        error: (error as unknown as { message?: string }).message || 'Unknown error'
       }
     }
 
     return {
       success: true,
-      ledgerEntry
+      ledgerEntry: ledgerEntry ?? undefined
     }
   } catch (error) {
     console.error('Error crediting order cashback:', error)

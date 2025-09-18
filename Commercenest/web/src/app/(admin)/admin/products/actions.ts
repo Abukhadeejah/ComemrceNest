@@ -6,6 +6,7 @@ import { assertTenantAdmin, getAuthenticatedUserId, hasAuthCookie } from '@/serv
 import { revalidateTag, unstable_cache } from 'next/cache'
 import { tenantProductsTag } from '@/server/cacheTags'
 import { forceInvalidateProductCaches } from '@/server/cacheUtils'
+import { adaptProductStatus, adaptToSupabaseJson, undefinedToNull } from '@/utils/typeAdapters'
 // GUARDRAIL: Import comprehensive guardrail system
 import {
   validateModuleAccess,
@@ -132,15 +133,16 @@ export async function createProduct(formData: FormData) {
     let tenantId: string | null = null
     try {
       // GUARDRAIL: Validate tenant context and admin access
-      tenantId = await resolveTenantIdFromRequest()
-      if (!tenantId) {
-        throw new Error('Tenant not found')
+      const tenantIdResult = await resolveTenantIdFromRequest()
+      if (!tenantIdResult) {
+        return createSafeErrorResponse('Tenant not found', 'createProduct')
       }
+      tenantId = tenantIdResult
       
-      await assertTenantAdmin(tenantId)
+      await assertTenantAdmin(tenantId!)  // Safe because we checked above
 
       // GUARDRAIL: Validate module access
-      await validateModuleAccess(tenantId, 'products', 'create')
+      await validateModuleAccess(tenantId!, 'products', 'create')
 
   const productData: ProductData = {
     name: formData.get('name') as string,
@@ -218,7 +220,7 @@ export async function createProduct(formData: FormData) {
   const { data: product, error } = await supabaseAdmin
     .from('products')
     .insert({
-      tenant_id: tenantId,
+      tenant_id: tenantId!,
       name: productData.name,
       slug: productData.slug,
       description: productData.description,
@@ -227,7 +229,7 @@ export async function createProduct(formData: FormData) {
       cost_per_item_cents: productData.cost_per_item_cents,
       stock: productData.stock,
       sku: productData.sku,
-      weight: productData.weight,
+      weight: typeof productData.weight === 'string' ? parseFloat(productData.weight) || null : productData.weight,
       dimensions: productData.dimensions,
       has_variants: productData.has_variants,
       track_inventory: productData.track_inventory,
@@ -248,7 +250,7 @@ export async function createProduct(formData: FormData) {
       is_gift_card: productData.is_gift_card,
       gift_card_amount_cents: productData.gift_card_amount_cents,
       gift_card_expiry_days: productData.gift_card_expiry_days,
-      status: productData.status,
+      status: adaptProductStatus(productData.status),
       // Badge System
       is_featured: productData.is_featured,
       is_bestseller: productData.is_bestseller,
@@ -281,7 +283,8 @@ export async function createProduct(formData: FormData) {
       .from('product_categories')
       .insert({
         product_id: product.id,
-        category_id: productData.category_id
+        category_id: productData.category_id,
+        tenant_id: tenantId
       })
   }
 
@@ -293,7 +296,7 @@ export async function createProduct(formData: FormData) {
         .from('product_images')
         .insert({
           product_id: product.id,
-          tenant_id: tenantId,
+          tenant_id: tenantId!,
           url: imageUrl,
           alt: `Product image ${index + 1}`,
           sort_order: index
@@ -309,7 +312,7 @@ export async function createProduct(formData: FormData) {
       const { data: variantOption, error: optionError } = await supabaseAdmin
         .from('variant_options')
         .insert({
-          tenant_id: tenantId,
+          tenant_id: tenantId!,
           name: option.name as string,
           display_name: option.displayName as string,
           type: option.type as string,
@@ -325,7 +328,7 @@ export async function createProduct(formData: FormData) {
       await supabaseAdmin
         .from('product_variant_options')
         .insert({
-          tenant_id: tenantId,
+          tenant_id: tenantId!,
           product_id: product.id,
           option_id: variantOption.id
         })
@@ -339,7 +342,7 @@ export async function createProduct(formData: FormData) {
           return supabaseAdmin
             .from('variant_option_values')
             .insert({
-              tenant_id: tenantId,
+              tenant_id: tenantId!,
               option_id: variantOption.id,
               value: value.value as string,
               display_value: value.displayValue as string,
@@ -364,13 +367,13 @@ export async function createProduct(formData: FormData) {
       const { data: variant, error: variantError } = await supabaseAdmin
         .from('product_variants')
         .insert({
-          tenant_id: tenantId,
+          tenant_id: tenantId!,
           product_id: product.id,
           name: `Variant ${combo.id}`,
           sku: combo.sku as string,
           price_cents: combo.priceCents as number,
           stock: combo.stock as number,
-          attributes: combo.options as Record<string, unknown>
+          attributes: adaptToSupabaseJson(combo.options as Record<string, unknown>)
         })
         .select()
         .single()
@@ -386,7 +389,7 @@ export async function createProduct(formData: FormData) {
           return supabaseAdmin
             .from('variant_combinations')
             .insert({
-              tenant_id: tenantId,
+              tenant_id: tenantId!,
               product_id: product.id,
               variant_id: variant.id,
               option_id: optionId,
@@ -408,11 +411,11 @@ export async function createProduct(formData: FormData) {
       const { data: sizeGuide, error: sizeGuideError } = await supabaseAdmin
         .from('size_guides')
         .insert({
-          tenant_id: tenantId,
+          tenant_id: tenantId!,
           name: guide.name as string,
           category: guide.category as string,
           gender: guide.gender as string,
-          measurements: guide.measurements as Record<string, unknown>
+          measurements: adaptToSupabaseJson(guide.measurements as Record<string, unknown>)
         })
         .select()
         .single()
@@ -423,7 +426,7 @@ export async function createProduct(formData: FormData) {
       await supabaseAdmin
         .from('product_size_guides')
         .insert({
-          tenant_id: tenantId,
+          tenant_id: tenantId!,
           product_id: product.id,
           size_guide_id: sizeGuide.id
         })
@@ -439,7 +442,7 @@ export async function createProduct(formData: FormData) {
     await supabaseAdmin
       .from('product_size_guides')
       .insert({
-        tenant_id: tenantId,
+        tenant_id: tenantId!,
         product_id: product.id,
         size_guide_id: productData.sizeGuideId
       })
@@ -568,7 +571,7 @@ export async function updateProduct(productId: string, formData: FormData) {
       cost_per_item_cents: productData.cost_per_item_cents,
       stock: productData.stock,
       sku: productData.sku,
-      weight: productData.weight,
+      weight: typeof productData.weight === 'string' ? parseFloat(productData.weight) || null : productData.weight,
       dimensions: productData.dimensions,
       has_variants: productData.has_variants,
       track_inventory: productData.track_inventory,
@@ -589,7 +592,7 @@ export async function updateProduct(productId: string, formData: FormData) {
       is_gift_card: productData.is_gift_card,
       gift_card_amount_cents: productData.gift_card_amount_cents,
       gift_card_expiry_days: productData.gift_card_expiry_days,
-      status: productData.status,
+      status: adaptProductStatus(productData.status),
       // Badge System
       is_featured: productData.is_featured,
       is_bestseller: productData.is_bestseller,
@@ -627,7 +630,8 @@ export async function updateProduct(productId: string, formData: FormData) {
       .from('product_categories')
       .insert({
         product_id: productId,
-        category_id: productData.category_id
+        category_id: productData.category_id,
+        tenant_id: tenantId
       })
   }
 
@@ -646,7 +650,7 @@ export async function updateProduct(productId: string, formData: FormData) {
         .from('product_images')
         .insert({
           product_id: productId,
-          tenant_id: tenantId,
+          tenant_id: tenantId!,
           url: imageUrl,
           alt: `Product image ${index + 1}`,
           sort_order: index
@@ -699,7 +703,7 @@ export async function updateProduct(productId: string, formData: FormData) {
         const { data: variantOption, error: optionError } = await supabaseAdmin
           .from('variant_options')
           .insert({
-            tenant_id: tenantId,
+            tenant_id: tenantId!,
             name: option.name as string,
             display_name: option.displayName as string,
             type: option.type as string,
@@ -715,7 +719,7 @@ export async function updateProduct(productId: string, formData: FormData) {
         await supabaseAdmin
           .from('product_variant_options')
           .insert({
-            tenant_id: tenantId,
+            tenant_id: tenantId!,
             product_id: productId,
             option_id: variantOption.id
           })
@@ -729,7 +733,7 @@ export async function updateProduct(productId: string, formData: FormData) {
             return supabaseAdmin
               .from('variant_option_values')
               .insert({
-                tenant_id: tenantId,
+                tenant_id: tenantId!,
                 option_id: variantOption.id,
                 value: value.value as string,
                 display_value: value.displayValue as string,
@@ -768,13 +772,13 @@ export async function updateProduct(productId: string, formData: FormData) {
         const { data: variant, error: variantError } = await supabaseAdmin
           .from('product_variants')
           .insert({
-            tenant_id: tenantId,
+            tenant_id: tenantId!,
             product_id: productId,
             name: `Variant ${combo.id}`,
             sku: combo.sku as string,
             price_cents: combo.priceCents as number,
             stock: combo.stock as number,
-            attributes: combo.options as Record<string, unknown>
+            attributes: adaptToSupabaseJson(combo.options as Record<string, unknown>)
           })
           .select()
           .single()
@@ -790,7 +794,7 @@ export async function updateProduct(productId: string, formData: FormData) {
             return supabaseAdmin
               .from('variant_combinations')
               .insert({
-                tenant_id: tenantId,
+                tenant_id: tenantId!,
                 product_id: productId,
                 variant_id: variant.id,
                 option_id: optionId,
@@ -821,11 +825,11 @@ export async function updateProduct(productId: string, formData: FormData) {
         const { data: sizeGuide, error: sizeGuideError } = await supabaseAdmin
           .from('size_guides')
           .insert({
-            tenant_id: tenantId,
+            tenant_id: tenantId!,
             name: guide.name as string,
             category: guide.category as string,
             gender: guide.gender as string,
-            measurements: guide.measurements as Record<string, unknown>
+            measurements: adaptToSupabaseJson(guide.measurements as Record<string, unknown>)
           })
           .select()
           .single()
@@ -836,7 +840,7 @@ export async function updateProduct(productId: string, formData: FormData) {
         await supabaseAdmin
           .from('product_size_guides')
           .insert({
-            tenant_id: tenantId,
+            tenant_id: tenantId!,
             product_id: productId,
             size_guide_id: sizeGuide.id
           })
@@ -860,7 +864,7 @@ export async function updateProduct(productId: string, formData: FormData) {
     await supabaseAdmin
       .from('product_size_guides')
       .insert({
-        tenant_id: tenantId,
+        tenant_id: tenantId!,
         product_id: productId,
         size_guide_id: productData.sizeGuideId
       })
@@ -963,7 +967,7 @@ export async function bulkUpdateProductStatus(productIds: string[], status: stri
 
   const { error } = await supabaseAdmin
     .from('products')
-    .update({ status })
+    .update({ status: adaptProductStatus(status) })
     .in('id', productIds)
     .eq('tenant_id', tenantId)
 
@@ -1075,7 +1079,7 @@ export async function uploadProductImage(file: File, productId: string) {
   const { error: imageError } = await supabaseAdmin
     .from('product_images')
     .insert({
-      tenant_id: tenantId,
+      tenant_id: tenantId!,
       product_id: productId,
       url: urlData.publicUrl,
       alt: file.name,
@@ -1138,7 +1142,7 @@ async function _getProductsFromDB(searchParams: {
 
   // Apply status filter
   if (searchParams.status && searchParams.status !== 'all') {
-    query = query.eq('status', searchParams.status)
+    query = query.eq('status', adaptProductStatus(searchParams.status))
   }
 
   // Apply category filter

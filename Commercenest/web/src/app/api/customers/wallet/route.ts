@@ -106,12 +106,12 @@ export async function GET() {
       }
 
       return {
-        id: entry.reference_id,
-        type: entry.entry_type,
+        id: entry.reference_id || `${entry.created_at}:${entry.source_key}`,
+        type: entry.entry_type as 'credit' | 'debit',
         amount_cents: entry.amount_cents,
         amount: entry.amount_cents / 100,
         source_key: entry.source_key,
-        metadata: entry.metadata,
+        metadata: (entry.metadata ?? {}) as unknown as Record<string, unknown>,
         created_at: entry.created_at,
         description: undefined,
         balance_after: balanceCents / 100, // Calculate running balance

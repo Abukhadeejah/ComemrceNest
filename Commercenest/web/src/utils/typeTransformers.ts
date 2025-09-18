@@ -64,7 +64,8 @@ export function transformVariantOptions(dbVariantOptions: DbVariantOption[] | nu
  * @param dbProduct - Raw product data from database
  * @returns Transformed product data
  */
-export function transformProductData(dbProduct: any) {
+type DbProductMinimal = { price_cents?: string | number; compare_at_price_cents?: string | number | null } & Record<string, unknown>
+export function transformProductData(dbProduct: DbProductMinimal) {
   return {
     ...dbProduct,
     // Add any necessary transformations here
@@ -81,29 +82,25 @@ export function transformProductData(dbProduct: any) {
 /**
  * Type guard to check if variant options are in database format
  */
-export function isDbVariantOption(item: any): item is DbVariantOption {
-  return item && 
-    typeof item === 'object' && 
-    'variant_options' in item &&
-    item.variant_options &&
-    typeof item.variant_options.id === 'string'
+export function isDbVariantOption(item: unknown): item is DbVariantOption {
+  if (!item || typeof item !== 'object') return false
+  const v = (item as Record<string, unknown>).variant_options as { id?: unknown } | undefined
+  return typeof v?.id === 'string'
 }
 
 /**
  * Type guard to check if variant options are in component format
  */
-export function isComponentVariantOption(item: any): item is VariantOption {
-  return item && 
-    typeof item === 'object' && 
-    'id' in item &&
-    'displayName' in item &&
-    'values' in item
+export function isComponentVariantOption(item: unknown): item is VariantOption {
+  if (!item || typeof item !== 'object') return false
+  const o = item as Record<string, unknown>
+  return typeof o.id === 'string' && Array.isArray(o.values)
 }
 
 /**
  * Universal variant options transformer that handles both formats
  */
-export function ensureVariantOptionsFormat(variantOptions: any[]): VariantOption[] {
+export function ensureVariantOptionsFormat(variantOptions: unknown[]): VariantOption[] {
   if (!variantOptions || variantOptions.length === 0) {
     return []
   }

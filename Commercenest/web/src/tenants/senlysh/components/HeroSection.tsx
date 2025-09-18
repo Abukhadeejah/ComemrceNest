@@ -5,13 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useTenant } from '@/hooks/useTenant'
 import { getSiteUrl } from '@/utils/site-urls'
-import { HeroSlide as SharedHeroSlide } from '@/types/hero'
-
-interface DatabaseHeroSlide extends SharedHeroSlide {
-  id: string;
-  position: number;
-  is_active: boolean;
-}
+import type { HeroSlide as SharedHeroSlide, HeroSettings as SharedHeroSettings } from '@/types/hero'
 
 interface HeroSlide {
   id: number;
@@ -36,15 +30,10 @@ interface HeroSlide {
   features?: string[];
 }
 
-interface HeroSettings {
-  id: string;
-  auto_play: boolean;
-  auto_play_interval_ms: number;
-  bg_overlay_class?: string;
-}
+type HeroSettings = SharedHeroSettings
 
 interface HeroSectionProps {
-  heroSlides?: DatabaseHeroSlide[];
+  heroSlides?: SharedHeroSlide[];
   heroSettings?: HeroSettings | null;
   slides?: HeroSlide[];
   autoPlay?: boolean;

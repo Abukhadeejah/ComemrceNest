@@ -11,9 +11,9 @@ interface Product {
   slug: string
   sku?: string
   stock: number
-  low_stock_threshold?: number
-  track_inventory: boolean
-  allow_backorders: boolean
+  low_stock_threshold?: number | null
+  track_inventory: boolean | null
+  allow_backorders: boolean | null
   status: string
   price_cents: number
   created_at: string

@@ -1,6 +1,7 @@
 import { getSettings } from '../../../../(admin)/admin/settings/actions'
 import { getPaymentSettings } from '../../../../(admin)/admin/settings/payments-actions'
 import { SettingsForm } from '../../../../(admin)/admin/settings/SettingsForm'
+import { adaptSettings } from '@/utils/typeAdapters'
 
 export default async function AdminSettings() {
   const settings = await getSettings()
@@ -20,7 +21,7 @@ export default async function AdminSettings() {
           <h2 className="text-lg font-medium text-gray-900">Store Settings</h2>
         </div>
         <div className="p-6">
-          <SettingsForm settings={settings} paymentSettings={paymentSettings} />
+          <SettingsForm settings={adaptSettings(settings)} paymentSettings={paymentSettings} />
         </div>
       </div>
     </div>

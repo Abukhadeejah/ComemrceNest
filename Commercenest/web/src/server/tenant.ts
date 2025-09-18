@@ -231,7 +231,10 @@ export async function getTenantConfig(tenantId: string): Promise<TenantConfig> {
   const config: TenantConfig = {
     tenantId,
     name: tenant?.name || 'Unknown Tenant',
-    companyProfile,
+    companyProfile: companyProfile ? {
+      name: typeof (companyProfile as Record<string, unknown>).name === 'string' ? (companyProfile as Record<string, unknown>).name as string : undefined,
+      brand_accent_hex: typeof (companyProfile as Record<string, unknown>).brand_accent_hex === 'string' ? (companyProfile as Record<string, unknown>).brand_accent_hex as string : undefined,
+    } : undefined,
     theme: {
       primaryColor: companyProfile?.brand_accent_hex || '#01589D',
       secondaryColor: '#C9A227', // Mustard

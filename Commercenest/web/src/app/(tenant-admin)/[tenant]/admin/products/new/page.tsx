@@ -5,6 +5,10 @@ import { ProductForm } from '../../../../../(admin)/admin/products/ProductForm'
 export default async function NewProductPage() {
   const tenantId = await resolveTenantIdFromRequest()
   
+  if (!tenantId) {
+    throw new Error('Tenant not found')
+  }
+  
   // Get categories for the form
   const { data: categories } = await supabaseAdmin
     .from('categories')

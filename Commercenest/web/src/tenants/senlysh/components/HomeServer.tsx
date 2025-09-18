@@ -1,6 +1,7 @@
 import { resolveTenantIdFromRequest } from '@/server/tenant'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
 import Home from './Home'
+import { adaptHeroSlides, adaptHeroSettings, adaptCategories } from '@/utils/typeAdapters'
 
 // interface _Category {
 //   id: string
@@ -55,9 +56,25 @@ export default async function HomeServer() {
   ])
 
   return <Home 
-    products={products || []} 
-    categories={categories || []} 
-    heroSlides={heroSlides || []}
-    heroSettings={heroSettings || null}
+    products={(products || []).map(p => ({
+      id: p.id,
+      name: p.name,
+      slug: p.slug,
+      description: p.description ?? undefined,
+      price_cents: p.price_cents,
+      compare_at_price_cents: p.compare_at_price_cents ?? undefined,
+      currency: p.currency,
+      hero_image_url: p.hero_image_url ?? undefined,
+      images: undefined,
+      stock: p.stock,
+      status: p.status,
+      is_featured: p.is_featured ?? undefined,
+      is_bestseller: p.is_bestseller ?? undefined,
+      is_on_sale: p.is_on_sale ?? undefined,
+      is_new_arrival: p.is_new_arrival ?? undefined
+    }))} 
+    categories={adaptCategories(categories || [])} 
+    heroSlides={adaptHeroSlides(heroSlides || [])}
+    heroSettings={heroSettings ? adaptHeroSettings(heroSettings) : null}
   />
 }

@@ -25,7 +25,25 @@ export default async function SenlyshProductPage({ params }: SenlyshProductPageP
   }
 
   const images = await fetchProductImages(tenantId, product.id)
-  const variantOptions = await fetchProductVariantOptions(tenantId, product.id)
+  const variantOptionsRaw = await fetchProductVariantOptions(tenantId, product.id)
+  const variantOptions = (variantOptionsRaw || []).map(item => ({
+    variant_options: {
+      id: item.variant_options.id,
+      name: item.variant_options.name,
+      display_name: item.variant_options.display_name,
+      type: item.variant_options.type,
+      variant_option_values: (item.variant_options.variant_option_values || []).map(v => ({
+        id: v.id,
+        value: v.value,
+        display_value: v.display_value,
+        color_hex: v.color_hex ?? undefined,
+        image_url: v.image_url ?? undefined,
+        sort_order: v.sort_order,
+        price_adjustment_cents: v.price_adjustment_cents ?? undefined,
+        cost_adjustment_cents: v.cost_adjustment_cents ?? undefined
+      }))
+    }
+  }))
 
   console.log('[SenlyshProductPage] Product:', product.name, 'ID:', product.id)
   console.log('[SenlyshProductPage] Images count:', images?.length || 0)

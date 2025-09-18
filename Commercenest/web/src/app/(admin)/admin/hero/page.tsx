@@ -1,6 +1,7 @@
 import { resolveTenantIdFromRequest } from '@/server/tenant'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
 import { HeroManagement } from './HeroManagement'
+import { adaptHeroSlides, adaptHeroSettings } from '@/utils/typeAdapters'
 
 export default async function HeroPage() {
   const tenantId = await resolveTenantIdFromRequest()
@@ -31,8 +32,8 @@ export default async function HeroPage() {
       </div>
 
       <HeroManagement 
-        initialSlides={heroSlides || []} 
-        initialSettings={heroSettings || null}
+        initialSlides={adaptHeroSlides(heroSlides || [])} 
+        initialSettings={heroSettings ? adaptHeroSettings(heroSettings) : null}
         tenantId={tenantId}
       />
     </div>

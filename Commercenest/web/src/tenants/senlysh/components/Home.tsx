@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { HeroSlide as SharedHeroSlide } from '@/types/hero'
+import type { HeroSlide as SharedHeroSlide, HeroSettings as SharedHeroSettings } from '@/types/hero'
 
 // Import modular components
 import HeroSection from './HeroSection';
@@ -41,24 +41,15 @@ interface Category {
   image_alt?: string
 }
 
-interface HeroSlide extends SharedHeroSlide {
-  id: string
-  position: number
-  is_active: boolean
-}
+type HeroSlide = SharedHeroSlide
 
-interface HeroSettings {
-  id: string
-  auto_play: boolean
-  auto_play_interval_ms: number
-  bg_overlay_class?: string
-}
+type HeroSettings = SharedHeroSettings | null
 
 interface HomeProps {
   products: ApiProduct[]
   categories: Category[]
   heroSlides: HeroSlide[]
-  heroSettings: HeroSettings | null
+  heroSettings: HeroSettings
 }
 
 export default function Home({ products, categories, heroSlides, heroSettings }: HomeProps) {

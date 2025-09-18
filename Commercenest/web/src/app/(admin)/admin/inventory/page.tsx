@@ -66,7 +66,13 @@ export default async function InventoryPage() {
       <InventoryStats stats={stats} />
       
       <div className="mt-6">
-        <InventoryTable products={products || []} />
+      <InventoryTable products={(products || []).map(p => ({
+        ...p,
+        sku: p.sku ?? undefined,
+        low_stock_threshold: p.low_stock_threshold ?? null,
+        track_inventory: p.track_inventory ?? null,
+        allow_backorders: p.allow_backorders ?? null
+      }))} />
       </div>
     </div>
   )

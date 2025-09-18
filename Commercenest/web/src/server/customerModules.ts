@@ -79,6 +79,20 @@ export async function isCustomerFeatureEnabled(
 /**
  * Get available customer modules with pricing
  */
+type ModuleRow = { module_key: string; metadata: unknown }
+type ModuleMetadata = {
+  tier?: 'basic' | 'premium'
+  price_monthly?: number
+  price_yearly?: number
+  features?: string[]
+  is_bundle?: boolean
+  includes?: string[]
+}
+
+function isModuleMetadata(value: unknown): value is ModuleMetadata {
+  return typeof value === 'object' && value !== null
+}
+
 export async function getCustomerModulePricing(): Promise<ModulePricing[]> {
   const { data, error } = await supabaseAdmin
     .from('module_registry')
@@ -90,15 +104,18 @@ export async function getCustomerModulePricing(): Promise<ModulePricing[]> {
     return []
   }
 
-  return data?.map(module => ({
-    module_key: module.module_key,
-    tier: module.metadata?.tier || 'basic',
-    price_monthly: module.metadata?.price_monthly || 0,
-    price_yearly: module.metadata?.price_yearly || 0,
-    features: module.metadata?.features || [],
-    is_bundle: module.metadata?.is_bundle || false,
-    includes: module.metadata?.includes || []
-  })) || []
+  return (data as ModuleRow[] | null | undefined)?.map(module => {
+    const meta = isModuleMetadata(module.metadata) ? module.metadata : {}
+    return {
+      module_key: module.module_key,
+      tier: meta.tier ?? 'basic',
+      price_monthly: meta.price_monthly ?? 0,
+      price_yearly: meta.price_yearly ?? 0,
+      features: Array.isArray(meta.features) ? meta.features : [],
+      is_bundle: Boolean(meta.is_bundle),
+      includes: Array.isArray(meta.includes) ? meta.includes : []
+    }
+  }) || []
 }
 
 /**

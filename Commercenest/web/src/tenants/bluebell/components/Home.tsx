@@ -1,7 +1,7 @@
 "use client"
 import { useEffect, useState } from 'react'
 import { Playfair_Display } from 'next/font/google'
-import type { ProductListItem } from '@/server/modules/products/service'
+import type { ProductListItem } from '@/types/product'
 import Testimonials from '@/components/patterns/Testimonials'
 import { bluebellTestimonials } from './testimonialsData'
 
@@ -9,7 +9,7 @@ const playfair = Playfair_Display({ subsets: ['latin'], weight: ['700','800','90
 
 type HomeClientProps = {
   products: ProductListItem[]
-  projects: { id: string; title: string; slug: string; hero_image_url: string | null }[]
+  projects: { id: string; title: string; slug: string; hero_image_url?: string }[]
 }
 
 export default function Home({ products }: HomeClientProps) {

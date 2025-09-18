@@ -83,7 +83,7 @@ export default async function ProductViewPage({ params }: ProductViewPageProps) 
     }
 
     const categoryName = product.categories?.[0]?.category?.name || 'No category'
-    const sortedImages = product.images?.sort((a: ProductImage, b: ProductImage) => a.sort_order - b.sort_order) || []
+    const sortedImages = product.images?.sort((a, b) => a.sort_order - b.sort_order) || []
 
     return (
       <div className="p-6">
@@ -230,7 +230,7 @@ export default async function ProductViewPage({ params }: ProductViewPageProps) 
                 <h3 className="text-lg font-medium text-gray-900 mb-4">Images</h3>
                 {sortedImages.length > 0 ? (
                   <div className="space-y-3">
-                    {sortedImages.map((image: ProductImage, index: number) => (
+                    {sortedImages.map((image, index) => (
                       <div key={index} className="relative">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img

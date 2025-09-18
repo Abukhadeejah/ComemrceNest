@@ -6,6 +6,7 @@
  */
 
 import { supabaseAdmin } from '@/server/supabaseAdmin'
+import type { TablesInsert, Json } from '@/types/supabase'
 import { headers, cookies } from 'next/headers'
 import { NextRequest } from 'next/server'
 import * as Sentry from '@sentry/nextjs'
@@ -164,13 +165,17 @@ export function createTenantQuery(tableName: string, tenantId: string) {
     'products', 'categories', 'orders', 'customers', 'settings_company_profile',
     'variant_options', 'variant_option_values', 'product_variants',
     'product_categories', 'product_images', 'portfolio_projects', 'portfolio_images'
-  ]
+  ] as const
 
-  const requiresTenantFilter = tenantScopedTables.includes(tableName)
+  const requiresTenantFilter = (tenantScopedTables as readonly string[]).includes(tableName)
 
   return {
     select: (columns: string = '*') => {
-      let queryBuilder = supabaseAdmin.from(tableName).select(columns)
+      const t = tableName as unknown as string
+      const fromCompat = (relation: string) => (
+        (supabaseAdmin as unknown as { from: (r: string) => { select: (c?: string) => unknown } }).from(relation)
+      )
+      let queryBuilder = fromCompat(t).select(columns)
 
       return {
         eq: (field: string, value: unknown) => {
@@ -184,7 +189,7 @@ export function createTenantQuery(tableName: string, tenantId: string) {
             throw new Error(`TENANT ISOLATION VIOLATION: Attempted to query ${tableName} with tenant_id ${value}, but context requires ${tenantId}`)
           }
 
-          queryBuilder = queryBuilder.eq(field, value)
+          queryBuilder = (queryBuilder as unknown as { eq: (f: string, v: unknown) => typeof queryBuilder }).eq(field, value)
           return {
             eq: (field: string, value: unknown) => {
               // Validate tenant_id if explicitly provided and table requires tenant isolation
@@ -197,11 +202,11 @@ export function createTenantQuery(tableName: string, tenantId: string) {
                 throw new Error(`TENANT ISOLATION VIOLATION: Attempted to query ${tableName} with tenant_id ${value}, but context requires ${tenantId}`)
               }
 
-              queryBuilder = queryBuilder.eq(field, value)
+              queryBuilder = (queryBuilder as unknown as { eq: (f: string, v: unknown) => typeof queryBuilder }).eq(field, value)
               return {
                 execute: async () => {
                   try {
-                    const { data, error } = await queryBuilder
+                    const { data, error } = await (queryBuilder as unknown as Promise<{ data: unknown; error: { message: string } | null }>)
                     if (error) {
                       logSecurityEvent('database_query_failed', {
                         table: tableName,
@@ -229,7 +234,7 @@ export function createTenantQuery(tableName: string, tenantId: string) {
         execute: async () => {
           try {
             // RLS policies handle the actual tenant filtering
-            const { data, error } = await queryBuilder
+            const { data, error } = await (queryBuilder as unknown as Promise<{ data: unknown; error: { message: string } | null }>)
 
             if (error) {
               logSecurityEvent('database_query_failed', {
@@ -327,17 +332,17 @@ export function buildSafeNavigation(tenantKey: string, enabledModules: Set<strin
  */
 export async function getFeatureFlag(flagKey: string, tenantId: string): Promise<boolean> {
   try {
-    const { data: flag, error } = await supabaseAdmin
+      const { data: flag, error } = await supabaseAdmin
       .from('tenant_feature_flags')
       .select('enabled')
       .eq('tenant_id', tenantId)
-      .eq('flag_id', (
-        await supabaseAdmin
-          .from('feature_flags')
-          .select('id')
-          .eq('key', flagKey)
-          .single()
-      ).data?.id)
+        .eq('flag_id', (
+          await supabaseAdmin
+            .from('feature_flags')
+            .select('id')
+            .eq('key', flagKey)
+            .maybeSingle()
+        ).data?.id || '_missing_')
       .single()
 
     if (error) {
@@ -366,12 +371,22 @@ export function logSecurityEvent(eventType: string, details: unknown) {
   Promise.resolve().then(async () => {
     try {
       const hdrs = await headers()
-      const logData = {
-        event_type: eventType,
-        details: JSON.stringify(details).substring(0, 1000), // Limit size
-        ip_address: hdrs.get('x-forwarded-for') || hdrs.get('x-real-ip'),
-        user_agent: hdrs.get('user-agent')?.substring(0, 255),
-        timestamp: new Date().toISOString()
+      const logData: TablesInsert<'audit_logs'> = {
+        action: eventType,
+        before_json: null,
+        after_json: ((): Json | null => {
+          if (details === null || details === undefined) return null
+          if (typeof details === 'object') return details as unknown as Json
+          return { message: String(details) } as unknown as Json
+        })(),
+        actor_user_id: null,
+        created_at: new Date().toISOString(),
+        id: undefined,
+        ip: hdrs.get('x-forwarded-for') || hdrs.get('x-real-ip'),
+        resource: null,
+        role: null,
+        tenant_id: null,
+        ua: hdrs.get('user-agent')?.substring(0, 255) || null
       }
 
       // Non-blocking insert - don't await
@@ -495,8 +510,8 @@ async function getTenantFromCache(tenantKey: string): Promise<{ id: string; stat
       // Warm cache from database
       const { data: tenants, error } = await supabaseAdmin
         .from('tenants')
-        .select('id, key, status')
-        .in('status', ['active', 'trial'])
+        .select('id, name, status')
+        .in('status', ['active'])
 
       if (error) {
         logSecurityEvent('tenant_cache_warm_failed', { error: error.message })
@@ -506,7 +521,8 @@ async function getTenantFromCache(tenantKey: string): Promise<{ id: string; stat
       // Build cache map
       const newCache = new Map<string, { id: string; status: string }>()
       tenants?.forEach(tenant => {
-        newCache.set(tenant.key, { id: tenant.id, status: tenant.status })
+        // Use name as key mapping (since 'key' column doesn't exist)
+        newCache.set(tenant.name, { id: tenant.id, status: tenant.status })
       })
       tenantCache = newCache
 

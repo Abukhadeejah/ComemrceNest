@@ -5,14 +5,32 @@
  */
 
 import { supabaseAdmin } from '@/server/supabaseAdmin'
+import type { Database } from '@/types/supabase'
 import { validateTenantContext, logSecurityEvent } from './guardrails'
 
 // ============================================================================
 // SAFE DATABASE QUERY BUILDER
 // ============================================================================
 
+type TableName = keyof (Database['public']['Tables'] & Database['public']['Views'])
+
+type AllowedFilterValue = string | number | boolean | null
+
+function asFilterValue(value: unknown): AllowedFilterValue {
+  if (
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean' ||
+    value === null
+  ) {
+    return value
+  }
+  // Fallback to string representation for unsupported types
+  return String(value)
+}
+
 export class SafeDatabaseQuery {
-  private tableName: string
+  private tableName: TableName
   private tenantId: string
   private query: {
     where?: Record<string, unknown>
@@ -22,7 +40,7 @@ export class SafeDatabaseQuery {
   } = {}
   private hasTenantFilter = false
 
-  constructor(tableName: string, tenantId: string) {
+  constructor(tableName: TableName, tenantId: string) {
     this.tableName = tableName
     this.tenantId = tenantId
   }
@@ -102,7 +120,7 @@ export class SafeDatabaseQuery {
 
 export class SafeSelectQuery {
   constructor(
-    private tableName: string,
+    private tableName: TableName,
     private query: {
       where?: Record<string, unknown>
       columns?: string
@@ -114,20 +132,25 @@ export class SafeSelectQuery {
 
   async execute(): Promise<unknown> {
     try {
-      let dbQuery = supabaseAdmin.from(this.tableName).select(this.query.columns || '*')
+      // Helper to safely call dynamic from without using any
+      const fromDynamic = (relation: string) => (
+        (supabaseAdmin as unknown as { from: (r: string) => { select: (c?: string) => unknown } }).from(relation)
+      )
+      const table = this.tableName as unknown as string
+      let dbQuery = fromDynamic(table).select(this.query.columns || '*')
 
       // Apply where conditions
       if (this.query.where) {
         Object.entries(this.query.where).forEach(([field, value]) => {
-          dbQuery = dbQuery.eq(field, value)
+          dbQuery = (dbQuery as unknown as { eq: (f: string, v: unknown) => typeof dbQuery }).eq(field, asFilterValue(value))
         })
       }
 
       // Apply other conditions
-      if (this.query.limit) dbQuery = dbQuery.limit(this.query.limit)
-      if (this.query.orderBy) dbQuery = dbQuery.order(this.query.orderBy.column, { ascending: this.query.orderBy.ascending })
+      if (this.query.limit) dbQuery = (dbQuery as unknown as { limit: (n: number) => unknown }).limit(this.query.limit)
+      if (this.query.orderBy) dbQuery = (dbQuery as unknown as { order: (c: string, o: { ascending: boolean }) => unknown }).order(this.query.orderBy.column, { ascending: this.query.orderBy.ascending })
 
-      const { data, error } = await dbQuery
+      const { data, error } = await (dbQuery as unknown as Promise<{ data: unknown; error: { message: string } | null }>)
 
       if (error) {
         await logSecurityEvent('database_query_failed', {
@@ -164,16 +187,19 @@ export class SafeSelectQuery {
 
 export class SafeInsertQuery {
   constructor(
-    private tableName: string,
+    private tableName: TableName,
     private data: Record<string, unknown>,
     private tenantId: string
   ) {}
 
   async execute(): Promise<unknown> {
     try {
-      const { data, error } = await supabaseAdmin
-        .from(this.tableName)
-        .insert(this.data)
+      const table = this.tableName as unknown as string
+      const fromDynamic = (relation: string) => (
+        (supabaseAdmin as unknown as { from: (r: string) => { insert: (v: Record<string, unknown>) => { select: () => Promise<{ data: unknown; error: { message: string } | null }> } } }).from(relation)
+      )
+      const { data, error } = await fromDynamic(table)
+        .insert(this.data as Record<string, unknown>)
         .select()
 
       if (error) {
@@ -189,7 +215,7 @@ export class SafeInsertQuery {
       await logSecurityEvent('database_insert_success', {
         table: this.tableName,
         tenantId: this.tenantId,
-        recordCount: data?.length || 0
+        recordCount: Array.isArray(data) ? data.length : 0
       })
 
       return data
@@ -207,7 +233,7 @@ export class SafeInsertQuery {
 
 export class SafeUpdateQuery {
   constructor(
-    private tableName: string,
+    private tableName: TableName,
     private data: Record<string, unknown>,
     private conditions: Record<string, unknown>,
     private tenantId: string
@@ -215,16 +241,20 @@ export class SafeUpdateQuery {
 
   async execute(): Promise<unknown> {
     try {
-      let dbQuery = supabaseAdmin.from(this.tableName).update(this.data)
+      const table = this.tableName as unknown as string
+      const fromDynamic = (relation: string) => (
+        (supabaseAdmin as unknown as { from: (r: string) => { update: (v: Record<string, unknown>) => unknown } }).from(relation)
+      )
+      let dbQuery = fromDynamic(table).update(this.data as Record<string, unknown>)
 
       // Apply where conditions
       if (this.conditions.where) {
         Object.entries(this.conditions.where).forEach(([field, value]) => {
-          dbQuery = dbQuery.eq(field, value)
+          dbQuery = (dbQuery as unknown as { eq: (f: string, v: unknown) => typeof dbQuery }).eq(field, asFilterValue(value))
         })
       }
 
-      const { data, error } = await dbQuery.select()
+      const { data, error } = await (dbQuery as unknown as { select: () => Promise<{ data: unknown; error: { message: string } | null }> }).select()
 
       if (error) {
         await logSecurityEvent('database_update_failed', {
@@ -240,7 +270,7 @@ export class SafeUpdateQuery {
       await logSecurityEvent('database_update_success', {
         table: this.tableName,
         tenantId: this.tenantId,
-        recordCount: data?.length || 0
+        recordCount: Array.isArray(data) ? data.length : 0
       })
 
       return data
@@ -258,23 +288,27 @@ export class SafeUpdateQuery {
 
 export class SafeDeleteQuery {
   constructor(
-    private tableName: string,
+    private tableName: TableName,
     private conditions: Record<string, unknown>,
     private tenantId: string
   ) {}
 
   async execute(): Promise<unknown> {
     try {
-      let dbQuery = supabaseAdmin.from(this.tableName).delete()
+      const table = this.tableName as unknown as string
+      const fromDynamic = (relation: string) => (
+        (supabaseAdmin as unknown as { from: (r: string) => { delete: () => unknown } }).from(relation)
+      )
+      let dbQuery = fromDynamic(table).delete()
 
       // Apply where conditions
       if (this.conditions.where) {
         Object.entries(this.conditions.where).forEach(([field, value]) => {
-          dbQuery = dbQuery.eq(field, value)
+          dbQuery = (dbQuery as unknown as { eq: (f: string, v: unknown) => typeof dbQuery }).eq(field, asFilterValue(value))
         })
       }
 
-      const { data, error } = await dbQuery.select()
+      const { data, error } = await (dbQuery as unknown as { select: () => Promise<{ data: unknown; error: { message: string } | null }> }).select()
 
       if (error) {
         await logSecurityEvent('database_delete_failed', {
@@ -289,7 +323,7 @@ export class SafeDeleteQuery {
       await logSecurityEvent('database_delete_success', {
         table: this.tableName,
         tenantId: this.tenantId,
-        recordCount: data?.length || 0
+        recordCount: Array.isArray(data) ? data.length : 0
       })
 
       return data
@@ -324,7 +358,7 @@ export class SafeDatabaseFactory {
   /**
    * GUARDRAIL: Creates safe query builder for a table
    */
-  table(tableName: string): SafeDatabaseQuery {
+  table(tableName: TableName): SafeDatabaseQuery {
     return new SafeDatabaseQuery(tableName, this.tenantId)
   }
 

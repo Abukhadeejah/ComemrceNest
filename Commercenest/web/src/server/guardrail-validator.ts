@@ -269,13 +269,15 @@ async function validateRLSPolicies(): Promise<ValidationResult[]> {
   const results: ValidationResult[] = []
 
   // Test 1: RLS enabled on critical tables
-  const criticalTables = ['products', 'categories', 'orders', 'customers', 'settings_company_profile']
+  const criticalTables = ['products', 'categories', 'orders', 'customers', 'settings_company_profile'] as const
 
   for (const table of criticalTables) {
     try {
       // Check if RLS is enabled (this is a simplified check)
-      const { error } = await supabaseAdmin
-        .from(table)
+      const fromCompat = (relation: string) => (
+        (supabaseAdmin as unknown as { from: (r: string) => { select: (c?: string) => { limit: (n: number) => Promise<{ data: unknown; error: { message: string } | null }> } } }).from(relation)
+      )
+      const { error } = await fromCompat(table as unknown as string)
         .select('*')
         .limit(1)
 

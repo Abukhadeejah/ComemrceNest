@@ -224,7 +224,11 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
           }
         } else {
           const result = await createProduct(form)
-          createdProductId = result.id
+          if ('id' in result) {
+            createdProductId = result.id
+          } else {
+            throw new Error(result.error || 'Failed to create product')
+          }
           
           // After product creation, upload images if any
           if (imageFiles.length > 0 && createdProductId) {
