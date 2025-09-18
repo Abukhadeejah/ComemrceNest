@@ -18,7 +18,7 @@ interface HeroManagementProps {
   tenantId: string
 }
 
-export function HeroManagement({ initialSlides, initialSettings, tenantId: _tenantId }: HeroManagementProps) {
+export function HeroManagement({ initialSlides, initialSettings, tenantId }: HeroManagementProps) {
   const [slides, setSlides] = useState<HeroSlide[]>(initialSlides)
   const [settings, setSettings] = useState<HeroSettings | null>(initialSettings)
   const [editingSlide, setEditingSlide] = useState<HeroSlide | null>(null)

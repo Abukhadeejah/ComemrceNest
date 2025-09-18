@@ -1,4 +1,4 @@
-import { fetchPublishedProductsPaged, fetchPublishedProductsPagedWithVariants, ProductListItem } from '@/server/modules/products/service'
+import { fetchPublishedProductsPagedWithVariants, ProductListItem } from '@/server/modules/products/service'
 
 export interface GetProductsParams {
   tenantId: string | null

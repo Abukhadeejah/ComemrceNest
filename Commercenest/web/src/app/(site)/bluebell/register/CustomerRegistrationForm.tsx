@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { supabaseClient } from '@/lib/supabaseClient'
 import type { CustomerRegistrationRequest } from '@/types/customer'
 
 interface CustomerRegistrationFormProps {

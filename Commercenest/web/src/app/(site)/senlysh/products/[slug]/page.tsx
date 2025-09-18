@@ -34,7 +34,7 @@ export default async function SenlyshProductPage({ params }: SenlyshProductPageP
     <ProductDetail
       product={product as unknown as Parameters<typeof ProductDetail>[0]['product']}
       images={images || []}
-      variantOptions={(variantOptions as unknown as any[]) || []}
+      variantOptions={variantOptions || []}
     />
   )
 }
