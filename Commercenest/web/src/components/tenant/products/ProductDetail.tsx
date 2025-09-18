@@ -50,7 +50,7 @@ interface VariantOptionData {
   id: string
   name: string
   display_name: string
-  type: 'text' | 'color' | 'image'
+  type: string
   variant_option_values: VariantOptionValue[]
 }
 
