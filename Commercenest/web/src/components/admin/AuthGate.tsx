@@ -9,7 +9,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   const supabase = createClientComponentClient()
   const [checking, setChecking] = useState(true)
   const [hasChecked, setHasChecked] = useState(false)
-  const [_error, _setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     // Only run auth check once

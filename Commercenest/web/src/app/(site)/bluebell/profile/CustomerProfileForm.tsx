@@ -9,7 +9,7 @@ interface CustomerProfileFormProps {
   tenantId: string
 }
 
-export default function CustomerProfileForm({ customer, tenantId }: CustomerProfileFormProps) {
+export default function CustomerProfileForm({ customer, tenantId: _tenantId }: CustomerProfileFormProps) {
   const [formData, setFormData] = useState({
     firstName: customer.first_name || '',
     lastName: customer.last_name || '',

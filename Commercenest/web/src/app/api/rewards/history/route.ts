@@ -5,7 +5,7 @@ import { resolveTenantIdFromRequest } from '@/server/tenant'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
 
 // Lists reward-related wallet entries (cashback/refund) for the authenticated customer
-export async function GET(_request: NextRequest) {
+export async function GET() {
   try {
     const tenantId = await resolveTenantIdFromRequest()
     if (!tenantId) return NextResponse.json({ error: 'Tenant context required' }, { status: 400 })

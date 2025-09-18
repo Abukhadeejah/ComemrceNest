@@ -1,6 +1,5 @@
 'use client'
 
-import { useTransition } from 'react'
 
 interface Settings {
   name: string

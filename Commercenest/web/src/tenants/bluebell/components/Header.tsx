@@ -13,7 +13,7 @@ const playfair = Playfair_Display({ subsets: ['latin'], weight: ['700','800','90
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { state } = useCart();
-  const { isCustomer, isLoading: authLoading } = useCustomerAuth();
+  const { isCustomer } = useCustomerAuth();
   const cartCount = state.itemCount;
   const wishlistCount = 0; // TODO: Implement wishlist functionality later
   const tenant = useTenant();

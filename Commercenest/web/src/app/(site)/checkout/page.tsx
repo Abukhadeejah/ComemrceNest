@@ -215,7 +215,7 @@ export default function CheckoutPage() {
     }
   }
 
-  const _handleNewAddress = async () => {
+  const handleNewAddress = async () => {
     if (saveAsDefault) {
       // Create new address and save as default
       try {
@@ -333,7 +333,7 @@ export default function CheckoutPage() {
     }
   }
 
-  async function _createTestOrder() {
+  async function createTestOrder() {
     setBusy(true)
     setMessage(null)
     try {
@@ -364,7 +364,7 @@ export default function CheckoutPage() {
     }
   }
 
-  async function _simulatePayment() {
+  async function simulatePayment() {
     if (!orderId) return
     setBusy(true)
     setMessage(null)

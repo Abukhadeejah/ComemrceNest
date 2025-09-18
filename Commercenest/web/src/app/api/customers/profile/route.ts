@@ -7,7 +7,7 @@ import { validateCustomerFeatureAccess } from '@/server/customerModules'
 import type { CustomerProfileResponse, CustomerProfileUpdateRequest } from '@/types/customer'
 
 // Get customer profile
-export async function GET(_request: NextRequest) {
+export async function GET() {
   try {
     const tenantId = await resolveTenantIdFromRequest()
     if (!tenantId) {

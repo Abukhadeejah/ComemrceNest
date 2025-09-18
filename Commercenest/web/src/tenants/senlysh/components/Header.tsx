@@ -19,7 +19,7 @@ export default function Header() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const { state } = useCart();
-  const { isCustomer, isLoading: authLoading } = useCustomerAuth();
+  const { isCustomer } = useCustomerAuth();
   const pathname = usePathname();
   const cartCount = state.itemCount;
   const wishlistCount = 0; // TODO: Implement wishlist functionality later

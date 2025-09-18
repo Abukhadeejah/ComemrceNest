@@ -7,7 +7,7 @@ import { validateCustomerFeatureAccess } from '@/server/customerModules'
 import type { WalletResponse } from '@/types/customer'
 
 // Get wallet balance and transaction history
-export async function GET(_request: NextRequest) {
+export async function GET() {
   try {
     const tenantId = await resolveTenantIdFromRequest()
     if (!tenantId) {
