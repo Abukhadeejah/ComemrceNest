@@ -24,7 +24,7 @@ export async function testGuardrailBreakAttempts() {
     const senlyshTenantId = '1e4c9aa7-e7af-4fe7-999b-c9c46219fa3c'
 
     // Try to access Senlysh products from Bluebell context
-    const { data: _data, error } = await supabaseAdmin
+    const { data: _data, error: _error } = await supabaseAdmin
       .from('products')
       .select('*')
       .eq('tenant_id', senlyshTenantId) // Wrong tenant!
@@ -60,7 +60,7 @@ export async function testGuardrailBreakAttempts() {
   console.log('🧪 Attempt 2: Safe database wrapper bypass')
   try {
     // Try to use unsafe database operations
-    const { data: _data, error } = await supabaseAdmin
+    const { data: _data, error: _error } = await supabaseAdmin
       .from('products')
       .select('*')
       .limit(5) // No tenant filter!
@@ -96,6 +96,7 @@ export async function testGuardrailBreakAttempts() {
   try {
     // Try to validate with invalid tenant ID
     const _result = await validateTenantContext('invalid-tenant-id-test')
+    // Result intentionally unused - we're testing for side effects
 
     testResults.push({
       attempt: 'Malformed tenant context',
@@ -241,7 +242,7 @@ export async function testGuardrailBreakAttempts() {
   console.log('🧪 Attempt 8: Module access violation')
   try {
     // Try to access disabled module
-    const { data: _data, error } = await supabaseAdmin
+    const { data: _data, error: _error } = await supabaseAdmin
       .from('tenant_modules')
       .select('enabled')
       .eq('module_key', 'nonexistent_module')

@@ -57,7 +57,7 @@ interface HeroSectionProps {
 const HeroSection: React.FC<HeroSectionProps> = ({
   heroSlides = [],
   heroSettings = null,
-  slides: _slides = [], // PRODUCTION READY: No default slides - only database data
+  // slides parameter removed - only using heroSlides from database
   autoPlay = true,
   autoPlayInterval = 2000
 }) => {
