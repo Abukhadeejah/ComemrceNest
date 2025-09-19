@@ -71,7 +71,8 @@ export default async function HomeServer() {
       is_featured: p.is_featured ?? undefined,
       is_bestseller: p.is_bestseller ?? undefined,
       is_on_sale: p.is_on_sale ?? undefined,
-      is_new_arrival: p.is_new_arrival ?? undefined
+      is_new_arrival: p.is_new_arrival ?? undefined,
+      product_variant_options: p.product_variant_options ?? undefined
     }))} 
     categories={adaptCategories(categories || [])} 
     heroSlides={adaptHeroSlides(heroSlides || [])}

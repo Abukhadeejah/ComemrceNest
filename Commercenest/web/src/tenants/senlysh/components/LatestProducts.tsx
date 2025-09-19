@@ -554,8 +554,8 @@ const ProductCardWithVariants: React.FC<ProductCardProps> = ({
                     group-hover:-translate-y-1 motion-reduce:transition-none
                     hover:z-10">
                     
-                    {/* Image Container - Fixed Height */}
-                    <div className="relative h-48 sm:h-56 md:h-64 overflow-hidden flex-shrink-0">
+                    {/* Image Container - Standardized Aspect Ratio */}
+                    <div className="relative aspect-[4/5] overflow-hidden flex-shrink-0">
                       {/* All Product Images (for smooth transitions) */}
                       {product.images.map((image, imgIndex) => (
                         <div
@@ -569,8 +569,8 @@ const ProductCardWithVariants: React.FC<ProductCardProps> = ({
                             alt={`${product.name} - View ${imgIndex + 1}`}
                             fill
                             loading="lazy"
-                            className="object-cover transition-transform duration-700 ease-out
-                              group-hover:scale-110 motion-reduce:transition-none"
+                            className="object-cover object-center transition-transform duration-700 ease-out
+                              group-hover:scale-110 motion-reduce:transition-none w-full h-full"
                             onError={(e) => {
                               console.error('LatestProducts image failed to load:', image);
                               const fallbackImages = [

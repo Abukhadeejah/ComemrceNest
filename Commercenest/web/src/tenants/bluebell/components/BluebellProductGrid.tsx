@@ -64,7 +64,7 @@ function ProductCard({ product }: { product: ProductListItem }) {
     <div className="product-card bg-white rounded-2xl overflow-hidden shadow-lg group flex flex-col">
       <div className="product-border border-2 border-transparent rounded-2xl h-full flex flex-col">
         {/* Product Image */}
-        <div className="fabric-texture h-56 bg-gradient-to-br from-bluebell-blue via-blue-600 to-bluebell-blue/70 relative overflow-hidden">
+        <div className="fabric-texture aspect-[4/5] bg-gradient-to-br from-bluebell-blue via-blue-600 to-bluebell-blue/70 relative overflow-hidden">
           {/* Fabric texture simulation */}
           <div 
             className="absolute inset-0 opacity-40" 
@@ -85,8 +85,9 @@ function ProductCard({ product }: { product: ProductListItem }) {
             src={getProductImage()}
             alt={product.name}
             fill
+            sizes="(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
             unoptimized
-            className="object-cover transition-transform duration-500 group-hover:scale-110"
+            className="object-cover object-center transition-transform duration-500 group-hover:scale-110 w-full h-full"
           />
           
           {/* Premium Badge */}

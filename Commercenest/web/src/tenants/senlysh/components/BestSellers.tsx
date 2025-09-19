@@ -152,13 +152,13 @@ const BestSellers: React.FC<BestSellersProps> = ({
             <div key={product.name} className="group relative flex-shrink-0 w-full animate-fade-in-up px-2"
                  style={{ animationDelay: `${index * 150}ms` }}>
               <Link href={product.url} className="block">
-                <div className="relative overflow-hidden rounded-lg shadow-lg cursor-pointer">
+                <div className="relative aspect-[4/5] overflow-hidden rounded-lg shadow-lg cursor-pointer">
                 <Image
                   src={product.image}
                   alt={product.name}
-                  width={400}
-                  height={400}
-                  className="w-full h-64 object-cover transition-transform duration-300 group-hover:scale-105"
+                  fill
+                  sizes="(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                  className="w-full h-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
                   onError={(e) => {
                     console.error('BestSeller image failed to load:', product.image);
                     const fallbackImages = [
