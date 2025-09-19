@@ -31,6 +31,7 @@ export const ADMIN_URLS = {
   categoriesNew: (tenant?: string) => getAdminUrl('/categories/new', tenant),
   categoryDetail: (id: string, tenant?: string) => getAdminUrl(`/categories/${id}`, tenant),
   categoryEdit: (id: string, tenant?: string) => getAdminUrl(`/categories/${id}/edit`, tenant),
+  taxClasses: (tenant?: string) => getAdminUrl('/tax-classes', tenant),
   orders: (tenant?: string) => getAdminUrl('/orders', tenant),
   customers: (tenant?: string) => getAdminUrl('/customers', tenant),
   analytics: (tenant?: string) => getAdminUrl('/analytics', tenant),

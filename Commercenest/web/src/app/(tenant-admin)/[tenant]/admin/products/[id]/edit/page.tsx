@@ -90,7 +90,7 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
       meta_title: product.meta_title || '',
       meta_description: product.meta_description || '',
       category_id: categoryId,
-      images: (product.images?.map((img: Record<string, unknown>) => String(img.url)).filter(Boolean) as string[]) || [],
+      images: Array.isArray(product.images) ? product.images.map((img: Record<string, unknown>) => String(img.url)).filter(Boolean) : [],
       // Fashion-specific fields
       material_composition: product.material_composition || '',
       care_instructions: product.care_instructions || '',
@@ -115,7 +115,7 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
       badge_display_from: product.badge_display_from || '',
       // Variant System - CRITICAL: Include existing variant state
       has_variants: product.has_variants || false,
-      variantOptions: product.product_variant_options || []
+      variantOptions: Array.isArray(product.product_variant_options) ? product.product_variant_options : []
     }
 
     return (

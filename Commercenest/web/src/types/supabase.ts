@@ -1220,6 +1220,7 @@ export type Database = {
           status: Database["public"]["Enums"]["product_status"]
           stock: number
           tags: string[] | null
+          tax_class_id: string | null
           taxable: boolean | null
           tenant_id: string
           track_inventory: boolean | null
@@ -1271,6 +1272,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["product_status"]
           stock?: number
           tags?: string[] | null
+          tax_class_id?: string | null
           taxable?: boolean | null
           tenant_id: string
           track_inventory?: boolean | null
@@ -1322,6 +1324,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["product_status"]
           stock?: number
           tags?: string[] | null
+          tax_class_id?: string | null
           taxable?: boolean | null
           tenant_id?: string
           track_inventory?: boolean | null
@@ -1329,6 +1332,13 @@ export type Database = {
           weight?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "products_tax_class_id_fkey"
+            columns: ["tax_class_id"]
+            isOneToOne: false
+            referencedRelation: "tax_classes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "products_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -1449,6 +1459,50 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "size_guides_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tax_classes: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          is_default: boolean | null
+          name: string
+          rate_percent: number
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          name: string
+          rate_percent?: number
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          name?: string
+          rate_percent?: number
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tax_classes_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -2369,9 +2423,5 @@ export const Constants = {
   },
 } as const
 
-
-
-
-
-
-
+// Export TaxClass type for easier usage
+export type TaxClass = Tables<"tax_classes">

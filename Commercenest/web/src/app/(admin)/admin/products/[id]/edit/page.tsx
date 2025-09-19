@@ -133,6 +133,7 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
       allow_backorders: product.allow_backorders || false,
       requires_shipping: product.requires_shipping !== false, // Default to true
       taxable: product.taxable !== false, // Default to true
+      tax_class_id: product.tax_class_id || '',
       weight: product.weight || 0,
       dimensions: product.dimensions || '',
       hs_code: product.hs_code || '',

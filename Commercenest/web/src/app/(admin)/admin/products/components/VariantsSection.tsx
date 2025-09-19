@@ -82,7 +82,7 @@ export function VariantsSection({
   const removeVariantOption = (optionId: string) => {
     onVariantOptionsChange(variantOptions.filter(opt => opt.id !== optionId))
     // Also clean up combinations that reference this option
-    const updatedCombinations = variantCombinations.map(combo => {
+    const updatedCombinations = (variantCombinations || []).map(combo => {
       const newOptions = { ...combo.options }
       delete newOptions[optionId]
       return { ...combo, options: newOptions }
@@ -98,7 +98,7 @@ export function VariantsSection({
           value: value.toLowerCase().replace(/\s+/g, '_'),
           displayValue
         }
-        return { ...option, values: [...option.values, newValue] }
+        return { ...option, values: [...(option.values || []), newValue] }
       }
       return option
     })
@@ -110,7 +110,7 @@ export function VariantsSection({
       if (option.id === optionId) {
         return {
           ...option,
-          values: option.values.map(v => {
+          values: (option.values || []).map(v => {
             if (v.id === valueId) {
               return { ...v, [field]: value }
             }
@@ -126,14 +126,14 @@ export function VariantsSection({
   const removeOptionValue = (optionId: string, valueId: string) => {
     const updatedOptions = variantOptions.map(option => {
       if (option.id === optionId) {
-        return { ...option, values: option.values.filter(v => v.id !== valueId) }
+        return { ...option, values: (option.values || []).filter(v => v.id !== valueId) }
       }
       return option
     })
     onVariantOptionsChange(updatedOptions)
 
     // Clean up combinations that reference this value
-    const updatedCombinations = variantCombinations.map(combo => {
+    const updatedCombinations = (variantCombinations || []).map(combo => {
       const newOptions = { ...combo.options }
       if (newOptions[optionId] === valueId) {
         delete newOptions[optionId]
@@ -187,7 +187,7 @@ export function VariantsSection({
   }
 
   const updateCombination = (comboId: string, field: keyof VariantCombination, value: string | number) => {
-    const updatedCombinations = variantCombinations.map(combo => {
+    const updatedCombinations = (variantCombinations || []).map(combo => {
       if (combo.id === comboId) {
         return { ...combo, [field]: value }
       }
@@ -197,7 +197,7 @@ export function VariantsSection({
   }
 
   const removeCombination = (comboId: string) => {
-    onVariantCombinationsChange(variantCombinations.filter(combo => combo.id !== comboId))
+    onVariantCombinationsChange((variantCombinations || []).filter(combo => combo.id !== comboId))
   }
 
   const getCombinationDisplayName = (combo: VariantCombination) => {
@@ -320,7 +320,7 @@ export function VariantsSection({
                         </div>
 
                         <div className="space-y-2">
-                          {option.values.map((value) => (
+                          {(option.values || []).map((value) => (
                             <div key={value.id} className="bg-gray-50 px-3 py-2 rounded-md">
                               <div className="flex items-center justify-between mb-2">
                                 <span className="text-sm font-medium text-gray-700">{value.displayValue}</span>
@@ -377,7 +377,7 @@ export function VariantsSection({
                   className="flex items-center space-x-2 flex-1"
                 >
                   <span className="font-medium text-gray-900">Variant Combinations</span>
-                  <span className="text-sm text-gray-500">({variantCombinations.length})</span>
+                  <span className="text-sm text-gray-500">({(variantCombinations || []).length})</span>
                 </button>
                 <div className="flex items-center space-x-2">
                   <button
@@ -403,7 +403,7 @@ export function VariantsSection({
 
               {expandedSections.has('combinations') && (
                 <div className="p-4">
-                  {variantCombinations.length === 0 ? (
+                  {(variantCombinations || []).length === 0 ? (
                     <div className="text-center py-8 text-gray-500">
                       <p>No combinations generated yet.</p>
                       <p className="text-sm mt-1">Click &quot;Generate&quot; to create all possible combinations.</p>
@@ -432,7 +432,7 @@ export function VariantsSection({
                             </tr>
                           </thead>
                           <tbody className="bg-white divide-y divide-gray-200">
-                            {variantCombinations.map((combo) => (
+                            {(variantCombinations || []).map((combo) => (
                               <tr key={combo.id}>
                                 <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                                   {getCombinationDisplayName(combo)}

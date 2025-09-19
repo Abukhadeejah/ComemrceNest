@@ -37,6 +37,7 @@ interface ProductData {
   allow_backorders?: boolean
   requires_shipping?: boolean
   taxable?: boolean
+  tax_class_id?: string | null
   hs_code?: string
   seo_url?: string
   // Fashion-specific fields
@@ -177,6 +178,7 @@ export async function createProduct(formData: FormData) {
     gift_card_expiry_days: formData.get('gift_card_expiry_days') ? parseInt(formData.get('gift_card_expiry_days') as string) : null,
     category_id: formData.get('category_id') as string,
     status: formData.get('status') as string,
+    tax_class_id: formData.get('tax_class_id') as string,
     images: formData.getAll('images') as string[],
     variantOptions: JSON.parse(formData.get('variantOptions') as string || '[]'),
     variantCombinations: JSON.parse(formData.get('variantCombinations') as string || '[]'),
@@ -239,6 +241,7 @@ export async function createProduct(formData: FormData) {
       allow_backorders: productData.allow_backorders,
       requires_shipping: productData.requires_shipping,
       taxable: productData.taxable,
+      tax_class_id: productData.tax_class_id && productData.tax_class_id.trim() !== '' ? productData.tax_class_id : null,
       hs_code: productData.hs_code,
       seo_url: productData.seo_url,
       material_composition: productData.material_composition,
@@ -520,6 +523,7 @@ export async function updateProduct(productId: string, formData: FormData) {
     gift_card_expiry_days: formData.get('gift_card_expiry_days') ? parseInt(formData.get('gift_card_expiry_days') as string) : null,
     category_id: formData.get('category_id') as string,
     status: formData.get('status') as string,
+    tax_class_id: formData.get('tax_class_id') as string,
     images: formData.getAll('images') as string[],
     variantOptions: JSON.parse(formData.get('variantOptions') as string || '[]'),
     variantCombinations: JSON.parse(formData.get('variantCombinations') as string || '[]'),
@@ -581,6 +585,7 @@ export async function updateProduct(productId: string, formData: FormData) {
       allow_backorders: productData.allow_backorders,
       requires_shipping: productData.requires_shipping,
       taxable: productData.taxable,
+      tax_class_id: productData.tax_class_id && productData.tax_class_id.trim() !== '' ? productData.tax_class_id : null,
       hs_code: productData.hs_code,
       seo_url: productData.seo_url,
       material_composition: productData.material_composition,

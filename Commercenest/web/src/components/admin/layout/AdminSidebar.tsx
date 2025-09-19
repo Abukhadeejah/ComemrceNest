@@ -12,7 +12,8 @@ import {
   ChartBarIcon,
   Cog6ToothIcon,
   PhotoIcon,
-  AcademicCapIcon
+  AcademicCapIcon,
+  CalculatorIcon
 } from '@heroicons/react/24/outline'
 import { ADMIN_URLS } from '@/utils/admin-urls'
 import { useAdminBranding, useAdminTenantKey } from '@/components/admin/AdminBrandingWrapper'
@@ -23,6 +24,7 @@ function buildNavigation(tenant?: string, enabledModules?: Set<string>) {
     { key: 'dashboard', name: 'Dashboard', href: ADMIN_URLS.dashboard(tenant), icon: HomeIcon },
     { key: 'products', name: 'Products', href: ADMIN_URLS.products(tenant), icon: CubeIcon },
     { key: 'categories', name: 'Categories', href: ADMIN_URLS.categories(tenant), icon: TagIcon },
+    { key: 'tax-classes', name: 'Tax Classes', href: ADMIN_URLS.taxClasses(tenant), icon: CalculatorIcon },
     { key: 'orders', name: 'Orders', href: ADMIN_URLS.orders(tenant), icon: ShoppingCartIcon },
     { key: 'customers', name: 'Customers', href: ADMIN_URLS.customers(tenant), icon: UsersIcon },
     { key: 'portfolio', name: 'Portfolio', href: ADMIN_URLS.portfolio(tenant), icon: BriefcaseIcon },
@@ -34,8 +36,8 @@ function buildNavigation(tenant?: string, enabledModules?: Set<string>) {
 
   if (!enabledModules) return base
 
-  // Always show dashboard, settings; gate others by enabled modules
-  const always = new Set(['dashboard', 'settings'])
+  // Always show dashboard, settings, tax-classes; gate others by enabled modules
+  const always = new Set(['dashboard', 'settings', 'tax-classes'])
   return base.filter(item => always.has(item.key) || enabledModules.has(item.key))
 }
 

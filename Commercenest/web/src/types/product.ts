@@ -106,9 +106,10 @@ export interface ProductFormData {
   meta_description: string
   seo_url?: string
   
-  // Shipping
+  // Shipping & Tax
   requires_shipping: boolean
   taxable: boolean
+  tax_class_id?: string
   hs_code?: string
   
   // Fashion-specific fields
@@ -196,3 +197,6 @@ export interface ProductImage {
   alt: string | null
   sort_order: number
 }
+
+// Tax Classes System - Use Supabase type for consistency
+export type TaxClass = import('@/types/supabase').TaxClass

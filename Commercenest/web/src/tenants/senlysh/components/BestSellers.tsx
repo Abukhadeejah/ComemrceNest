@@ -98,15 +98,15 @@ const BestSellers: React.FC<BestSellersProps> = ({
 
     const productSlug = product.slug || generateSlug(product.name || 'unnamed-product');
 
-    return {
-      name: product.name,
-      image: product.hero_image_url, // Always use actual product image
-      price: product.price_cents / 100,
-      originalPrice: product.compare_at_price_cents ? product.compare_at_price_cents / 100 : undefined,
-      badges: badges.map(badge => badge.text),
-      url: `/senlysh/products/${productSlug}`,
-      rating: 4.5 // Default rating - could be made dynamic from reviews table
-    };
+      return {
+        name: product.name,
+        image: product.hero_image_url || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=400&fit=crop&crop=center', // Always use actual product image with fallback
+        price: product.price_cents / 100,
+        originalPrice: product.compare_at_price_cents ? product.compare_at_price_cents / 100 : undefined,
+        badges: badges.map(badge => badge.text),
+        url: `/senlysh/products/${productSlug}`,
+        rating: 4.5 // Default rating - could be made dynamic from reviews table
+      };
   });
 
   // Show warning if no products found

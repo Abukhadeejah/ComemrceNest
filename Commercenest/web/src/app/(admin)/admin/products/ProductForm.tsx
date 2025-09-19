@@ -15,6 +15,7 @@ import { BasicInformationSection } from './components/BasicInformationSection'
 import { PricingSection } from './components/PricingSection'
 import { InventorySection } from './components/InventorySection'
 import { ShippingSection } from './components/ShippingSection'
+import { TaxSection } from './components/TaxSection'
 import { OrganizationSection } from './components/OrganizationSection'
 
 import { MediaSection } from './components/MediaSection'
@@ -65,6 +66,7 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
     gift_card_expiry_days: '',
     category_id: '',
     status: 'draft',
+    tax_class_id: '',
     images: [],
     variantOptions: [],
     sizeGuides: [],
@@ -350,6 +352,12 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
         />
         
         <ShippingSection 
+          formData={formData} 
+          errors={errors}
+          onInputChange={handleInputChange}
+        />
+
+        <TaxSection 
           formData={formData} 
           errors={errors}
           onInputChange={handleInputChange}
