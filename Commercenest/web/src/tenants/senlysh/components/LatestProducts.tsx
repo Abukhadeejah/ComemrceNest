@@ -193,21 +193,33 @@ const LatestProducts: React.FC<LatestProductsProps> = ({
         const primaryBadge = badges.length > 0 ? badges[0] : { text: 'New', className: 'bg-green-500 text-white' };
 
         // PRODUCTION READY: Use database images with fallback for missing images
-        const resolvedImages: string[] = (Array.isArray(product.images) && product.images.length > 0)
-          ? product.images
-          : (product.hero_image_url ? [product.hero_image_url] : []);
+        let resolvedImages: string[] = [];
+        
+        // First try product_images array
+        if (Array.isArray(product.images) && product.images.length > 0) {
+          resolvedImages = product.images;
+        } 
+        // Then try hero_image_url
+        else if (product.hero_image_url) {
+          resolvedImages = [product.hero_image_url];
+        }
 
-        // Add fallback images if no images found in database
+        // Always add fallback images to handle 404 errors from Supabase storage
+        const fallbackImages = [
+          'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=400&fit=crop&crop=center',
+          'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=400&h=400&fit=crop&crop=center',
+          'https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?w=400&h=400&fit=crop&crop=center',
+          'https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=400&h=400&fit=crop&crop=center',
+          'https://images.unsplash.com/photo-1445205170230-053b83016050?w=400&h=400&fit=crop&crop=center'
+        ];
+        
+        // If no images found in database, use fallback
         if (resolvedImages.length === 0) {
           console.warn(`Product ${product.name} has no images in database, using fallback`);
-          const fallbackImages = [
-            'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=400&fit=crop&crop=center',
-            'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=400&h=400&fit=crop&crop=center',
-            'https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?w=400&h=400&fit=crop&crop=center',
-            'https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=400&h=400&fit=crop&crop=center',
-            'https://images.unsplash.com/photo-1445205170230-053b83016050?w=400&h=400&fit=crop&crop=center'
-          ];
           resolvedImages.push(fallbackImages[Math.floor(Math.random() * fallbackImages.length)]);
+        } else {
+          // Add fallback as secondary images for error handling
+          resolvedImages.push(...fallbackImages.slice(0, 2));
         }
 
         // Generate a proper slug from product name if slug is missing
@@ -572,13 +584,15 @@ const ProductCardWithVariants: React.FC<ProductCardProps> = ({
                             className="object-cover object-center transition-transform duration-700 ease-out
                               group-hover:scale-110 motion-reduce:transition-none w-full h-full"
                             onError={(e) => {
-                              console.error('LatestProducts image failed to load:', image);
+                              console.warn(`LatestProducts image failed to load: ${image}. Using fallback.`);
                               const fallbackImages = [
                                 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=400&fit=crop&crop=center',
                                 'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=400&h=400&fit=crop&crop=center',
                                 'https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?w=400&h=400&fit=crop&crop=center'
                               ];
-                              e.currentTarget.src = fallbackImages[Math.floor(Math.random() * fallbackImages.length)];
+                              const fallbackSrc = fallbackImages[imgIndex % fallbackImages.length];
+                              e.currentTarget.src = fallbackSrc;
+                              console.log(`Switched to fallback image: ${fallbackSrc}`);
                             }}
                             onLoad={() => {
                               console.log('LatestProducts image loaded successfully:', image);
@@ -778,17 +792,18 @@ const ProductCardWithVariants: React.FC<ProductCardProps> = ({
               product.sizes && (
                           <div className="flex flex-wrap gap-2 mt-2 min-h-[2rem]">
                             {product.sizes.map((size) => (
-                              <Link 
+                              <button 
                                 key={size} 
-                                href="#" 
+                                type="button"
                                 className="text-sm text-gray-600 hover:text-purple-600 border border-gray-300
                                   px-3 py-2 rounded transition-all duration-200 hover:border-purple-300
                                   motion-reduce:transition-none hover:scale-105 hover:shadow-sm
                                   hover:-translate-y-0.5 transform-gpu min-w-[44px] min-h-[44px]
-                                  flex items-center justify-center"
+                                  flex items-center justify-center cursor-pointer"
+                                onClick={(e) => e.stopPropagation()}
                               >
                                 {size}
-                              </Link>
+                              </button>
                             ))}
                           </div>
               )
