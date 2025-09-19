@@ -1,6 +1,5 @@
 # Ignore TypeScript errors during Vercel builds
 *.d.ts
-tsconfig.json
 
 # Ignore test files
 **/*.test.*
