@@ -830,6 +830,29 @@ describe('Customer Journey', () => {
 
 **This technical report provides the complete roadmap for implementing the membership, shipping, and rewards system. Each phase builds upon the previous one, ensuring a stable and scalable implementation.**
 
+## Variant robustness test plan (2025-09-22)
+
+- Preconditions
+  - Tenant: senlysh. One product with has_variants=true and at least one Size option with values.
+- Admin UI (tenant-admin edit)
+  - With variants enabled: verify Variant Options and Variant Combinations sections show a required marker (*).
+  - Leaving options or combinations empty disables “Update Variants” with a red inline hint.
+  - Setting negative price or stock disables “Update Variants”.
+  - Clicking bottom “Update” does not change variants and does not error.
+- Server actions
+  - updateProductVariants: rejects when options=[] or combinations=[], or negative price/stock.
+  - updateProduct: rejects payloads that try to mutate variants; instructs to use Update Variants.
+- Database
+  - products.has_variants is NOT NULL DEFAULT false.
+  - CHECK constraints:
+    - products.low_stock_threshold >= 0
+    - product_variants.stock >= 0
+    - variant_option_values.price_adjustment_cents >= 0
+    - variant_option_values.cost_adjustment_cents >= 0
+- Regression
+  - After saving variants, refresh page: combinations render from DB.
+  - Create new product with has_variants=true, add option/values and combinations, save via Update Variants, then Update: no errors and persistence retained.
+
 
 
 

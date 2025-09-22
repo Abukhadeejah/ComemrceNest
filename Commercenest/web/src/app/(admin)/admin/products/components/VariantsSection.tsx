@@ -57,6 +57,12 @@ export function VariantsSection({
   const [newOptionType, setNewOptionType] = useState<'text' | 'color' | 'image' | 'select'>('select')
   const [isUpdatingVariants, setIsUpdatingVariants] = useState(false)
 
+  // Client-side validity checks when variants are enabled
+  const optionHasValues = (opt: VariantOption) => Array.isArray(opt.values) && opt.values.length > 0
+  const allOptionsValid = variantOptions.every(opt => opt.name?.trim() && optionHasValues(opt))
+  const combinationsValid = variantCombinations.length > 0 && variantCombinations.every(c => (c.priceCents ?? 0) >= 0 && (c.stock ?? 0) >= 0 && Object.keys(c.options || {}).length > 0)
+  const canUpdateVariants = hasVariants ? (variantOptions.length > 0 && allOptionsValid && combinationsValid) : true
+
   const toggleSection = (section: string) => {
     const newExpanded = new Set(expandedSections)
     if (newExpanded.has(section)) {
@@ -261,6 +267,11 @@ export function VariantsSection({
         <p className="text-sm text-gray-500 mt-1">
           Create multiple variations of this product (size, color, material, etc.)
         </p>
+        {hasVariants && (
+          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded mt-2 p-2">
+            When enabled, at least one <strong>Variant Option</strong> with values and at least one <strong>Variant Combination</strong> are required. Price and Stock must be non‑negative.
+          </p>
+        )}
       </div>
 
       {!hasVariants ? (
@@ -277,7 +288,7 @@ export function VariantsSection({
                 onClick={() => toggleSection('options')}
                 className="flex items-center space-x-2 flex-1"
               >
-                <span className="font-medium text-gray-900">Variant Options</span>
+                <span className="font-medium text-gray-900">Variant Options{hasVariants && <span className="text-red-600"> *</span>}</span>
                 <span className="text-sm text-gray-500">({variantOptions.length})</span>
               </button>
               <button
@@ -345,7 +356,7 @@ export function VariantsSection({
                       {/* Option Values */}
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-gray-700">Values</span>
+                          <span className="text-sm font-medium text-gray-700">Values{hasVariants && <span className="text-red-600"> *</span>}</span>
                           <AddValueButton
                             option={option}
                             onAdd={(value, displayValue) => addOptionValue(option.id, value, displayValue)}
@@ -409,7 +420,7 @@ export function VariantsSection({
                   onClick={() => toggleSection('combinations')}
                   className="flex items-center space-x-2 flex-1"
                 >
-                  <span className="font-medium text-gray-900">Variant Combinations</span>
+                  <span className="font-medium text-gray-900">Variant Combinations{hasVariants && <span className="text-red-600"> *</span>}</span>
                   <span className="text-sm text-gray-500">({variantCombinations.length})</span>
                 </button>
                 <div className="flex items-center space-x-2">
@@ -424,7 +435,7 @@ export function VariantsSection({
                     <button
                       type="button"
                       onClick={handleUpdateVariants}
-                      disabled={isUpdatingVariants}
+                      disabled={isUpdatingVariants || (hasVariants && !canUpdateVariants)}
                       className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isUpdatingVariants ? 'Updating...' : 'Update Variants'}
@@ -446,6 +457,11 @@ export function VariantsSection({
 
               {expandedSections.has('combinations') && (
                 <div className="p-4">
+                  {hasVariants && !canUpdateVariants && (
+                    <div className="mb-3 text-xs text-red-700 bg-red-50 border border-red-200 rounded p-2">
+                      Complete requirements before saving: at least one option with values, at least one combination, non‑negative price and stock.
+                    </div>
+                  )}
                   {variantCombinations.length === 0 ? (
                     <div className="text-center py-8 text-gray-500">
                       <p>No combinations generated yet.</p>
