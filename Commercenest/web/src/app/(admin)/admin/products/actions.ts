@@ -198,6 +198,29 @@ export async function createProduct(formData: FormData) {
     tags: formData.get('tags') ? JSON.parse(formData.get('tags') as string) : []
   }
 
+  // Basic server-side validation for product creation
+  const creationProblems: string[] = []
+  if (!productData.name || !String(productData.name).trim()) creationProblems.push('Product name is required.')
+  if (!productData.slug || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(String(productData.slug))) creationProblems.push('Slug must be kebab-case, lowercase letters, numbers and hyphens only.')
+  if (!productData.status || !['draft', 'active', 'archived'].includes(String(productData.status))) creationProblems.push('Invalid status. Use draft, active, or archived.')
+  if (productData.price_cents != null && Number(productData.price_cents) < 0) creationProblems.push('Price must be ≥ 0.')
+  if (productData.compare_at_price_cents != null && Number(productData.compare_at_price_cents) < 0) creationProblems.push('Compare-at price must be ≥ 0.')
+  if (productData.cost_per_item_cents != null && Number(productData.cost_per_item_cents) < 0) creationProblems.push('Cost per item must be ≥ 0.')
+  if (productData.stock != null && Number(productData.stock) < 0) creationProblems.push('Stock must be ≥ 0.')
+  if (productData.low_stock_threshold != null && Number(productData.low_stock_threshold) < 0) creationProblems.push('Low stock threshold must be ≥ 0.')
+
+  // If variants are enabled at creation time, require at least one option and one combination
+  if (productData.has_variants) {
+    const opts = Array.isArray(productData.variantOptions) ? productData.variantOptions : []
+    const combos = Array.isArray(productData.variantCombinations) ? productData.variantCombinations : []
+    if (opts.length === 0) creationProblems.push('At least one variant option is required when variants are enabled.')
+    if (combos.length === 0) creationProblems.push('At least one variant combination is required when variants are enabled.')
+  }
+
+  if (creationProblems.length > 0) {
+    throw new Error(`Validation failed: ${creationProblems.join(' ')}`)
+  }
+
   // Process numeric fields - convert empty strings to null
   if (productData.weight === '') productData.weight = null
   if (productData.model_height_cm === 0) productData.model_height_cm = null
@@ -621,6 +644,14 @@ export async function updateProduct(productId: string, formData: FormData) {
 
   if (error) {
     throw new Error(`Failed to update product: ${error.message}`)
+  }
+
+  // Guardrail: if variants are enabled, reject embedded variant arrays here
+  if (productData.has_variants && (
+    (Array.isArray(productData.variantOptions) && productData.variantOptions.length > 0) ||
+    (Array.isArray(productData.variantCombinations) && productData.variantCombinations.length > 0)
+  )) {
+    throw new Error('Variants must be updated using the "Update Variants" button. The main Update does not accept variant arrays.')
   }
 
   // Handle category assignment (using UPSERT to prevent duplicates)
@@ -1198,6 +1229,55 @@ export async function updateProductVariants(
     const tenantId = await resolveTenantIdFromRequest()
     if (!tenantId) {
       throw new Error('Tenant not found')
+    }
+
+    // Strict validation when variants are enabled
+    if (variantData.hasVariants) {
+      const problems: string[] = []
+      if (!Array.isArray(variantData.variantOptions) || variantData.variantOptions.length === 0) {
+        problems.push('At least one variant option is required when variants are enabled.')
+      }
+      if (!Array.isArray(variantData.variantCombinations) || variantData.variantCombinations.length === 0) {
+        problems.push('At least one variant combination is required when variants are enabled.')
+      }
+
+      // Validate options/values
+      for (const opt of variantData.variantOptions || []) {
+        if (!opt || typeof opt.name !== 'string' || !opt.name.trim()) {
+          problems.push('Each variant option must have a non-empty name.')
+        }
+        if (!Array.isArray(opt.values) || opt.values.length === 0) {
+          problems.push(`Option "${opt?.displayName || opt?.name || 'unknown'}" must include at least one value.`)
+        }
+        for (const val of opt.values || []) {
+          if (!val || typeof val.value !== 'string' || !val.value.trim()) {
+            problems.push(`Option value is required for "${opt?.displayName || opt?.name || 'unknown'}".`)
+          }
+          if (val.priceAdjustmentCents != null && Number(val.priceAdjustmentCents) < 0) {
+            problems.push('Value priceAdjustmentCents cannot be negative.')
+          }
+          if (val.costAdjustmentCents != null && Number(val.costAdjustmentCents) < 0) {
+            problems.push('Value costAdjustmentCents cannot be negative.')
+          }
+        }
+      }
+
+      // Validate combinations
+      for (const combo of variantData.variantCombinations || []) {
+        if (combo.priceCents == null || Number.isNaN(Number(combo.priceCents)) || Number(combo.priceCents) < 0) {
+          problems.push('Each combination requires priceCents ≥ 0.')
+        }
+        if (combo.stock == null || Number.isNaN(Number(combo.stock)) || Number(combo.stock) < 0) {
+          problems.push('Each combination requires stock ≥ 0.')
+        }
+        if (!combo.options || typeof combo.options !== 'object' || Object.keys(combo.options).length === 0) {
+          problems.push('Each combination must specify option selections.')
+        }
+      }
+
+      if (problems.length > 0) {
+        throw new Error(`Variant validation failed: ${problems.join(' ')}`)
+      }
     }
 
     console.log('DEBUG: Starting variant update for product:', productId)
