@@ -305,35 +305,39 @@ export async function createProduct(formData: FormData) {
     await Promise.all(imagePromises)
   }
 
-  // Handle variant options
+  // Handle variant options (using UPSERT to prevent duplicates)
   if (Array.isArray(productData.variantOptions) && productData.variantOptions.length > 0) {
     const variantOptionPromises = productData.variantOptions.map(async (option: Record<string, unknown>) => {
-      // First, create the variant option
+      // First, upsert the variant option (prevent duplicates)
       const { data: variantOption, error: optionError } = await supabaseAdmin
         .from('variant_options')
-        .insert({
+        .upsert({
           tenant_id: tenantId!,
           name: option.name as string,
           display_name: option.displayName as string,
           type: option.type as string,
           required: option.required as boolean,
           sort_order: 0
+        }, {
+          onConflict: 'tenant_id,name'
         })
         .select()
         .single()
 
       if (optionError) throw optionError
 
-      // Link the option to the product
+      // Link the option to the product (upsert to prevent duplicates)
       await supabaseAdmin
         .from('product_variant_options')
-        .insert({
+        .upsert({
           tenant_id: tenantId!,
           product_id: product.id,
           option_id: variantOption.id
+        }, {
+          onConflict: 'product_id,option_id'
         })
 
-      // Create option values
+      // Create option values (upsert to prevent duplicates)
       const optionValues = Array.isArray((option as Record<string, unknown> & { values?: Record<string, unknown>[] }).values)
         ? ((option as Record<string, unknown> & { values?: Record<string, unknown>[] }).values as Record<string, unknown>[])
         : []
@@ -341,7 +345,7 @@ export async function createProduct(formData: FormData) {
         const valuePromises = optionValues.map(async (value: Record<string, unknown>) => {
           return supabaseAdmin
             .from('variant_option_values')
-            .insert({
+            .upsert({
               tenant_id: tenantId!,
               option_id: variantOption.id,
               value: value.value as string,
@@ -350,6 +354,8 @@ export async function createProduct(formData: FormData) {
               image_url: value.imageUrl as string,
               price_adjustment_cents: value.priceAdjustmentCents ? parseInt(String(value.priceAdjustmentCents)) : 0,
               cost_adjustment_cents: value.costAdjustmentCents ? parseInt(String(value.costAdjustmentCents)) : 0
+            }, {
+              onConflict: 'option_id,value'
             })
         })
         await Promise.all(valuePromises)
@@ -617,198 +623,64 @@ export async function updateProduct(productId: string, formData: FormData) {
     throw new Error(`Failed to update product: ${error.message}`)
   }
 
-  // Handle category assignment
-  // Remove existing categories first
-  await supabaseAdmin
-    .from('product_categories')
-    .delete()
-    .eq('product_id', productId)
-
-  // Add new category if one is selected
+  // Handle category assignment (using UPSERT to prevent duplicates)
   if (productData.category_id && productData.category_id.trim() !== '') {
     await supabaseAdmin
       .from('product_categories')
-      .insert({
+      .upsert({
         product_id: productId,
         category_id: productData.category_id,
         tenant_id: tenantId
+      }, {
+        onConflict: 'product_id,category_id'
       })
-  }
-
-  // Handle image uploads
-  const normalizedImagesUpdate = normalizeImageInputs(productData.images || [])
-  if (normalizedImagesUpdate.length > 0) {
-    // Remove existing images
+  } else {
+    // Remove category assignment if none selected
     await supabaseAdmin
-      .from('product_images')
+      .from('product_categories')
       .delete()
       .eq('product_id', productId)
+  }
 
-    // Add new images
+  // Handle image uploads (using UPSERT to prevent duplicates)
+  const normalizedImagesUpdate = normalizeImageInputs(productData.images || [])
+  if (normalizedImagesUpdate.length > 0) {
+    // Upsert images to prevent duplicates while maintaining order
     const imagePromises = normalizedImagesUpdate.map(async (imageUrl: string, index: number) => {
       return supabaseAdmin
         .from('product_images')
-        .insert({
+        .upsert({
           product_id: productId,
           tenant_id: tenantId!,
           url: imageUrl,
           alt: `Product image ${index + 1}`,
           sort_order: index
+        }, {
+          onConflict: 'product_id,url'
         })
     })
     await Promise.all(imagePromises)
+    
+    // Clean up any images that are no longer in the list
+    await supabaseAdmin
+      .from('product_images')
+      .delete()
+      .eq('product_id', productId)
+      .not('url', 'in', `(${normalizedImagesUpdate.map(url => `'${url}'`).join(',')})`)
+  } else {
+    // Remove all images if none provided
+    await supabaseAdmin
+      .from('product_images')
+      .delete()
+      .eq('product_id', productId)
   }
 
-  // Handle variant options update
-  if (Array.isArray(productData.variantOptions)) {
-    // Remove existing variant options and related data
-    await supabaseAdmin
-      .from('product_variant_options')
-      .delete()
-      .eq('product_id', productId)
+  // IMPORTANT: Do not mutate variant options in the main product update.
+  // Variants are managed exclusively via updateProductVariants to avoid
+  // accidental deletion/reinsertion and ID mapping issues.
 
-    await supabaseAdmin
-      .from('variant_combinations')
-      .delete()
-      .eq('product_id', productId)
-
-    await supabaseAdmin
-      .from('product_variants')
-      .delete()
-      .eq('product_id', productId)
-
-    // Get all option IDs that need to be cleaned up
-    const { data: existingOptions } = await supabaseAdmin
-      .from('product_variant_options')
-      .select('option_id')
-      .eq('product_id', productId)
-
-    if (existingOptions && existingOptions.length > 0) {
-      const optionIds = existingOptions.map(opt => opt.option_id)
-      await supabaseAdmin
-        .from('variant_option_values')
-        .delete()
-        .in('option_id', optionIds)
-
-      await supabaseAdmin
-        .from('variant_options')
-        .delete()
-        .in('id', optionIds)
-    }
-
-    // Add new variant options
-    if (productData.variantOptions.length > 0) {
-      const variantOptionPromises = productData.variantOptions.map(async (option: Record<string, unknown>) => {
-        // First, create the variant option
-        const { data: variantOption, error: optionError } = await supabaseAdmin
-          .from('variant_options')
-          .insert({
-            tenant_id: tenantId!,
-            name: option.name as string,
-            display_name: option.displayName as string,
-            type: option.type as string,
-            required: option.required as boolean,
-            sort_order: 0
-          })
-          .select()
-          .single()
-
-        if (optionError) throw optionError
-
-        // Link the option to the product
-        await supabaseAdmin
-          .from('product_variant_options')
-          .insert({
-            tenant_id: tenantId!,
-            product_id: productId,
-            option_id: variantOption.id
-          })
-
-        // Create option values
-        const optionValues = Array.isArray((option as Record<string, unknown> & { values?: Record<string, unknown>[] }).values)
-          ? ((option as Record<string, unknown> & { values?: Record<string, unknown>[] }).values as Record<string, unknown>[])
-          : []
-        if (optionValues.length > 0) {
-          const valuePromises = optionValues.map(async (value: Record<string, unknown>) => {
-            return supabaseAdmin
-              .from('variant_option_values')
-              .insert({
-                tenant_id: tenantId!,
-                option_id: variantOption.id,
-                value: value.value as string,
-                display_value: value.displayValue as string,
-                color_hex: value.colorHex as string,
-                image_url: value.imageUrl as string,
-                price_adjustment_cents: value.priceAdjustmentCents ? parseInt(String(value.priceAdjustmentCents)) : 0,
-                cost_adjustment_cents: value.costAdjustmentCents ? parseInt(String(value.costAdjustmentCents)) : 0
-              })
-          })
-          await Promise.all(valuePromises)
-        }
-
-        return variantOption
-      })
-      await Promise.all(variantOptionPromises)
-    }
-  }
-
-  // Handle variant combinations update
-  if (Array.isArray(productData.variantCombinations)) {
-    // Remove existing combinations
-    await supabaseAdmin
-      .from('variant_combinations')
-      .delete()
-      .eq('product_id', productId)
-
-    await supabaseAdmin
-      .from('product_variants')
-      .delete()
-      .eq('product_id', productId)
-
-    // Add new combinations
-    if (productData.variantCombinations.length > 0) {
-      const combinationPromises = productData.variantCombinations.map(async (combo: Record<string, unknown>) => {
-        // Create the variant combination
-        const { data: variant, error: variantError } = await supabaseAdmin
-          .from('product_variants')
-          .insert({
-            tenant_id: tenantId!,
-            product_id: productId,
-            name: `Variant ${combo.id}`,
-            sku: combo.sku as string,
-            price_cents: combo.priceCents as number,
-            stock: combo.stock as number,
-            attributes: adaptToSupabaseJson(combo.options as Record<string, unknown>)
-          })
-          .select()
-          .single()
-
-        if (variantError) throw variantError
-
-        // Create variant combinations for each option-value pair
-        if ((combo as Record<string, unknown> & { options?: Record<string, unknown> }).options && typeof (combo as Record<string, unknown> & { options?: Record<string, unknown> }).options === 'object') {
-          const optionEntries = Object.entries(((combo as Record<string, unknown> & { options?: Record<string, unknown> }).options) as Record<string, unknown>)
-          const comboPromises = optionEntries.map(async ([optionId, valueId]) => {
-            // Find the option and value IDs (this is a simplified approach)
-            // In a real implementation, you'd need to maintain proper ID mappings
-            return supabaseAdmin
-              .from('variant_combinations')
-              .insert({
-                tenant_id: tenantId!,
-                product_id: productId,
-                variant_id: variant.id,
-                option_id: optionId,
-                option_value_id: valueId as string
-              })
-          })
-          await Promise.all(comboPromises)
-        }
-
-        return variant
-      })
-      await Promise.all(combinationPromises)
-    }
-  }
+  // IMPORTANT: Do not mutate variant combinations in the main product update.
+  // This prevents accidental data loss when the bottom Update button is used.
 
   // Handle size guides update
   if (Array.isArray(productData.sizeGuides)) {
@@ -852,22 +724,23 @@ export async function updateProduct(productId: string, formData: FormData) {
     }
   }
 
-  // Handle selected size guide update
+  // Handle selected size guide update (using UPSERT to prevent duplicates)
   if (productData.sizeGuideId && productData.sizeGuideId !== '') {
-    // Remove existing associations first
+    await supabaseAdmin
+      .from('product_size_guides')
+      .upsert({
+        tenant_id: tenantId!,
+        product_id: productId,
+        size_guide_id: productData.sizeGuideId
+      }, {
+        onConflict: 'product_id,size_guide_id'
+      })
+  } else {
+    // Remove size guide association if none selected
     await supabaseAdmin
       .from('product_size_guides')
       .delete()
       .eq('product_id', productId)
-
-    // Add the selected size guide
-    await supabaseAdmin
-      .from('product_size_guides')
-      .insert({
-        tenant_id: tenantId!,
-        product_id: productId,
-        size_guide_id: productData.sizeGuideId
-      })
   }
 
   revalidateTag(tenantProductsTag(tenantId))
@@ -1286,6 +1159,296 @@ export async function getCategories(tenantIdArg?: string) {
     return await getCachedCategories(tenantId)
   } catch (error) {
     console.error('getCategories error:', error)
+    throw error
+  }
+}
+
+// Dedicated variant update action for isolated variant operations
+export async function updateProductVariants(
+  productId: string,
+  variantData: {
+    hasVariants: boolean
+    variantOptions: Array<{
+      id: string
+      name: string
+      displayName: string
+      type: string
+      required: boolean
+      values: Array<{
+        id: string
+        value: string
+        displayValue: string
+        colorHex?: string
+        imageUrl?: string
+        priceAdjustmentCents?: number
+        costAdjustmentCents?: number
+      }>
+    }>
+    variantCombinations: Array<{
+      id: string
+      options: Record<string, string>
+      priceCents: number
+      stock: number
+      sku: string
+      imageUrl?: string
+    }>
+  }
+) {
+  try {
+    const tenantId = await resolveTenantIdFromRequest()
+    if (!tenantId) {
+      throw new Error('Tenant not found')
+    }
+
+    console.log('DEBUG: Starting variant update for product:', productId)
+    console.log('DEBUG: Variant payload received:', {
+      hasVariants: variantData.hasVariants,
+      optionsCount: variantData.variantOptions.length,
+      combinationsCount: variantData.variantCombinations.length
+    })
+
+    // Step 1: Update the product's has_variants flag
+    const { error: productError } = await supabaseAdmin
+      .from('products')
+      .update({ has_variants: variantData.hasVariants })
+      .eq('id', productId)
+      .eq('tenant_id', tenantId)
+
+    if (productError) {
+      console.error('DEBUG: Failed to update product has_variants:', productError)
+      throw productError
+    }
+
+    console.log('DEBUG: Product has_variants updated to:', variantData.hasVariants)
+
+    // Step 2: Handle variant options with UPSERT
+    if (variantData.hasVariants && variantData.variantOptions.length > 0) {
+      const variantOptionPromises = variantData.variantOptions.map(async (option) => {
+        console.log('DEBUG: Processing variant option:', option.name)
+        
+        // UPSERT variant option
+        const { data: variantOption, error: optionError } = await supabaseAdmin
+          .from('variant_options')
+          .upsert({
+            tenant_id: tenantId,
+            name: option.name,
+            display_name: option.displayName,
+            type: option.type,
+            required: option.required,
+            sort_order: 0
+          }, {
+            onConflict: 'tenant_id,name'
+          })
+          .select()
+          .single()
+
+        if (optionError) {
+          console.error('DEBUG: Failed to upsert variant option:', optionError)
+          throw optionError
+        }
+
+        console.log('DEBUG: Variant option upserted:', variantOption)
+
+        // UPSERT product variant option link
+        await supabaseAdmin
+          .from('product_variant_options')
+          .upsert({
+            tenant_id: tenantId,
+            product_id: productId,
+            option_id: variantOption.id
+          }, {
+            onConflict: 'product_id,option_id'
+          })
+
+        // UPSERT variant option values
+        if (option.values && option.values.length > 0) {
+          const valuePromises = option.values.map(async (value) => {
+            console.log('DEBUG: Processing variant value:', value.value)
+            
+            const { error: valueError } = await supabaseAdmin
+              .from('variant_option_values')
+              .upsert({
+                tenant_id: tenantId,
+                option_id: variantOption.id,
+                value: value.value,
+                display_value: value.displayValue,
+                color_hex: value.colorHex || null,
+                image_url: value.imageUrl || null,
+                price_adjustment_cents: value.priceAdjustmentCents || 0,
+                cost_adjustment_cents: value.costAdjustmentCents || 0
+              }, {
+                onConflict: 'option_id,value'
+              })
+
+            if (valueError) {
+              console.error('DEBUG: Failed to upsert variant value:', valueError)
+              throw valueError
+            }
+
+            console.log('DEBUG: Variant value upserted:', value.value)
+          })
+
+          await Promise.all(valuePromises)
+        }
+      })
+
+      await Promise.all(variantOptionPromises)
+    }
+
+    // Step 3: Handle variant combinations
+    if (variantData.variantCombinations && variantData.variantCombinations.length > 0) {
+      console.log('DEBUG: Processing variant combinations:', variantData.variantCombinations.length)
+
+      // Build client -> DB ID mappings for options and values
+      // Map client option id -> option name
+      const clientOptionIdToName = new Map<string, string>()
+      // Map option name -> DB option id
+      const optionNameToDbId = new Map<string, string>()
+      // Map composite key (dbOptionId + '::' + value) -> dbValueId
+      const optionValueKeyToDbValueId = new Map<string, string>()
+
+      for (const option of variantData.variantOptions) {
+        clientOptionIdToName.set(option.id, option.name)
+
+        // Fetch DB option id by unique (tenant_id, name)
+        const { data: dbOption, error: fetchOptionErr } = await supabaseAdmin
+          .from('variant_options')
+          .select('id')
+          .eq('tenant_id', tenantId)
+          .eq('name', option.name)
+          .single()
+
+        if (fetchOptionErr || !dbOption) {
+          console.error('DEBUG: Failed to resolve DB option id for', option.name, fetchOptionErr)
+          continue
+        }
+        optionNameToDbId.set(option.name, dbOption.id)
+
+        // Resolve all value IDs for this option in a single query
+        const values = (option.values || []).map(v => v.value).filter(Boolean)
+        if (values.length > 0) {
+          const { data: dbValues, error: fetchValuesErr } = await supabaseAdmin
+            .from('variant_option_values')
+            .select('id, value')
+            .eq('tenant_id', tenantId)
+            .eq('option_id', dbOption.id)
+            .in('value', values)
+
+          if (fetchValuesErr) {
+            console.error('DEBUG: Failed to resolve DB value ids for option', option.name, fetchValuesErr)
+          } else {
+            for (const row of dbValues || []) {
+              optionValueKeyToDbValueId.set(`${dbOption.id}::${row.value}`, row.id)
+            }
+          }
+        }
+      }
+
+      // Delete existing variants (cascades remove variant_combinations)
+      const { error: deleteError } = await supabaseAdmin
+        .from('product_variants')
+        .delete()
+        .eq('product_id', productId)
+        .eq('tenant_id', tenantId)
+
+      if (deleteError) {
+        console.error('DEBUG: Failed to delete existing variants:', deleteError)
+        throw deleteError
+      }
+
+      // Insert new variants and their combinations using DB UUIDs
+      const combinationPromises = variantData.variantCombinations.map(async (combo) => {
+        // Transform client option/value IDs -> DB UUIDs
+        const transformedAttributes: Record<string, string> = {}
+        const optionPairs: Array<{ optionId: string; valueId: string; valueStr?: string }> = []
+
+        for (const [clientOptionId, clientValueId] of Object.entries(combo.options || {})) {
+          const optionName = clientOptionIdToName.get(clientOptionId)
+          if (!optionName) continue
+          const dbOptionId = optionNameToDbId.get(optionName)
+          if (!dbOptionId) continue
+
+          // Find the value string for this client value id within the payload option
+          const optionPayload = variantData.variantOptions.find(o => o.id === clientOptionId)
+          const valuePayload = optionPayload?.values?.find(v => v.id === clientValueId)
+          const valueStr = valuePayload?.value
+          if (!valueStr) continue
+
+          const dbValueId = optionValueKeyToDbValueId.get(`${dbOptionId}::${valueStr}`)
+          if (!dbValueId) continue
+
+          transformedAttributes[dbOptionId] = dbValueId
+          optionPairs.push({ optionId: dbOptionId, valueId: dbValueId, valueStr })
+        }
+
+        // Derive variant display name from value display strings if available
+        const nameParts: string[] = []
+        for (const pair of optionPairs) {
+          // Best-effort get display_value for readability (optional)
+          nameParts.push(pair.valueStr || pair.valueId)
+        }
+        const variantName = nameParts.join(' - ') || `Variant ${String(combo.id).slice(0, 8)}`
+
+        const { data: variantRow, error: variantError } = await supabaseAdmin
+          .from('product_variants')
+          .insert({
+            tenant_id: tenantId,
+            product_id: productId,
+            name: variantName,
+            sku: combo.sku || '',
+            price_cents: combo.priceCents || 0,
+            stock: combo.stock || 0,
+            attributes: transformedAttributes
+          })
+          .select('id')
+          .single()
+
+        if (variantError) {
+          console.error('DEBUG: Failed to insert variant row:', variantError)
+          throw variantError
+        }
+
+        // Insert variant_combinations rows
+        if (optionPairs.length > 0) {
+          const rows = optionPairs.map(p => ({
+            tenant_id: tenantId,
+            product_id: productId,
+            variant_id: variantRow!.id,
+            option_id: p.optionId,
+            option_value_id: p.valueId
+          }))
+
+          const { error: combosErr } = await supabaseAdmin
+            .from('variant_combinations')
+            .insert(rows)
+
+          if (combosErr) {
+            console.error('DEBUG: Failed to insert variant_combinations:', combosErr)
+            throw combosErr
+          }
+        }
+      })
+
+      await Promise.all(combinationPromises)
+    } else {
+      // If no variant combinations, delete existing ones
+      const { error: deleteError } = await supabaseAdmin
+        .from('product_variants')
+        .delete()
+        .eq('product_id', productId)
+        .eq('tenant_id', tenantId)
+
+      if (deleteError) {
+        console.error('DEBUG: Failed to delete existing variants:', deleteError)
+        throw deleteError
+      }
+    }
+
+    console.log('DEBUG: Variant update completed successfully')
+
+    return { success: true }
+  } catch (error) {
+    console.error('DEBUG: updateProductVariants failed:', error)
     throw error
   }
 }

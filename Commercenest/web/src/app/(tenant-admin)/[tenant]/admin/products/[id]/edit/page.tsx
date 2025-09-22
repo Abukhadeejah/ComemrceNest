@@ -17,27 +17,127 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
       notFound()
     }
 
-    // Get product with category and images
+    // Get product basic data first (separate from complex joins)
     const { data: product, error } = await supabaseAdmin
       .from('products')
-      .select(`
-        *,
-        categories:product_categories(
-          category:categories(name, slug)
-        ),
-        images:product_images(
-          url,
-          alt,
-          sort_order
-        )
-      `)
+      .select('*')
       .eq('id', id)
       .eq('tenant_id', tenantId)
       .single()
 
     if (error || !product) {
+      console.error('Product fetch error:', error)
       notFound()
     }
+
+    // Get related data separately to avoid query corruption
+    const [categoriesResult, imagesResult, variantOptionsResult, variantsResult] = await Promise.all([
+      // Categories
+      supabaseAdmin
+        .from('product_categories')
+        .select('category:categories(id, name, slug)')
+        .eq('product_id', id),
+      
+      // Images  
+      supabaseAdmin
+        .from('product_images')
+        .select('url, alt, sort_order')
+        .eq('product_id', id)
+        .order('sort_order'),
+      
+      // Variant options
+      supabaseAdmin
+        .from('product_variant_options')
+        .select(`
+          option:variant_options(
+            id,
+            name,
+            display_name,
+            type,
+            required,
+            values:variant_option_values(
+              id,
+              value,
+              display_value,
+              color_hex,
+              image_url
+            )
+          )
+        `)
+        .eq('product_id', id),
+      
+      // Product variants
+      supabaseAdmin
+        .from('product_variants')
+        .select('id, name, sku, price_cents, stock, attributes')
+        .eq('product_id', id)
+    ])
+
+    // Transform variant options data to match expected structure
+    const transformedVariantOptions = (variantOptionsResult.data || []).map((item: any) => {
+      const dbOptionId = item.option?.id || ''
+      return {
+        id: `option_${dbOptionId}`,
+        name: item.option?.name || '',
+        displayName: item.option?.display_name || '',
+        type: item.option?.type || 'text',
+        required: item.option?.required || false,
+        values: (item.option?.values || []).map((value: any) => ({
+          id: `value_${value.id || ''}`,
+          value: value.value || '',
+          displayValue: value.display_value || '',
+          colorHex: value.color_hex || undefined,
+          imageUrl: value.image_url || undefined,
+          priceAdjustmentCents: value.price_adjustment_cents || 0,
+          costAdjustmentCents: value.cost_adjustment_cents || 0
+        }))
+      }
+    })
+
+    // Build DB UUID -> client ID maps for options and values
+    const optionDbToClient = new Map<string, string>()
+    const valueDbToClient = new Map<string, string>()
+    for (const opt of transformedVariantOptions) {
+      const dbId = (opt.id || '').replace(/^option_/, '')
+      optionDbToClient.set(dbId, opt.id)
+      for (const val of opt.values) {
+        const vDbId = (val.id || '').replace(/^value_/, '')
+        valueDbToClient.set(vDbId, val.id)
+      }
+    }
+
+    // Transform variant combinations data to match expected structure
+    const transformedVariants = (variantsResult.data || []).map((variant: any) => ({
+      id: `combo_${variant.id || ''}`,
+      options: Object.fromEntries(
+        Object.entries(variant.attributes || {}).map(([dbOptionId, dbValueId]) => {
+          const clientOpt = optionDbToClient.get(String(dbOptionId)) || `option_${dbOptionId}`
+          const clientVal = valueDbToClient.get(String(dbValueId)) || `value_${dbValueId}`
+          return [clientOpt, clientVal]
+        })
+      ),
+      priceCents: variant.price_cents || 0,
+      stock: variant.stock || 0,
+      sku: variant.sku || '',
+      imageUrl: undefined
+    }))
+
+    // Attach the related data to product object
+    const productWithRelations = {
+      ...product,
+      categories: categoriesResult.data || [],
+      images: imagesResult.data || [],
+      variant_options: transformedVariantOptions,
+      variants: transformedVariants
+    }
+
+    console.log('DEBUG: Raw product from DB:', {
+      id: productWithRelations.id,
+      name: productWithRelations.name,
+      has_variants: productWithRelations.has_variants,
+      has_variants_type: typeof productWithRelations.has_variants,
+      variant_options_length: productWithRelations.variant_options?.length || 0
+    })
 
     // Get categories for the form
     const { data: categories, error: categoriesError } = await supabaseAdmin
@@ -52,7 +152,7 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
 
     // Transform product data to match ProductForm expectations
     const categoryId = (() => {
-      const first = Array.isArray(product.categories) ? product.categories[0] as unknown : undefined
+      const first = Array.isArray(productWithRelations.categories) ? productWithRelations.categories[0] as unknown : undefined
       if (first && typeof first === 'object' && 'category' in (first as Record<string, unknown>)) {
         const cat = (first as Record<string, unknown> & { category?: { id?: unknown } }).category
         if (cat && typeof cat.id === 'string') return cat.id
@@ -61,38 +161,42 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
     })()
 
     const formData = {
-      id: product.id,
-      name: product.name,
-      slug: product.slug,
-      description: product.description || '',
-      status: product.status,
-      price_cents: product.price_cents,
-      compare_at_price_cents: product.compare_at_price_cents || 0,
-      cost_per_item_cents: product.cost_per_item_cents || 0,
-      stock: product.stock,
-      sku: product.sku || '',
-      track_inventory: product.track_inventory || false,
-      low_stock_threshold: product.low_stock_threshold || 0,
-      allow_backorders: product.allow_backorders || false,
-      requires_shipping: product.requires_shipping || true,
-      taxable: product.taxable || true,
-      weight: product.weight || 0,
-      dimensions: product.dimensions || '',
-      hs_code: product.hs_code || '',
-      meta_title: product.meta_title || '',
-      meta_description: product.meta_description || '',
+      id: productWithRelations.id,
+      name: productWithRelations.name,
+      slug: productWithRelations.slug,
+      description: productWithRelations.description || '',
+      status: productWithRelations.status,
+      price_cents: productWithRelations.price_cents,
+      compare_at_price_cents: productWithRelations.compare_at_price_cents || 0,
+      cost_per_item_cents: productWithRelations.cost_per_item_cents || 0,
+      stock: productWithRelations.stock,
+      sku: productWithRelations.sku || '',
+      track_inventory: productWithRelations.track_inventory || false,
+      low_stock_threshold: productWithRelations.low_stock_threshold || 0,
+      allow_backorders: productWithRelations.allow_backorders || false,
+      requires_shipping: productWithRelations.requires_shipping || true,
+      taxable: productWithRelations.taxable || true,
+      weight: productWithRelations.weight || 0,
+      dimensions: productWithRelations.dimensions || '',
+      hs_code: productWithRelations.hs_code || '',
+      meta_title: productWithRelations.meta_title || '',
+      meta_description: productWithRelations.meta_description || '',
       category_id: categoryId,
-      images: (product.images?.map((img: Record<string, unknown>) => String(img.url)).filter(Boolean) as string[]) || [],
+      images: (productWithRelations.images?.map((img: Record<string, unknown>) => String(img.url)).filter(Boolean) as string[]) || [],
+      has_variants: productWithRelations.has_variants === true, // Explicit boolean check
       // Fashion-specific fields
-      material_composition: product.material_composition || '',
-      care_instructions: product.care_instructions || '',
-      fit_type: product.fit_type || '',
-      model_height_cm: product.model_height_cm ?? undefined,
-      model_weight_kg: product.model_weight_kg ?? undefined,
-      model_wearing_size: product.model_wearing_size || '',
-      is_gift_card: product.is_gift_card || false,
-      gift_card_amount_cents: product.gift_card_amount_cents ?? undefined,
-      gift_card_expiry_days: product.gift_card_expiry_days ?? undefined
+      material_composition: productWithRelations.material_composition || '',
+      care_instructions: productWithRelations.care_instructions || '',
+      fit_type: productWithRelations.fit_type || '',
+      model_height_cm: productWithRelations.model_height_cm ?? undefined,
+      model_weight_kg: productWithRelations.model_weight_kg ?? undefined,
+      model_wearing_size: productWithRelations.model_wearing_size || '',
+      is_gift_card: productWithRelations.is_gift_card || false,
+      gift_card_amount_cents: productWithRelations.gift_card_amount_cents ?? undefined,
+      gift_card_expiry_days: productWithRelations.gift_card_expiry_days ?? undefined,
+      // Variant data
+      variantOptions: productWithRelations.variant_options || [],
+      variantCombinations: productWithRelations.variants || []
     }
 
     return (

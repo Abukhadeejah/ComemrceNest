@@ -17,20 +17,38 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
       notFound()
     }
 
-    // Get product with category, images, and variants
+    // Get product basic data first (separate from complex joins)
     const { data: product, error } = await supabaseAdmin
       .from('products')
-      .select(`
-        *,
-        categories:product_categories(
-          category:categories(name, slug)
-        ),
-        images:product_images(
-          url,
-          alt,
-          sort_order
-        ),
-        variant_options:product_variant_options(
+      .select('*')
+      .eq('id', id)
+      .eq('tenant_id', tenantId)
+      .single()
+
+    if (error || !product) {
+      console.error('Product fetch error:', error)
+      notFound()
+    }
+
+    // Get related data separately to avoid query corruption
+    const [categoriesResult, imagesResult, variantOptionsResult, variantsResult] = await Promise.all([
+      // Categories
+      supabaseAdmin
+        .from('product_categories')
+        .select('category:categories(id, name, slug)')
+        .eq('product_id', id),
+      
+      // Images  
+      supabaseAdmin
+        .from('product_images')
+        .select('url, alt, sort_order')
+        .eq('product_id', id)
+        .order('sort_order'),
+      
+      // Variant options
+      supabaseAdmin
+        .from('product_variant_options')
+        .select(`
           option:variant_options(
             id,
             name,
@@ -45,23 +63,32 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
               image_url
             )
           )
-        ),
-        variants:product_variants(
-          id,
-          name,
-          sku,
-          price_cents,
-          stock,
-          attributes
-        )
-      `)
-      .eq('id', id)
-      .eq('tenant_id', tenantId)
-      .single()
+        `)
+        .eq('product_id', id),
+      
+      // Product variants
+      supabaseAdmin
+        .from('product_variants')
+        .select('id, name, sku, price_cents, stock, attributes')
+        .eq('product_id', id)
+    ])
 
-    if (error || !product) {
-      notFound()
+    // Attach the related data to product object
+    const productWithRelations = {
+      ...product,
+      categories: categoriesResult.data || [],
+      images: imagesResult.data || [],
+      variant_options: variantOptionsResult.data || [],
+      variants: variantsResult.data || []
     }
+
+    console.log('DEBUG: Raw product from DB:', {
+      id: productWithRelations.id,
+      name: productWithRelations.name,
+      has_variants: productWithRelations.has_variants,
+      has_variants_type: typeof productWithRelations.has_variants,
+      variant_options_length: productWithRelations.variant_options?.length || 0
+    })
 
     // Get categories for the form
     const { data: categories, error: categoriesError } = await supabaseAdmin
@@ -74,30 +101,41 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
       console.log('Error fetching categories:', categoriesError)
     }
 
-    // Transform variant options
-    const rawOptions = Array.isArray(product.variant_options) ? product.variant_options : []
+    // Transform variant options from database
+    const rawOptions = Array.isArray(productWithRelations.variant_options) ? productWithRelations.variant_options : []
+    console.log('DEBUG: Raw variant options from DB:', rawOptions)
+    
     const variantOptions = rawOptions.map((pvo: Record<string, unknown>) => {
       const option = (pvo.option || {}) as Record<string, unknown>
+      const values = Array.isArray((option as Record<string, unknown> & { values?: Record<string, unknown>[] }).values)
+        ? ((option as Record<string, unknown> & { values?: Record<string, unknown>[] }).values as Record<string, unknown>[]).map((value: Record<string, unknown>) => ({
+            id: (value.id as string) || '',
+            value: (value.value as string) || '',
+            displayValue: (value.display_value as string) || '',
+            colorHex: (value.color_hex as string) || undefined,
+            imageUrl: (value.image_url as string) || undefined
+          }))
+        : []
+        
+      console.log('DEBUG: Transformed option:', {
+        id: option.id,
+        name: option.name,
+        displayName: option.display_name,
+        values_count: values.length
+      })
+      
       return {
         id: (option.id as string) || '',
         name: (option.name as string) || '',
         displayName: (option.display_name as string) || '',
         type: (option.type as string) || 'select',
         required: Boolean(option.required),
-        values: Array.isArray((option as Record<string, unknown> & { values?: Record<string, unknown>[] }).values)
-          ? ((option as Record<string, unknown> & { values?: Record<string, unknown>[] }).values as Record<string, unknown>[]).map((value: Record<string, unknown>) => ({
-              id: (value.id as string) || '',
-              value: (value.value as string) || '',
-              displayValue: (value.display_value as string) || '',
-              colorHex: (value.color_hex as string) || undefined,
-              imageUrl: (value.image_url as string) || undefined
-            }))
-          : []
+        values
       }
     })
 
     // Transform variant combinations
-    const rawVariants = Array.isArray(product.variants) ? product.variants : []
+    const rawVariants = Array.isArray(productWithRelations.variants) ? productWithRelations.variants : []
     const variantCombinations = rawVariants.map((variant: Record<string, unknown>) => ({
       id: (variant.id as string) || '',
       options: (variant.attributes as Record<string, string>) || {},
@@ -107,8 +145,30 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
       imageUrl: ''
     }))
 
-    // Transform product data to match ProductForm expectations
-    const categoryId = (() => {
+      // FALLBACK: If has_variants is undefined, fetch it directly
+      let hasVariants = product.has_variants
+      if (hasVariants === undefined || hasVariants === null) {
+        console.log('DEBUG: has_variants is undefined, fetching directly from database...')
+        const { data: directProduct } = await supabaseAdmin
+          .from('products')
+          .select('has_variants')
+          .eq('id', id)
+          .eq('tenant_id', tenantId)
+          .single()
+        
+        hasVariants = directProduct?.has_variants || false
+        console.log('DEBUG: Direct query result:', { has_variants: hasVariants })
+      }
+
+      // Transform product data to match ProductForm expectations
+      console.log('DEBUG: About to create formData, final has_variants:', {
+        original_value: product.has_variants,
+        final_value: hasVariants,
+        type: typeof hasVariants,
+        boolean_conversion: hasVariants === true
+      })
+
+      const categoryId = (() => {
       const first = Array.isArray(product.categories) ? product.categories[0] as unknown : undefined
       if (first && typeof first === 'object' && 'category' in (first as Record<string, unknown>)) {
         const cat = (first as Record<string, unknown> & { category?: { id?: unknown } }).category
@@ -140,6 +200,7 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
       meta_description: product.meta_description || '',
       category_id: categoryId,
       images: (product.images?.map((img: Record<string, unknown>) => String(img.url)).filter(Boolean) as string[]) || [],
+      has_variants: productWithRelations.has_variants === true, // Explicit boolean check
       variantOptions,
       variantCombinations,
       // Fashion-specific fields

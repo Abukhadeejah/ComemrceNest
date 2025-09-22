@@ -4,10 +4,11 @@ import { useState, useTransition, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ADMIN_URLS } from '@/utils/admin-urls'
 import { useAdminTenantKey } from '@/components/admin/AdminBrandingWrapper'
-import { useDraftPersistence } from '@/hooks/useDraftPersistence'
+// Removed draft persistence - interferes with database operations
 import { 
   createProduct, 
   updateProduct,
+  updateProductVariants,
   uploadProductImage
 } from './actions'
 import { Category } from '@/utils/categoryUtils'
@@ -83,15 +84,7 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
     badge_display_from: ''
   })
 
-  // Draft persistence
-  const draftKey = `product_${mode}${initialData?.id ? `_${initialData.id}` : ''}`
-  const { loadDraft, clearDraft, hasDraft } = useDraftPersistence({
-    draftKey,
-    formData,
-    enabled: true
-  })
-  
-  const [showDraftNotification, setShowDraftNotification] = useState(false)
+  // Draft persistence removed - was interfering with database operations
 
   // State for images (can be File objects for new uploads or URL strings for existing images)
   const [imageFiles, setImageFiles] = useState<(File | string)[]>(initialData?.images || [])
@@ -120,31 +113,72 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
   // Populate form data when initialData is provided (edit mode)
   useEffect(() => {
     if (initialData && mode === 'edit') {
-      console.log('ProductForm: Loading initial data for edit mode:', initialData)
+      console.log('ProductForm: Loading initial data for edit mode:', {
+        has_variants: initialData.has_variants,
+        has_variants_type: typeof initialData.has_variants,
+        has_variants_boolean: Boolean(initialData.has_variants),
+        variantOptions_length: initialData.variantOptions?.length || 0
+      })
       setFormData(prev => ({
         ...prev,
-        ...initialData
+        ...initialData,
+        // Explicit handling for has_variants to prevent undefined
+        has_variants: Boolean(initialData.has_variants)
       }))
     }
   }, [initialData, mode])
 
-  // Load draft data on component mount
-  useEffect(() => {
-    if (hasDraft()) {
-      const draftData = loadDraft()
-      if (draftData) {
-        // Only load draft if we're not in edit mode with initial data
-        if (mode === 'create' || !initialData) {
+  // Draft persistence removed - was interfering with database operations
+
+  // Dedicated variant update handler
+  const handleVariantUpdate = async (variantData: {
+    hasVariants: boolean
+    variantOptions: Array<{
+      id: string
+      name: string
+      displayName: string
+      type: string
+      required: boolean
+      values: Array<{
+        id: string
+        value: string
+        displayValue: string
+        colorHex?: string
+        imageUrl?: string
+        priceAdjustmentCents?: number
+        costAdjustmentCents?: number
+      }>
+    }>
+    variantCombinations: Array<{
+      id: string
+      options: Record<string, string>
+      priceCents: number
+      stock: number
+      sku: string
+      imageUrl?: string
+    }>
+  }) => {
+    if (!formData.id) {
+      console.error('DEBUG: Cannot update variants - no product ID')
+      return
+    }
+
+    try {
+      console.log('DEBUG: ProductForm triggering variant update...')
+      await updateProductVariants(formData.id, variantData)
+      console.log('DEBUG: ProductForm variant update completed')
+      
+      // Update the local form state to reflect the changes
           setFormData(prev => ({
             ...prev,
-            ...draftData
-          }))
-          setShowDraftNotification(true)
-          console.log('[ProductForm] Draft loaded successfully')
-        }
-      }
+        has_variants: variantData.hasVariants
+      }))
+      
+    } catch (error) {
+      console.error('DEBUG: ProductForm variant update failed:', error)
+      throw error
     }
-  }, [hasDraft, loadDraft, mode, initialData])
+  }
 
   // Generate slug from name
   const generateSlug = (name: string) => {
@@ -247,9 +281,7 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
           }
         }
         
-        // Clear draft after successful submission
-        clearDraft()
-        console.log('[ProductForm] Draft cleared after successful submission')
+        // Draft persistence removed - no need to clear
         
         // Small delay to ensure cache invalidation completes
         await new Promise(resolve => setTimeout(resolve, 100))
@@ -301,29 +333,7 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
-        {showDraftNotification && (
-          <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <svg className="h-5 w-5 text-blue-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <div className="text-sm text-blue-800">
-                  <strong>Draft loaded:</strong> Your previous work has been restored automatically.
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowDraftNotification(false)}
-                className="text-blue-400 hover:text-blue-600"
-              >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Draft notification removed - no longer using local storage drafts */}
         
         {errors.general && (
           <div className="bg-red-50 border border-red-200 rounded-md p-4">
@@ -369,6 +379,8 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
           onVariantOptionsChange={setVariantOptions}
           variantCombinations={variantCombinations}
           onVariantCombinationsChange={setVariantCombinations}
+          onUpdateVariants={mode === 'edit' ? handleVariantUpdate : undefined}
+          productId={formData.id}
         />
 
         <SizeGuideSection

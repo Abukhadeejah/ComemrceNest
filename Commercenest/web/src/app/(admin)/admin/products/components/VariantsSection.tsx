@@ -38,6 +38,8 @@ interface VariantsSectionProps {
   onVariantOptionsChange: (options: VariantOption[]) => void
   variantCombinations: VariantCombination[]
   onVariantCombinationsChange: (combinations: VariantCombination[]) => void
+  onUpdateVariants?: (variantData: { hasVariants: boolean, variantOptions: VariantOption[], variantCombinations: VariantCombination[] }) => Promise<void>
+  productId?: string
 }
 
 export function VariantsSection({
@@ -46,11 +48,14 @@ export function VariantsSection({
   variantOptions,
   onVariantOptionsChange,
   variantCombinations,
-  onVariantCombinationsChange
+  onVariantCombinationsChange,
+  onUpdateVariants,
+  productId
 }: VariantsSectionProps) {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['options']))
   const [newOptionName, setNewOptionName] = useState('')
   const [newOptionType, setNewOptionType] = useState<'text' | 'color' | 'image' | 'select'>('select')
+  const [isUpdatingVariants, setIsUpdatingVariants] = useState(false)
 
   const toggleSection = (section: string) => {
     const newExpanded = new Set(expandedSections)
@@ -154,7 +159,7 @@ export function VariantsSection({
 
       if (restOptions.length === 0) {
         return firstOption.values.map(value => ({
-          id: `combo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          id: crypto.randomUUID(),
           options: { [firstOption.id]: value.id },
           priceCents: 0,
           stock: 0,
@@ -169,7 +174,7 @@ export function VariantsSection({
       firstOption.values.forEach(value => {
         restCombinations.forEach(restCombo => {
           combinations.push({
-            id: `combo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            id: crypto.randomUUID(),
             options: { [firstOption.id]: value.id, ...restCombo.options },
             priceCents: 0,
             stock: 0,
@@ -208,6 +213,34 @@ export function VariantsSection({
         return value?.displayValue || value?.value || 'Unknown'
       })
       .join(' / ')
+  }
+
+  const handleUpdateVariants = async () => {
+    if (!onUpdateVariants || !productId) return
+    
+    setIsUpdatingVariants(true)
+    try {
+      console.log('DEBUG: Updating variants with payload:', {
+        productId,
+        hasVariants,
+        variantOptions_count: variantOptions.length,
+        variantOptions,
+        variantCombinations_count: variantCombinations.length,
+        variantCombinations
+      })
+      
+      await onUpdateVariants({
+        hasVariants,
+        variantOptions,
+        variantCombinations
+      })
+      
+      console.log('DEBUG: Variant update completed successfully')
+    } catch (error) {
+      console.error('DEBUG: Variant update failed:', error)
+    } finally {
+      setIsUpdatingVariants(false)
+    }
   }
 
   return (
@@ -387,6 +420,16 @@ export function VariantsSection({
                   >
                     Generate
                   </button>
+                  {onUpdateVariants && (
+                    <button
+                      type="button"
+                      onClick={handleUpdateVariants}
+                      disabled={isUpdatingVariants}
+                      className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isUpdatingVariants ? 'Updating...' : 'Update Variants'}
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => toggleSection('combinations')}
