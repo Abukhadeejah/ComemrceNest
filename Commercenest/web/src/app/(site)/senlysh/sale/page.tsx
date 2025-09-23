@@ -5,6 +5,9 @@ import { Suspense } from 'react'
 import type { Metadata } from 'next'
 import { getProducts } from '@/server/products'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
+import { fetchVariantsForProducts } from '@/server/modules/products/service'
+import type { ProductListItem as UIProductListItem } from '@/types/product'
+import { fetchProductVariants } from '@/server/modules/products/service'
 import { getRegistryEntry } from '@/registry/tenantRegistry'
 import { ProductGrid } from '@/components/tenant/products/ProductGrid'
 
@@ -27,6 +30,17 @@ export default async function SenlyshSalePage({ searchParams }: SalePageProps) {
 
   const products = await getProducts({ tenantId, page: parseInt(params.page || '1'), limit: 12 })
 
+  // Bulk fetch variant combinations for all products
+  const variantCombinationsRaw = await fetchVariantsForProducts(
+    tenantId,
+    products.map(p => p.id)
+  )
+  const variantCombinations = variantCombinationsRaw.map(vc => ({
+    ...vc,
+    product_id: String(vc.product_id),
+    attributes: (vc.attributes ?? {}) as Record<string, string>
+  }))
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -35,7 +49,7 @@ export default async function SenlyshSalePage({ searchParams }: SalePageProps) {
           <p className="mt-2 text-gray-600">Discover limited-time offers and discounts</p>
         </div>
         <Suspense fallback={<ProductGridSkeleton />}> 
-          <ProductGrid products={products} />
+  <ProductGrid products={products as unknown as UIProductListItem[]} variantCombinations={variantCombinations} />
         </Suspense>
       </div>
     </div>

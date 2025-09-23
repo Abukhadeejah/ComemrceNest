@@ -177,18 +177,26 @@ export interface ProductListItem {
   id: string
   name: string
   slug: string
-  description?: string
+  description?: string | null
   price_cents: number
-  compare_at_price_cents?: number
+  compare_at_price_cents?: number | null
   stock: number
   currency: string
-  hero_image_url?: string
+  hero_image_url?: string | null
   is_featured?: boolean
   badge_text?: string
   badge_color?: string
   badge_display_from?: string
   badge_display_until?: string
   status: 'draft' | 'published'
+  is_bestseller?: boolean
+  is_new_arrival?: boolean
+  is_on_sale?: boolean
+  is_limited_edition?: boolean
+  is_sold_out?: boolean
+  custom_badge_text?: string
+  badge_priority?: number
+  low_stock_threshold?: number
   product_variant_options?: Array<{
     variant_options: {
       id: string
@@ -200,11 +208,11 @@ export interface ProductListItem {
         id: string
         value: string
         display_value: string
-        color_hex?: string
-        image_url?: string
-        price_adjustment_cents: number
-        cost_adjustment_cents: number
-        sort_order: number
+        color_hex?: string | null
+        image_url?: string | null
+        price_adjustment_cents?: number | null
+        cost_adjustment_cents?: number | null
+        sort_order?: number | null
       }>
     }
   }>

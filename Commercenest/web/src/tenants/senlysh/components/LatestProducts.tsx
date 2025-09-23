@@ -5,7 +5,7 @@ import { generateProductBadges, getBadgeClassName, getBadgeStyle } from '@/utils
 import AutoCarousel from '@/components/tenant/AutoCarousel';
 import { QuickViewModal } from '@/components/tenant/products/QuickViewModal';
 import { useCart } from '@/lib/cart';
-import { ProductListItem } from '@/server/modules/products/service';
+import { ProductListItem } from '@/types/product';
 
 interface Product {
   name: string;
@@ -115,12 +115,7 @@ const LatestProducts: React.FC<LatestProductsProps> = ({
   apiProducts: propApiProducts,
   variantCombinations = []
 }) => {
-  // Debug logging to understand data flow
-  console.log('LatestProducts received data:', {
-    propProductsLength: propProducts?.length || 0,
-    propApiProductsLength: propApiProducts?.length || 0,
-    sampleApiProduct: propApiProducts?.[0]
-  });
+  //
 
   const [products, setProducts] = useState<Product[]>(propProducts || []); // PRODUCTION READY: No default products - only database data
   const [hoveredProduct, setHoveredProduct] = useState<string | null>(null);
@@ -133,11 +128,11 @@ const LatestProducts: React.FC<LatestProductsProps> = ({
     id: apiProduct.id,
     name: apiProduct.name,
     slug: apiProduct.slug || '',
-    description: apiProduct.description ?? null,
+    description: apiProduct.description ?? undefined,
     price_cents: apiProduct.price_cents,
     compare_at_price_cents: apiProduct.compare_at_price_cents,
     currency: 'INR', // Default currency
-    hero_image_url: apiProduct.hero_image_url || null,
+    hero_image_url: apiProduct.hero_image_url || undefined,
     stock: apiProduct.stock || 0,
     is_featured: apiProduct.is_featured,
     status: 'published' as const,
@@ -149,29 +144,29 @@ const LatestProducts: React.FC<LatestProductsProps> = ({
         display_name: optionGroup.variant_options.display_name || optionGroup.variant_options.name,
         type: optionGroup.variant_options.type,
         sort_order: 0, // Default sort order for variant options
-        variant_option_values: optionGroup.variant_options.variant_option_values || []
+        variant_option_values: (optionGroup.variant_options.variant_option_values || []).map(value => ({
+          id: value.id,
+          value: value.value,
+          display_value: value.display_value,
+          color_hex: value.color_hex || undefined,
+          image_url: value.image_url || undefined,
+          price_adjustment_cents: value.price_adjustment_cents || undefined,
+          cost_adjustment_cents: value.cost_adjustment_cents || undefined,
+          sort_order: value.sort_order || undefined
+        }))
       }
     })),
   });
   const { addItem } = useCart();
 
   useEffect(() => {
-    console.log('LatestProducts useEffect triggered:', {
-      propApiProductsExists: !!propApiProducts,
-      isArray: Array.isArray(propApiProducts),
-      length: propApiProducts?.length || 0
-    });
-
+    
     if (propApiProducts && Array.isArray(propApiProducts) && propApiProducts.length > 0) {
-      console.log('Starting transformation of', propApiProducts.length, 'products');
+      
       const transformedProducts = propApiProducts.slice(0, 8).map(product => {
-        console.log('Transforming product:', product?.name, {
-          hasVariantOptions: !!product.product_variant_options,
-          variantOptionsLength: product.product_variant_options?.length || 0,
-          variantOptions: product.product_variant_options
-        });
+        
         if (!product || typeof product !== 'object') {
-          console.log('Skipping invalid product:', product);
+          
           return null;
         }
         
@@ -208,7 +203,6 @@ const LatestProducts: React.FC<LatestProductsProps> = ({
 
         // Add fallback images if no images found in database
         if (resolvedImages.length === 0) {
-          console.warn(`Product ${product.name} has no images in database, using fallback`);
           const fallbackImages = [
             'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=400&fit=crop&crop=center',
             'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=400&h=400&fit=crop&crop=center',
@@ -250,13 +244,7 @@ const LatestProducts: React.FC<LatestProductsProps> = ({
         })) || [];
 
         const hasVariants = variantOptions.length > 0;
-
-        console.log('Product variant transformation result:', product?.name, {
-          hasVariants,
-          variantOptionsCount: variantOptions.length,
-          variantOptions: variantOptions
-        });
-
+        
         return {
           id: product.id,
           name: product.name || 'Unnamed Product',
@@ -278,19 +266,10 @@ const LatestProducts: React.FC<LatestProductsProps> = ({
         };
       }).filter(product => product !== null) as Product[]; // Remove any null entries
       
-      console.log('Transformation complete:', {
-        originalCount: propApiProducts.length,
-        transformedCount: transformedProducts.length,
-        transformedProducts: transformedProducts.map(p => ({ name: p.name, price: p.price }))
-      });
       
       setProducts(transformedProducts);
     } else {
-      console.log('No products to transform:', {
-        propApiProductsExists: !!propApiProducts,
-        isArray: Array.isArray(propApiProducts),
-        length: propApiProducts?.length || 0
-      });
+      
     }
   }, [propApiProducts]);
 
@@ -357,18 +336,59 @@ const LatestProducts: React.FC<LatestProductsProps> = ({
           return false;
         }
 
-        // Calculate final price with variant adjustments
+        // Calculate final price using the same logic as calculateCurrentPrice
         let finalPrice = product.price * 100; // Convert to cents
-        if (selectedVariants) {
+        
+        // Priority 1: Check for direct variant combination price
+        const productVariants = variantCombinations?.filter(vc => vc.product_id === product.id) || [];
+        
+        if (productVariants.length > 0) {
+          // Find matching variant combination based on selected variants
+          const matchingCombination = productVariants.find(combination => {
+            // Check if all selected variants match this combination's attributes
+            return Object.entries(selectedVariants || {}).every(([optionName, selectedValue]) => {
+              // Find the option ID for this option name
+              const option = product.variantOptions?.find(opt => opt.name === optionName);
+              if (!option) return false;
+              
+              // Find the value ID for this value
+              const value = option.values.find(v => v.value === selectedValue);
+              if (!value) return false;
+              
+              // Check if this combination has this option-value pair
+              return combination.attributes[option.id] === value.id;
+            });
+          });
+          
+          if (matchingCombination && matchingCombination.price_cents > 0) {
+            finalPrice = matchingCombination.price_cents;
+          } else {
+            // Priority 2: Fallback to base price + adjustments
+            let adjustmentCents = 0;
+            product.variantOptions.forEach(option => {
+              const selectedValue = selectedVariants?.[option.name];
+              if (selectedValue) {
+                const valueObj = option.values.find(v => v.value === selectedValue);
+                if (valueObj && valueObj.price_adjustment_cents) {
+                  adjustmentCents += valueObj.price_adjustment_cents;
+                }
+              }
+            });
+            finalPrice = product.price * 100 + adjustmentCents;
+          }
+        } else {
+          // Priority 2: Fallback to base price + adjustments
+          let adjustmentCents = 0;
           product.variantOptions.forEach(option => {
-            const selectedValue = selectedVariants[option.name];
+            const selectedValue = selectedVariants?.[option.name];
             if (selectedValue) {
               const valueObj = option.values.find(v => v.value === selectedValue);
-              if (valueObj) {
-                finalPrice += valueObj.price_adjustment_cents;
+              if (valueObj && valueObj.price_adjustment_cents) {
+                adjustmentCents += valueObj.price_adjustment_cents;
               }
             }
           });
+          finalPrice = product.price * 100 + adjustmentCents;
         }
 
         addItem({
@@ -392,7 +412,6 @@ const LatestProducts: React.FC<LatestProductsProps> = ({
       });
       }
       
-      console.log('Added to cart:', product.name, selectedVariants);
       return true;
     }
     return false;
@@ -446,6 +465,7 @@ const LatestProducts: React.FC<LatestProductsProps> = ({
         product={quickViewProduct}
         isOpen={isQuickViewOpen}
         onClose={closeQuickView}
+        variantCombinations={variantCombinations}
       />
     </section>
   );
@@ -492,9 +512,6 @@ const ProductCardWithVariants: React.FC<ProductCardProps> = ({
     forceUpdate({});
   }, [selectedVariants]);
 
-  // Debug logging for ProductCardWithVariants (reduced for performance)
-  console.log('ProductCardWithVariants:', product.name, 'hasVariants:', product.hasVariants);
-
   // Calculate current price based on selected variants
   const calculateCurrentPrice = () => {
     let currentPrice = product.price;
@@ -522,7 +539,6 @@ const ProductCardWithVariants: React.FC<ProductCardProps> = ({
         });
         
         if (matchingCombination && matchingCombination.price_cents > 0) {
-          console.log('Using direct variant price:', matchingCombination.name, '₹' + (matchingCombination.price_cents / 100));
           return matchingCombination.price_cents / 100; // Convert cents to rupees
         }
       }
@@ -535,7 +551,6 @@ const ProductCardWithVariants: React.FC<ProductCardProps> = ({
           const valueObj = option.values.find(v => v.value === selectedValue);
           if (valueObj && valueObj.price_adjustment_cents) {
             adjustmentCents += valueObj.price_adjustment_cents;
-            console.log('Applied price adjustment:', option.name, selectedValue, '₹' + (valueObj.price_adjustment_cents / 100));
           }
         }
       });
@@ -543,10 +558,6 @@ const ProductCardWithVariants: React.FC<ProductCardProps> = ({
       // Apply adjustments to base price
       if (adjustmentCents !== 0) {
         currentPrice = (product.price * 100 + adjustmentCents) / 100;
-        console.log('Price updated by adjustment:', product.name, 'from ₹' + product.price, 'to ₹' + currentPrice, 'adjustment:', adjustmentCents);
-      } else {
-        const selectedCombination = Object.entries(selectedVariants).map(([optionName, value]) => `${optionName}:${value}`).join(', ');
-        console.log('No price adjustments for:', product.name, 'selected combination:', selectedCombination);
       }
     }
     
@@ -556,24 +567,16 @@ const ProductCardWithVariants: React.FC<ProductCardProps> = ({
   const currentPrice = calculateCurrentPrice();
 
   const handleVariantSelect = (optionName: string, value: string) => {
-    console.log('Variant selected:', product.name, optionName + ':', value);
     setSelectedVariants(prev => ({ ...prev, [optionName]: value }));
     setVariantValidationError(''); // Clear error when variant is selected
   };
 
   const handleAddToCartClick = () => {
-    console.log('handleAddToCartClick called for:', product.name, {
-      hasVariants: product.hasVariants,
-      variantOptionsLength: product.variantOptions?.length || 0,
-      selectedVariants: selectedVariants,
-      variantOptions: product.variantOptions
-    });
     
     if (product.hasVariants && product.variantOptions && product.variantOptions.length > 0) {
       const missingVariants: string[] = [];
       product.variantOptions.forEach(option => {
         const selectedValue = selectedVariants[option.name];
-        console.log(`Checking variant option: ${option.name}, selectedValue: ${selectedValue}`);
         if (!selectedValue) {
           missingVariants.push(option.display_name || option.name);
         }
@@ -583,13 +586,11 @@ const ProductCardWithVariants: React.FC<ProductCardProps> = ({
         const message = missingVariants.length === 1
           ? `Please select ${missingVariants[0].toLowerCase()}`
           : `Please select ${missingVariants.join(', ').toLowerCase()}`;
-        console.log('Validation failed, missing variants:', missingVariants, 'message:', message);
         setVariantValidationError(message);
         return;
       }
     }
     
-    console.log('Validation passed, calling onAddToCart with:', selectedVariants);
     const success = onAddToCart(selectedVariants);
     if (success) {
       setVariantValidationError('');
@@ -628,7 +629,6 @@ const ProductCardWithVariants: React.FC<ProductCardProps> = ({
                             className="object-cover object-center transition-transform duration-700 ease-out
                               group-hover:scale-110 motion-reduce:transition-none w-full h-full"
                             onError={(e) => {
-                              console.error('LatestProducts image failed to load:', image);
                               const fallbackImages = [
                                 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=400&fit=crop&crop=center',
                                 'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=400&h=400&fit=crop&crop=center',
@@ -696,7 +696,6 @@ const ProductCardWithVariants: React.FC<ProductCardProps> = ({
                           e.preventDefault();
                           e.stopPropagation();
                           // Handle wishlist toggle
-                          console.log('Wishlist toggle for:', product.name);
                         }}
                         className="absolute top-2 right-2 bg-white p-3 rounded-full shadow-lg
                           hover:bg-gray-100 transition-all duration-300 transform hover:scale-110 

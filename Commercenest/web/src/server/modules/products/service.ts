@@ -369,6 +369,27 @@ export async function fetchProductVariants(tenantId: string, productId: string) 
   return data || []
 }
 
+// Bulk fetch variant combinations for multiple products (used by PLP/collections)
+export async function fetchVariantsForProducts(
+  tenantId: string,
+  productIds: string[]
+) {
+  if (!productIds || productIds.length === 0) return []
+  const { data, error } = await supabaseAdmin
+    .from('product_variants')
+    .select('id, name, sku, price_cents, stock, attributes, product_id')
+    .eq('tenant_id', tenantId)
+    .in('product_id', productIds)
+    .eq('is_active', true)
+
+  if (error) {
+    console.error('[fetchVariantsForProducts] query error', error)
+    return []
+  }
+
+  return data || []
+}
+
 // New function to fetch products with variant options for PLP
 export async function fetchPublishedProductsWithVariants(tenantId: string) {
   const { data: products, error: productsError } = await supabaseAdmin

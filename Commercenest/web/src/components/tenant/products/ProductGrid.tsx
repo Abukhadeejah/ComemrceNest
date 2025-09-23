@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { ProductListItem } from '@/server/modules/products/service'
+import { ProductListItem } from '@/types/product'
 import { HeartIcon, ShoppingBagIcon, EyeIcon } from '@heroicons/react/24/outline'
 import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid'
 import { useState } from 'react'
@@ -11,11 +11,21 @@ import { generateProductBadges, getBadgeClassName, getBadgeStyle } from '@/utils
 import { SITE_URLS } from '@/utils/site-urls'
 import { useCart } from '@/lib/cart'
 
-interface ProductGridProps {
-  products: ProductListItem[]
+interface VariantCombination {
+  product_id: string
+  name: string | null
+  price_cents: number
+  stock: number | null
+  sku: string | null
+  attributes: Record<string, string>
 }
 
-export function ProductGrid({ products }: ProductGridProps) {
+interface ProductGridProps {
+  products: ProductListItem[]
+  variantCombinations?: VariantCombination[]
+}
+
+export function ProductGrid({ products, variantCombinations = [] }: ProductGridProps) {
   const [quickViewProduct, setQuickViewProduct] = useState<ProductListItem | null>(null)
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false)
 
@@ -64,21 +74,23 @@ export function ProductGrid({ products }: ProductGridProps) {
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 items-stretch">
         {products.map((product) => (
-          <ProductCard
-            key={product.id}
-            product={product}
-            onQuickView={handleQuickView}
-            tenantKey={tenantKey}
-          />
+        <ProductCard
+          key={product.id}
+          product={product}
+          onQuickView={handleQuickView}
+          tenantKey={tenantKey}
+          variantCombinations={variantCombinations}
+        />
         ))}
       </div>
 
       {/* Quick View Modal */}
       {isQuickViewOpen && quickViewProduct && (
-        <QuickViewModal 
-          product={quickViewProduct} 
+        <QuickViewModal
+          product={quickViewProduct}
           isOpen={isQuickViewOpen}
-          onClose={closeQuickView} 
+          onClose={closeQuickView}
+          variantCombinations={variantCombinations}
         />
       )}
     </>
@@ -88,11 +100,13 @@ export function ProductGrid({ products }: ProductGridProps) {
 function ProductCard({
   product,
   onQuickView,
-  tenantKey
+  tenantKey,
+  variantCombinations = []
 }: {
   product: ProductListItem;
   onQuickView: (product: ProductListItem) => void;
   tenantKey: string | null;
+  variantCombinations?: VariantCombination[];
 }) {
   const { addItem } = useCart()
   const [isWishlisted, setIsWishlisted] = useState(false)
@@ -102,16 +116,50 @@ function ProductCard({
   // Get variant options from the product data
   const variantOptions = product.product_variant_options || []
 
-  // Calculate current price based on selected variants
+  // Calculate current price based on selected variants with priority:
+  // 1) Direct variant combination price, 2) Base + adjustments, 3) Base
   const calculateCurrentPrice = () => {
+    // Priority 1: direct variant combination price when all selections present
+    if (variantOptions.length > 0 && Object.keys(selectedVariants).length > 0) {
+      const productVariants = variantCombinations.filter(vc => vc.product_id === product.id)
+      if (productVariants.length > 0) {
+        const matching = productVariants.find(combination => {
+          const allMatch = Object.entries(selectedVariants).every(([optionName, selectedValueId]) => {
+            const option = variantOptions.find(o => o.variant_options.name === optionName)?.variant_options
+            if (!option) return false
+            const optId = String(option.id)
+            const attrVal = combination.attributes[optId] 
+              || combination.attributes[optId.toLowerCase()] 
+              || combination.attributes[optId.toUpperCase()]
+              || combination.attributes[option.name]
+            // resolve selected value canonical id and value
+            const selectedValueObj = option.variant_option_values.find(v => v.id === selectedValueId)
+            const selectedValueCanonical = selectedValueObj?.id || selectedValueId
+            const selectedValueText = selectedValueObj?.value
+            const isMatch = (
+              String(attrVal).toLowerCase() === String(selectedValueCanonical).toLowerCase() ||
+              (selectedValueText ? String(attrVal).toLowerCase() === String(selectedValueText).toLowerCase() : false)
+            )
+            
+            return isMatch
+          })
+          return allMatch
+        })
+        if (matching && matching.price_cents > 0) {
+          return matching.price_cents
+        }
+        
+      }
+    }
+
+    // Priority 2: base + adjustments
     let currentPrice = product.price_cents
-    
     variantOptions.forEach(option => {
       const variantOption = option.variant_options
-      const selectedValue = selectedVariants[variantOption.name]
-      if (selectedValue) {
+      const selectedValueId = selectedVariants[variantOption.name]
+      if (selectedValueId) {
         const optionValue = variantOption.variant_option_values.find(
-          val => val.value === selectedValue
+          val => val.id === selectedValueId
         )
         if (optionValue?.price_adjustment_cents) {
           currentPrice += optionValue.price_adjustment_cents
@@ -179,7 +227,7 @@ function ProductCard({
       // Clear validation error on successful add
       setVariantValidationError('')
     } catch (e) {
-      console.error('Failed to add to cart', e)
+      
       setVariantValidationError('Failed to add item to cart. Please try again.')
     }
   }
@@ -381,13 +429,13 @@ function ProductCard({
                           onClick={() => {
                             setSelectedVariants(prev => ({
                               ...prev,
-                              [variantOption.name]: value.value
+                              [variantOption.name]: value.id
                             }))
                             // Clear validation error when user makes a selection
                             setVariantValidationError('')
                           }}
                           className={`text-xs px-2 py-1 border rounded transition-colors duration-200 ${
-                            selectedVariants[variantOption.name] === value.value
+                            selectedVariants[variantOption.name] === value.id
                               ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
                               : 'border-gray-200 text-gray-700 hover:border-gray-400 hover:bg-gray-50'
                           }`}

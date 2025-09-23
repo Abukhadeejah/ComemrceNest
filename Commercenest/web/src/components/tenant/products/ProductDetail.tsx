@@ -86,11 +86,7 @@ export function ProductDetail({ product, images, variantOptions = [], variantCom
   const [showAskQuestion, setShowAskQuestion] = useState(false)
   const [peopleViewing, setPeopleViewing] = useState(29)
 
-  console.log('[ProductDetail] Rendering with:', { 
-    productName: product?.name, 
-    imagesCount: images?.length, 
-    variantOptionsCount: variantOptions?.length 
-  })
+  
 
   const formatPrice = (priceCents: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -125,7 +121,7 @@ export function ProductDetail({ product, images, variantOptions = [], variantCom
       })
       
       if (matchingCombination && matchingCombination.price_cents > 0) {
-        console.log('Using direct variant price:', matchingCombination.name, '₹' + (matchingCombination.price_cents / 100))
+        
         return matchingCombination.price_cents
       }
     }
@@ -140,7 +136,7 @@ export function ProductDetail({ product, images, variantOptions = [], variantCom
         )
         if (optionValue?.price_adjustment_cents) {
           currentPrice += optionValue.price_adjustment_cents
-          console.log('Applied price adjustment:', variantOption.name, selectedValue, '₹' + (optionValue.price_adjustment_cents / 100))
+          
         }
       }
     })
@@ -242,7 +238,7 @@ export function ProductDetail({ product, images, variantOptions = [], variantCom
           : undefined,
       })
     } catch (e) {
-      console.error('Failed to add to cart', e)
+      
     }
   }
 
@@ -273,7 +269,7 @@ export function ProductDetail({ product, images, variantOptions = [], variantCom
       // Redirect to checkout
       window.location.href = `/checkout`
     } catch (e) {
-      console.error('Failed to buy now', e)
+      
     }
   }
 
@@ -385,7 +381,7 @@ export function ProductDetail({ product, images, variantOptions = [], variantCom
                   try {
                     const variantOption = option?.variant_options
                     if (!variantOption || !variantOption.variant_option_values) {
-                      console.warn('Invalid variant option:', option)
+                      
                       return null
                     }
                     
@@ -430,7 +426,7 @@ export function ProductDetail({ product, images, variantOptions = [], variantCom
                       </div>
                     )
                   } catch (error) {
-                    console.error('Error rendering variant option:', error, option)
+                    
                     return null
                   }
                 })}
@@ -888,7 +884,7 @@ export function ProductDetail({ product, images, variantOptions = [], variantCom
     </div>
   )
   } catch (error) {
-    console.error('[ProductDetail] Error rendering component:', error)
+    
     return (
       <div className="bg-white min-h-screen p-8">
         <div className="max-w-4xl mx-auto">
