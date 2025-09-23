@@ -189,6 +189,25 @@ export interface ProductListItem {
   badge_display_from?: string
   badge_display_until?: string
   status: 'draft' | 'published'
+  product_variant_options?: Array<{
+    variant_options: {
+      id: string
+      name: string
+      display_name: string
+      type: string
+      sort_order: number
+      variant_option_values: Array<{
+        id: string
+        value: string
+        display_value: string
+        color_hex?: string
+        image_url?: string
+        price_adjustment_cents: number
+        cost_adjustment_cents: number
+        sort_order: number
+      }>
+    }
+  }>
 }
 
 export interface ProductImage {

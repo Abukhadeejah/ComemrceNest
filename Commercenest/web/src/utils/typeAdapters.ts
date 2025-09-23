@@ -163,7 +163,8 @@ export function adaptHeroSettingsForDB(
  * Adapts Supabase Product to Application ProductListItem
  */
 export function adaptProductListItem(
-  dbProduct: Pick<Database['public']['Tables']['products']['Row'], 'id' | 'name' | 'slug' | 'description' | 'price_cents' | 'compare_at_price_cents' | 'stock' | 'currency' | 'hero_image_url' | 'is_featured' | 'badge_color' | 'badge_display_from' | 'badge_display_until' | 'status'>
+  dbProduct: Pick<Database['public']['Tables']['products']['Row'], 'id' | 'name' | 'slug' | 'description' | 'price_cents' | 'compare_at_price_cents' | 'stock' | 'currency' | 'hero_image_url' | 'is_featured' | 'badge_color' | 'badge_display_from' | 'badge_display_until' | 'status'>,
+  variantOptions?: Database['public']['Tables']['product_variant_options']['Row'][]
 ): ProductListItem {
   return {
     id: dbProduct.id,
@@ -179,7 +180,18 @@ export function adaptProductListItem(
     badge_color: adaptString(dbProduct.badge_color),
     badge_display_from: adaptString(dbProduct.badge_display_from),
     badge_display_until: adaptString(dbProduct.badge_display_until),
-    status: dbProduct.status
+    status: dbProduct.status,
+    // Include variant options for storefront components
+    product_variant_options: variantOptions?.map(option => ({
+      variant_options: {
+        id: option.option_id || option.id,
+        name: 'Size', // Default name since product_variant_options doesn't have name
+        display_name: 'Size', // Default display name
+        type: 'text', // Default type
+        sort_order: option.sort_order || 0,
+        variant_option_values: [] // Will be populated by separate query if needed
+      }
+    }))
   }
 }
 
@@ -310,9 +322,12 @@ export function adaptHeroSlides(
  * Adapts an array of Supabase Products to Application ProductListItems
  */
 export function adaptProductListItems(
-  dbProducts: Pick<Database['public']['Tables']['products']['Row'], 'id' | 'name' | 'slug' | 'description' | 'price_cents' | 'compare_at_price_cents' | 'stock' | 'currency' | 'hero_image_url' | 'is_featured' | 'badge_color' | 'badge_display_from' | 'badge_display_until' | 'status'>[]
+  dbProducts: Pick<Database['public']['Tables']['products']['Row'], 'id' | 'name' | 'slug' | 'description' | 'price_cents' | 'compare_at_price_cents' | 'stock' | 'currency' | 'hero_image_url' | 'is_featured' | 'badge_color' | 'badge_display_from' | 'badge_display_until' | 'status'>[],
+  variantOptionsMap?: Map<string, Database['public']['Tables']['product_variant_options']['Row'][]>
 ): ProductListItem[] {
-  return dbProducts.map(adaptProductListItem)
+  return dbProducts.map(product => 
+    adaptProductListItem(product, variantOptionsMap?.get(product.id))
+  )
 }
 
 /**

@@ -169,7 +169,7 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
       })
 
       const categoryId = (() => {
-      const first = Array.isArray(product.categories) ? product.categories[0] as unknown : undefined
+      const first = Array.isArray(productWithRelations.categories) ? productWithRelations.categories[0] as unknown : undefined
       if (first && typeof first === 'object' && 'category' in (first as Record<string, unknown>)) {
         const cat = (first as Record<string, unknown> & { category?: { id?: unknown } }).category
         if (cat && typeof cat.id === 'string') return cat.id
@@ -199,7 +199,7 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
       meta_title: product.meta_title || '',
       meta_description: product.meta_description || '',
       category_id: categoryId,
-      images: (product.images?.map((img: Record<string, unknown>) => String(img.url)).filter(Boolean) as string[]) || [],
+      images: (productWithRelations.images?.map((img: Record<string, unknown>) => String(img.url)).filter(Boolean) as string[]) || [],
       has_variants: productWithRelations.has_variants === true, // Explicit boolean check
       variantOptions,
       variantCombinations,

@@ -79,11 +79,11 @@ interface ApiProduct {
         id: string;
         value: string;
         display_value: string;
-        color_hex?: string;
-        image_url?: string;
-        price_adjustment_cents: number;
-        cost_adjustment_cents: number;
-        sort_order: number;
+        color_hex: string | null;
+        image_url: string | null;
+        price_adjustment_cents: number | null;
+        cost_adjustment_cents: number | null;
+        sort_order: number | null;
       }>;
     };
   }>;
@@ -94,6 +94,15 @@ interface LatestProductsProps {
   products?: Product[];
   bgColor?: string;
   apiProducts?: ApiProduct[];
+  variantCombinations?: Array<{
+    product_id: string
+    id: string
+    name: string
+    price_cents: number
+    stock: number
+    sku: string
+    attributes: Record<string, string>
+  }>;
 }
 
 // PRODUCTION READY: No hardcoded mock data - only dynamic database data is used
@@ -103,7 +112,8 @@ const LatestProducts: React.FC<LatestProductsProps> = ({
   title = "Latest Products",
   products: propProducts,
   bgColor = "bg-white",
-  apiProducts: propApiProducts
+  apiProducts: propApiProducts,
+  variantCombinations = []
 }) => {
   // Debug logging to understand data flow
   console.log('LatestProducts received data:', {
@@ -123,24 +133,23 @@ const LatestProducts: React.FC<LatestProductsProps> = ({
     id: apiProduct.id,
     name: apiProduct.name,
     slug: apiProduct.slug || '',
-    description: apiProduct.description || 'No description available',
+    description: apiProduct.description ?? null,
     price_cents: apiProduct.price_cents,
     compare_at_price_cents: apiProduct.compare_at_price_cents,
     currency: 'INR', // Default currency
     hero_image_url: apiProduct.hero_image_url || null,
     stock: apiProduct.stock || 0,
-    low_stock_threshold: 5,
     is_featured: apiProduct.is_featured,
-    is_bestseller: apiProduct.is_bestseller,
-    is_new_arrival: apiProduct.is_new_arrival,
-    is_on_sale: apiProduct.is_on_sale,
-    is_limited_edition: apiProduct.is_limited_edition,
-    is_sold_out: apiProduct.is_sold_out,
-    // Include variant information for QuickViewModal - fix structure to match ProductListItem
+    status: 'published' as const,
+    // Include variant information for QuickViewModal - standardized structure
     product_variant_options: apiProduct.product_variant_options?.map(optionGroup => ({
       variant_options: {
-        ...optionGroup.variant_options,
-        sort_order: 0 // Add missing sort_order field
+        id: optionGroup.variant_options.id,
+        name: optionGroup.variant_options.name,
+        display_name: optionGroup.variant_options.display_name || optionGroup.variant_options.name,
+        type: optionGroup.variant_options.type,
+        sort_order: 0, // Default sort order for variant options
+        variant_option_values: optionGroup.variant_options.variant_option_values || []
       }
     })),
   });
@@ -426,6 +435,7 @@ const LatestProducts: React.FC<LatestProductsProps> = ({
                 onImageClick={(productName, imgIndex) => handleImageClick(productName, imgIndex)}
                 onQuickView={() => handleQuickView(product)}
                 onAddToCart={(selectedVariants) => handleAddToCartWithVariants(product, selectedVariants)}
+                variantCombinations={variantCombinations}
               />
             ))}
         </AutoCarousel>
@@ -451,6 +461,15 @@ interface ProductCardProps {
   onImageClick: (productName: string, imgIndex: number) => void;
   onQuickView: () => void;
   onAddToCart: (selectedVariants?: Record<string, string>) => boolean;
+  variantCombinations: Array<{
+    product_id: string
+    id: string
+    name: string
+    price_cents: number
+    stock: number
+    sku: string
+    attributes: Record<string, string>
+  }>;
 }
 
 const ProductCardWithVariants: React.FC<ProductCardProps> = ({
@@ -461,7 +480,8 @@ const ProductCardWithVariants: React.FC<ProductCardProps> = ({
   onMouseLeave,
   onImageClick,
   onQuickView,
-  onAddToCart
+  onAddToCart,
+  variantCombinations
 }) => {
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
   const [variantValidationError, setVariantValidationError] = useState<string>('');
@@ -479,19 +499,55 @@ const ProductCardWithVariants: React.FC<ProductCardProps> = ({
   const calculateCurrentPrice = () => {
     let currentPrice = product.price;
     
-    if (product.hasVariants && product.variantOptions) {
+    if (product.hasVariants && product.variantOptions && Object.keys(selectedVariants).length > 0) {
+      // Priority 1: Check for direct variant combination price
+      const productVariants = variantCombinations?.filter(vc => vc.product_id === product.id) || [];
+      
+      if (productVariants.length > 0) {
+        // Find matching variant combination based on selected variants
+        const matchingCombination = productVariants.find(combination => {
+          // Check if all selected variants match this combination's attributes
+          return Object.entries(selectedVariants).every(([optionName, selectedValue]) => {
+            // Find the option ID for this option name
+            const option = product.variantOptions?.find(opt => opt.name === optionName);
+            if (!option) return false;
+            
+            // Find the value ID for this value
+            const value = option.values.find(v => v.value === selectedValue);
+            if (!value) return false;
+            
+            // Check if this combination has this option-value pair
+            return combination.attributes[option.id] === value.id;
+          });
+        });
+        
+        if (matchingCombination && matchingCombination.price_cents > 0) {
+          console.log('Using direct variant price:', matchingCombination.name, '₹' + (matchingCombination.price_cents / 100));
+          return matchingCombination.price_cents / 100; // Convert cents to rupees
+        }
+      }
+      
+      // Priority 2: Fallback to base price + adjustments
       let adjustmentCents = 0;
       product.variantOptions.forEach(option => {
         const selectedValue = selectedVariants[option.name];
         if (selectedValue) {
           const valueObj = option.values.find(v => v.value === selectedValue);
-          if (valueObj) {
+          if (valueObj && valueObj.price_adjustment_cents) {
             adjustmentCents += valueObj.price_adjustment_cents;
+            console.log('Applied price adjustment:', option.name, selectedValue, '₹' + (valueObj.price_adjustment_cents / 100));
           }
         }
       });
-      currentPrice = (product.price * 100 + adjustmentCents) / 100;
-      console.log('Price updated:', product.name, 'from ₹' + product.price, 'to ₹' + currentPrice, 'adjustment:', adjustmentCents);
+      
+      // Apply adjustments to base price
+      if (adjustmentCents !== 0) {
+        currentPrice = (product.price * 100 + adjustmentCents) / 100;
+        console.log('Price updated by adjustment:', product.name, 'from ₹' + product.price, 'to ₹' + currentPrice, 'adjustment:', adjustmentCents);
+      } else {
+        const selectedCombination = Object.entries(selectedVariants).map(([optionName, value]) => `${optionName}:${value}`).join(', ');
+        console.log('No price adjustments for:', product.name, 'selected combination:', selectedCombination);
+      }
     }
     
     return currentPrice;
@@ -635,15 +691,23 @@ const ProductCardWithVariants: React.FC<ProductCardProps> = ({
                       </div>
 
                       {/* Wishlist Button with enhanced hover */}
-                      <Link href="/wishlist" className="absolute top-2 right-2 bg-white p-3 rounded-full shadow-lg
-                        hover:bg-gray-100 transition-all duration-300 transform hover:scale-110 
-                        motion-reduce:transition-none z-10 hover:shadow-xl
-                        hover:-translate-y-0.5 min-w-[44px] min-h-[44px] flex items-center justify-center">
+                      <button 
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          // Handle wishlist toggle
+                          console.log('Wishlist toggle for:', product.name);
+                        }}
+                        className="absolute top-2 right-2 bg-white p-3 rounded-full shadow-lg
+                          hover:bg-gray-100 transition-all duration-300 transform hover:scale-110 
+                          motion-reduce:transition-none z-10 hover:shadow-xl
+                          hover:-translate-y-0.5 min-w-[44px] min-h-[44px] flex items-center justify-center"
+                      >
                         <svg className="h-4 w-4 text-gray-600 transition-transform duration-200
                           group-hover:rotate-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                         </svg>
-                      </Link>
+                      </button>
 
                       {/* Quick Actions on Hover with staggered animation */}
                       <div className="absolute bottom-2 left-2 right-2 flex justify-center gap-2 opacity-0 group-hover:opacity-100 

@@ -19,6 +19,7 @@ export type ProductListItem = {
   currency: string
   hero_image_url: string | null
   stock: number
+  status: 'draft' | 'published'
   low_stock_threshold?: number | null
   // Badge System (optional until migration is applied)
   is_featured?: boolean
@@ -44,11 +45,11 @@ export type ProductListItem = {
         id: string
         value: string
         display_value: string
-        color_hex?: string
-        image_url?: string
-        sort_order: number
-        price_adjustment_cents?: number
-        cost_adjustment_cents?: number
+        color_hex: string | null | undefined
+        image_url: string | null | undefined
+        sort_order: number | null
+        price_adjustment_cents: number | null | undefined
+        cost_adjustment_cents: number | null | undefined
       }[]
     }
   }[]

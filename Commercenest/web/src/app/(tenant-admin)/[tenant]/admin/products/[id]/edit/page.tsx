@@ -74,15 +74,16 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
     ])
 
     // Transform variant options data to match expected structure
-    const transformedVariantOptions = (variantOptionsResult.data || []).map((item: any) => {
-      const dbOptionId = item.option?.id || ''
+    const transformedVariantOptions = (variantOptionsResult.data || []).map((item: unknown) => {
+      const typedItem = item as { option?: { id?: string; name?: string; display_name?: string; type?: string; required?: boolean | null; values?: Array<{ id?: string; value?: string; display_value?: string; color_hex?: string | null; image_url?: string | null; sort_order?: number | null; price_adjustment_cents?: number | null; cost_adjustment_cents?: number | null }> } }
+      const dbOptionId = typedItem.option?.id || ''
       return {
         id: `option_${dbOptionId}`,
-        name: item.option?.name || '',
-        displayName: item.option?.display_name || '',
-        type: item.option?.type || 'text',
-        required: item.option?.required || false,
-        values: (item.option?.values || []).map((value: any) => ({
+        name: typedItem.option?.name || '',
+        displayName: typedItem.option?.display_name || '',
+        type: typedItem.option?.type || 'text',
+        required: typedItem.option?.required || false,
+        values: (typedItem.option?.values || []).map((value: { id?: string; value?: string; display_value?: string; color_hex?: string | null; image_url?: string | null; sort_order?: number | null; price_adjustment_cents?: number | null; cost_adjustment_cents?: number | null }) => ({
           id: `value_${value.id || ''}`,
           value: value.value || '',
           displayValue: value.display_value || '',
@@ -107,20 +108,23 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
     }
 
     // Transform variant combinations data to match expected structure
-    const transformedVariants = (variantsResult.data || []).map((variant: any) => ({
-      id: `combo_${variant.id || ''}`,
-      options: Object.fromEntries(
-        Object.entries(variant.attributes || {}).map(([dbOptionId, dbValueId]) => {
-          const clientOpt = optionDbToClient.get(String(dbOptionId)) || `option_${dbOptionId}`
-          const clientVal = valueDbToClient.get(String(dbValueId)) || `value_${dbValueId}`
+    const transformedVariants = (variantsResult.data || []).map((variant: unknown) => {
+      const typedVariant = variant as { id?: string; attributes?: unknown; name?: string; sku?: string | null; price_cents?: number; stock?: number | null }
+      return {
+        id: `combo_${typedVariant.id || ''}`,
+        options: Object.fromEntries(
+          Object.entries((typedVariant.attributes as Record<string, unknown>) || {}).map(([dbOptionId, dbValueId]) => {
+            const clientOpt = optionDbToClient.get(String(dbOptionId)) || `option_${dbOptionId}`
+            const clientVal = valueDbToClient.get(String(dbValueId)) || `value_${dbValueId}`
           return [clientOpt, clientVal]
         })
       ),
-      priceCents: variant.price_cents || 0,
-      stock: variant.stock || 0,
-      sku: variant.sku || '',
+      priceCents: typedVariant.price_cents || 0,
+      stock: typedVariant.stock || 0,
+      sku: typedVariant.sku || '',
       imageUrl: undefined
-    }))
+      }
+    })
 
     // Attach the related data to product object
     const productWithRelations = {

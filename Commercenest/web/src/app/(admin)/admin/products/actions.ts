@@ -1378,7 +1378,7 @@ export async function updateProductVariants(
     // Step 3: Handle variant combinations
     if (variantData.variantCombinations && variantData.variantCombinations.length > 0) {
       console.log('DEBUG: Processing variant combinations:', variantData.variantCombinations.length)
-
+      
       // Build client -> DB ID mappings for options and values
       // Map client option id -> option name
       const clientOptionIdToName = new Map<string, string>()

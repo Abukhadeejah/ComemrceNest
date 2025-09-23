@@ -124,18 +124,28 @@ export async function hasAuthCookie(): Promise<boolean> {
 
 export async function assertTenantAdmin(tenantId: string): Promise<string> {
   const userId = await getAuthenticatedUserId()
-  if (!userId) throw new Error('unauthenticated')
+  if (!userId) {
+    // Redirect to login instead of throwing error
+    const { redirect } = await import('next/navigation')
+    redirect('/login')
+  }
+  
+  // At this point, userId is guaranteed to be non-null due to the check above
   const { data: member } = await supabaseAdmin
     .from('tenant_members')
     .select('role')
     .eq('tenant_id', tenantId)
-    .eq('user_id', userId)
+    .eq('user_id', userId!)
     .maybeSingle()
   if (process.env.NODE_ENV !== 'production') {
     console.log('[AUTH] assertTenantAdmin user:', userId, 'tenant:', tenantId, 'member:', member)
   }
-  if (!member || member.role !== 'tenant_admin') throw new Error('forbidden')
-  return userId
+  if (!member || member.role !== 'tenant_admin') {
+    // Redirect to unauthorized page instead of throwing error
+    const { redirect } = await import('next/navigation')
+    redirect('/unauthorized')
+  }
+  return userId!
 }
 
 

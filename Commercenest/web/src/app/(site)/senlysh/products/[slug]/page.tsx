@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
-import { fetchProductBySlug, fetchProductImages, fetchProductVariantOptions } from '@/server/modules/products/service'
+import { fetchProductBySlug, fetchProductImages, fetchProductVariantOptions, fetchProductVariants } from '@/server/modules/products/service'
 import { ProductDetail } from '@/components/tenant/products/ProductDetail'
 
 interface SenlyshProductPageProps {
@@ -26,6 +26,8 @@ export default async function SenlyshProductPage({ params }: SenlyshProductPageP
 
   const images = await fetchProductImages(tenantId, product.id)
   const variantOptionsRaw = await fetchProductVariantOptions(tenantId, product.id)
+  const variantCombinations = await fetchProductVariants(tenantId, product.id)
+  
   const variantOptions = (variantOptionsRaw || []).map(item => ({
     variant_options: {
       id: item.variant_options.id,
@@ -36,11 +38,11 @@ export default async function SenlyshProductPage({ params }: SenlyshProductPageP
         id: v.id,
         value: v.value,
         display_value: v.display_value,
-        color_hex: v.color_hex ?? undefined,
-        image_url: v.image_url ?? undefined,
+        color_hex: v.color_hex,
+        image_url: v.image_url,
         sort_order: v.sort_order,
-        price_adjustment_cents: v.price_adjustment_cents ?? undefined,
-        cost_adjustment_cents: v.cost_adjustment_cents ?? undefined
+        price_adjustment_cents: v.price_adjustment_cents,
+        cost_adjustment_cents: v.cost_adjustment_cents
       }))
     }
   }))
@@ -48,12 +50,21 @@ export default async function SenlyshProductPage({ params }: SenlyshProductPageP
   console.log('[SenlyshProductPage] Product:', product.name, 'ID:', product.id)
   console.log('[SenlyshProductPage] Images count:', images?.length || 0)
   console.log('[SenlyshProductPage] Variant options count:', variantOptions?.length || 0)
+  console.log('[SenlyshProductPage] Variant combinations count:', variantCombinations?.length || 0)
 
   return (
     <ProductDetail
       product={product as unknown as Parameters<typeof ProductDetail>[0]['product']}
       images={images || []}
       variantOptions={variantOptions}
+      variantCombinations={variantCombinations?.map(vc => ({
+        id: vc.id,
+        name: vc.name,
+        price_cents: vc.price_cents,
+        stock: vc.stock || 0,
+        sku: vc.sku || '',
+        attributes: vc.attributes as Record<string, string>
+      }))}
     />
   )
 }

@@ -175,8 +175,12 @@ function ProductCard({
           ? { id: `variant_${Object.values(selectedVariants).join('_')}`, name: 'Variant', options: selectedVariants }
           : undefined,
       })
+      
+      // Clear validation error on successful add
+      setVariantValidationError('')
     } catch (e) {
       console.error('Failed to add to cart', e)
+      setVariantValidationError('Failed to add item to cart. Please try again.')
     }
   }
 
@@ -370,7 +374,7 @@ function ProductCard({
                   </span>
                   <div className="flex gap-1 flex-wrap">
                     {variantOption.variant_option_values
-                      .sort((a, b) => a.sort_order - b.sort_order)
+                      .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
                       .map((value) => (
                         <button
                           key={value.id}

@@ -217,8 +217,13 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
     
     const form = new FormData(e.currentTarget)
     
-    // Add all form data
+    // Add all form data (excluding variant data which is handled separately)
     Object.entries(formData).forEach(([key, value]) => {
+      // Skip variant data - handled by updateProductVariants action
+      if (key === 'variantOptions' || key === 'variantCombinations') {
+        return
+      }
+      
       if (Array.isArray(value)) {
         // Only append arrays if they have content
         if (value.length > 0) {
@@ -230,9 +235,8 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
       }
     })
 
-    // Add variant data
-    form.append('variantOptions', JSON.stringify(variantOptions))
-    form.append('variantCombinations', JSON.stringify(variantCombinations))
+    // Variant data is handled separately via updateProductVariants action
+    // Do not include variant data in main product update
 
     startTransition(async () => {
       try {
