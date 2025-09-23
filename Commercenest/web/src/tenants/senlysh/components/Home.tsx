@@ -30,6 +30,25 @@ interface ApiProduct {
   is_bestseller?: boolean
   is_on_sale?: boolean
   is_new_arrival?: boolean
+  // Variant support
+  product_variant_options?: Array<{
+    variant_options: {
+      id: string
+      name: string
+      display_name: string
+      type: string
+      variant_option_values: Array<{
+        id: string
+        value: string
+        display_value: string
+        color_hex: string | null
+        image_url: string | null
+        price_adjustment_cents: number | null
+        cost_adjustment_cents: number | null
+        sort_order: number | null
+      }>
+    }
+  }>
 }
 
 interface Category {
@@ -50,9 +69,18 @@ interface HomeProps {
   categories: Category[]
   heroSlides: HeroSlide[]
   heroSettings: HeroSettings
+  variantCombinations: Array<{
+    product_id: string
+    id: string
+    name: string
+    price_cents: number
+    stock: number
+    sku: string
+    attributes: Record<string, string>
+  }>
 }
 
-export default function Home({ products, categories, heroSlides, heroSettings }: HomeProps) {
+export default function Home({ products, categories, heroSlides, heroSettings, variantCombinations }: HomeProps) {
   const [countdown, setCountdown] = useState({
     days: 129,
     hours: 6,
@@ -94,7 +122,7 @@ export default function Home({ products, categories, heroSlides, heroSettings }:
         <CategoriesSection categories={categories} />
 
         {/* Latest Products Section */}
-        <LatestProducts apiProducts={products} />
+        <LatestProducts apiProducts={products} variantCombinations={variantCombinations} />
 
         {/* Feature Icons Section */}
         <FeatureIcons />

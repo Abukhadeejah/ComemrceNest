@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 import { ProductGrid } from '@/components/tenant/products/ProductGrid'
+import type { ProductListItem as UIProductListItem } from '@/types/product'
 import { ProductFilters } from '@/components/tenant/products/ProductFilters'
 import { ProductSearch } from '@/components/tenant/products/ProductSearch'
 import { getProducts } from '@/server/products'
@@ -119,7 +120,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                 Showing <span className="font-medium">{platformProducts.length}</span> products
               </p>
             </div>
-            <ProductGrid products={platformProducts} />
+            <ProductGrid products={platformProducts as unknown as UIProductListItem[]} />
           </div>
 
           {/* Platform Newsletter */}
@@ -205,7 +206,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
               Showing <span className="font-medium">{products.length}</span> products
             </p>
           </div>
-          <ProductGrid products={products} />
+          <ProductGrid products={products as unknown as UIProductListItem[]} />
         </div>
 
         {/* Newsletter */}

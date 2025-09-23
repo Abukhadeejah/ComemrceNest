@@ -4,10 +4,12 @@ export const revalidate = 0
 
 import { Suspense } from 'react'
 import { ProductGrid } from '@/components/tenant/products/ProductGrid'
+import type { ProductListItem as UIProductListItem } from '@/types/product'
 import { ProductFilters } from '@/components/tenant/products/ProductFilters'
 import { ProductSearch } from '@/components/tenant/products/ProductSearch'
 import { getProducts } from '@/server/products'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
+import { fetchVariantsForProducts } from '@/server/modules/products/service'
 
 interface ProductsPageProps {
   searchParams: Promise<{
@@ -63,6 +65,17 @@ export default async function SenlyshProductsPage({ searchParams }: ProductsPage
 
   console.log('[SENLYSH_PRODUCTS_PAGE] Fetched products for tenant:', tenantId, 'Count:', products.length)
 
+  // Bulk fetch variant combinations for all products (faster, ensures availability)
+  const variantCombinationsRaw = await fetchVariantsForProducts(
+    tenantId,
+    products.map(p => p.id)
+  )
+  const variantCombinations = variantCombinationsRaw.map(vc => ({
+    ...vc,
+    product_id: String(vc.product_id),
+    attributes: (vc.attributes ?? {}) as Record<string, string>
+  }))
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -82,7 +95,7 @@ export default async function SenlyshProductsPage({ searchParams }: ProductsPage
 
         {/* Products Grid */}
         <Suspense fallback={<ProductGridSkeleton />}>
-          <ProductGrid key={tenantId} products={products} />
+          <ProductGrid key={tenantId} products={products as unknown as UIProductListItem[]} variantCombinations={variantCombinations} />
         </Suspense>
       </div>
     </div>

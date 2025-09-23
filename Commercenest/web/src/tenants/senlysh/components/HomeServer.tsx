@@ -18,7 +18,7 @@ export default async function HomeServer() {
     return <main className="p-6"><h1 className="text-xl font-semibold">Senlysh</h1><p className="text-sm text-neutral-600">Tenant not found.</p></main>
   }
 
-  const [{ data: products }, { data: categories }, { data: heroSlides }, { data: heroSettings }] = await Promise.all([
+  const [{ data: products }, { data: categories }, { data: heroSlides }, { data: heroSettings }, { data: variantCombinations }] = await Promise.all([
     supabaseAdmin
       .from('products')
       .select(`
@@ -52,7 +52,12 @@ export default async function HomeServer() {
       .from('hero_settings')
       .select('*')
       .eq('tenant_id', tenantId)
-      .single()
+      .single(),
+    supabaseAdmin
+      .from('product_variants')
+      .select('product_id, id, name, price_cents, stock, sku, attributes')
+      .eq('tenant_id', tenantId)
+      .eq('is_active', true)
   ])
 
   return <Home 
@@ -77,5 +82,14 @@ export default async function HomeServer() {
     categories={adaptCategories(categories || [])} 
     heroSlides={adaptHeroSlides(heroSlides || [])}
     heroSettings={heroSettings ? adaptHeroSettings(heroSettings) : null}
+    variantCombinations={(variantCombinations || []).map(vc => ({
+      product_id: vc.product_id,
+      id: vc.id,
+      name: vc.name,
+      price_cents: vc.price_cents,
+      stock: vc.stock || 0,
+      sku: vc.sku || '',
+      attributes: vc.attributes as Record<string, string>
+    }))}
   />
 }

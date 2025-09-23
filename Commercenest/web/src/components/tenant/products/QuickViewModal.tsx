@@ -6,15 +6,25 @@ import { XMarkIcon, HeartIcon, ShoppingBagIcon, StarIcon, EyeIcon, ClockIcon, Us
 import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ProductListItem } from '@/server/modules/products/service'
+import { ProductListItem } from '@/types/product'
+
+interface VariantCombination {
+  product_id: string
+  name: string | null
+  price_cents: number
+  stock: number | null
+  sku: string | null
+  attributes: Record<string, string>
+}
 
 interface QuickViewModalProps {
   product: ProductListItem | null
   isOpen: boolean
   onClose: () => void
+  variantCombinations?: VariantCombination[]
 }
 
-export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps) {
+export function QuickViewModal({ product, isOpen, onClose, variantCombinations = [] }: QuickViewModalProps) {
   const [selectedSize, setSelectedSize] = useState('M')
   const [quantity, setQuantity] = useState(1)
   const [isWishlisted, setIsWishlisted] = useState(false)
@@ -90,34 +100,70 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
     forceUpdate({});
   }, [selectedVariants]);
 
-  // Calculate current price based on selected variants
+  // Calculate current price based on selected variants with priority:
+  // 1) Direct variant combination price, 2) Base + adjustments, 3) Base
   const calculateCurrentPrice = () => {
-    if (!product) return 0;
-    
-    let currentPrice = product.price_cents / 100; // Convert cents to rupees
-    
+    if (!product) return 0
+
+    // Priority 1: direct variant combination price when all selections present
+    if (product.product_variant_options && product.product_variant_options.length > 0 && Object.keys(selectedVariants).length > 0) {
+      const productVariants = (variantCombinations || []).filter(vc => String(vc.product_id) === String(product.id))
+      
+      if (productVariants.length > 0) {
+        const matching = productVariants.find(combination => {
+          const allMatch = Object.entries(selectedVariants).every(([optionName, selectedValueId]) => {
+            const option = product.product_variant_options!
+              .map(o => o.variant_options)
+              .find(vo => vo.name === optionName || vo.name?.toLowerCase() === String(optionName).toLowerCase())
+            if (!option) return false
+            const optId = String(option.id)
+            const attrVal = combination.attributes[optId] 
+              || combination.attributes[optId.toLowerCase()] 
+              || combination.attributes[optId.toUpperCase()] 
+              || combination.attributes[option.name]
+            const selectedValueObj = option.variant_option_values.find(v => v.id === selectedValueId)
+            const selectedValueCanonical = selectedValueObj?.id || selectedValueId
+            const selectedValueText = selectedValueObj?.value
+            const isMatch = (
+              String(attrVal).toLowerCase() === String(selectedValueCanonical).toLowerCase() ||
+              (selectedValueText ? String(attrVal).toLowerCase() === String(selectedValueText).toLowerCase() : false)
+            )
+            
+            return isMatch
+          })
+          return allMatch
+        })
+        if (matching && matching.price_cents > 0) {
+          return matching.price_cents / 100
+        }
+        
+      }
+    }
+
+    // Priority 2: base + adjustments
     if (product.product_variant_options && product.product_variant_options.length > 0) {
-      let adjustmentCents = 0;
+      let adjustmentCents = 0
       product.product_variant_options.forEach(option => {
-        const variantOption = option.variant_options;
-        const selectedValue = selectedVariants[variantOption.name];
-        if (selectedValue) {
-          const valueObj = variantOption.variant_option_values.find(v => v.value === selectedValue);
-          if (valueObj) {
-            adjustmentCents += valueObj.price_adjustment_cents || 0;
+        const variantOption = option.variant_options
+        const selectedValueId = selectedVariants[variantOption.name]
+        if (selectedValueId) {
+          const valueObj = variantOption.variant_option_values.find(v => v.id === selectedValueId)
+          if (valueObj && valueObj.price_adjustment_cents) {
+            adjustmentCents += valueObj.price_adjustment_cents
           }
         }
-      });
-      currentPrice = (product.price_cents + adjustmentCents) / 100;
-      console.log('QuickView Price updated:', product.name, 'from ₹' + (product.price_cents / 100), 'to ₹' + currentPrice, 'adjustment:', adjustmentCents);
+      })
+      const price = (product.price_cents + adjustmentCents) / 100
+      
+      return price
     }
-    
-    return currentPrice;
-  };
 
-  const handleVariantSelect = (optionName: string, value: string) => {
-    console.log('QuickView Variant selected:', product?.name, optionName + ':', value);
-    setSelectedVariants(prev => ({ ...prev, [optionName]: value }));
+    // Priority 3: base only
+    return product.price_cents / 100
+  }
+
+  const handleVariantSelect = (optionName: string, valueId: string) => {
+    setSelectedVariants(prev => ({ ...prev, [optionName]: valueId }));
     setVariantValidationError(''); // Clear error when variant is selected
   };
 
@@ -168,13 +214,7 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
     
     // Clear validation error and proceed with add to cart
     setVariantValidationError('');
-    console.log('QuickView Adding to cart:', { 
-      product: product.name, 
-      selectedVariants, 
-      selectedSize, 
-      quantity,
-      finalPrice: currentPrice
-    });
+    
     // TODO: Implement actual add to cart functionality
   }
 
@@ -470,9 +510,9 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
                                     {variantOption.variant_option_values.map((value) => (
                                       <button
                                         key={value.id}
-                                        onClick={() => handleVariantSelect(variantOption.name, value.value)}
+                                        onClick={() => handleVariantSelect(variantOption.name, value.id)}
                                         className={`px-4 py-2 text-sm font-medium rounded-lg border transition-colors duration-200 ${
-                                          selectedVariants[variantOption.name] === value.value
+                                          selectedVariants[variantOption.name] === value.id
                                             ? 'border-indigo-600 bg-indigo-50 text-indigo-600'
                                             : 'border-gray-300 text-gray-700 hover:border-gray-400'
                                         }`}

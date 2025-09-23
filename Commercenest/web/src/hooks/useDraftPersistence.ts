@@ -1,105 +1,73 @@
 'use client'
 
-import { useEffect, useCallback, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 
-interface UseDraftPersistenceOptions<T = Record<string, unknown>> {
-  /** Unique key for the draft (e.g., 'product_create', 'category_edit_123') */
+interface UseDraftPersistenceOptions {
   draftKey: string
-  /** Form data to persist */
-  formData: T
-  /** Auto-save interval in milliseconds (default: 2000ms) */
-  autoSaveInterval?: number
-  /** Whether to enable auto-save (default: true) */
+  formData: Record<string, unknown>
   enabled?: boolean
+  debounceMs?: number
 }
 
-interface DraftData {
-  data: Record<string, unknown>
-  timestamp: number
-  version: string
+interface UseDraftPersistenceReturn {
+  loadDraft: () => Record<string, unknown> | null
+  saveDraft: () => void
+  clearDraft: () => void
+  hasDraft: () => boolean
 }
 
-export function useDraftPersistence<T = Record<string, unknown>>({
+export function useDraftPersistence({
   draftKey,
   formData,
-  autoSaveInterval = 2000,
-  enabled = true
-}: UseDraftPersistenceOptions<T>) {
+  enabled = true,
+  debounceMs = 1000
+}: UseDraftPersistenceOptions): UseDraftPersistenceReturn {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const lastSavedDataRef = useRef<string>('')
-  const DRAFT_VERSION = '1.0.0' // For future migration compatibility
 
-  // Generate storage key
-  const storageKey = `commercenest_draft_${draftKey}`
-
-  // Save draft to localStorage
-  const saveDraft = useCallback((data: T) => {
+  const saveDraft = useCallback(() => {
     if (!enabled) return
-
+    
     try {
-      const draftData: DraftData = {
-        data: data as Record<string, unknown>,
-        timestamp: Date.now(),
-        version: DRAFT_VERSION
-      }
-      
-      const serializedData = JSON.stringify(draftData)
-      
-      // Only save if data has actually changed
-      if (serializedData !== lastSavedDataRef.current) {
-        localStorage.setItem(storageKey, serializedData)
-        lastSavedDataRef.current = serializedData
-        console.log(`[Draft] Auto-saved: ${draftKey}`)
-      }
+      localStorage.setItem(`draft_${draftKey}`, JSON.stringify(formData))
     } catch (error) {
-      console.error('[Draft] Failed to save:', error)
+      console.warn('Failed to save draft:', error)
     }
-  }, [storageKey, enabled, draftKey])
+  }, [draftKey, formData, enabled])
 
-  // Load draft from localStorage
-  const loadDraft = useCallback((): T | null => {
+  const loadDraft = useCallback((): Record<string, unknown> | null => {
     if (!enabled) return null
-
+    
     try {
-      const stored = localStorage.getItem(storageKey)
-      if (!stored) return null
-
-      const draftData: DraftData = JSON.parse(stored)
-      
-      // Check if draft is not too old (24 hours)
-      const MAX_DRAFT_AGE = 24 * 60 * 60 * 1000 // 24 hours
-      if (Date.now() - draftData.timestamp > MAX_DRAFT_AGE) {
-        localStorage.removeItem(storageKey)
-        return null
-      }
-
-      console.log(`[Draft] Loaded: ${draftKey}`)
-      return draftData.data as T
+      const saved = localStorage.getItem(`draft_${draftKey}`)
+      return saved ? JSON.parse(saved) : null
     } catch (error) {
-      console.error('[Draft] Failed to load:', error)
-      // Clean up corrupted data
-      localStorage.removeItem(storageKey)
+      console.warn('Failed to load draft:', error)
       return null
     }
-  }, [storageKey, enabled, draftKey])
+  }, [draftKey, enabled])
 
-  // Clear draft
   const clearDraft = useCallback(() => {
+    if (!enabled) return
+    
     try {
-      localStorage.removeItem(storageKey)
-      console.log(`[Draft] Cleared: ${draftKey}`)
+      localStorage.removeItem(`draft_${draftKey}`)
     } catch (error) {
-      console.error('[Draft] Failed to clear:', error)
+      console.warn('Failed to clear draft:', error)
     }
-  }, [storageKey, draftKey])
+  }, [draftKey, enabled])
 
-  // Check if draft exists
   const hasDraft = useCallback((): boolean => {
     if (!enabled) return false
-    return localStorage.getItem(storageKey) !== null
-  }, [storageKey, enabled])
+    
+    try {
+      return localStorage.getItem(`draft_${draftKey}`) !== null
+    } catch (error) {
+      console.warn('Failed to check draft:', error)
+      return false
+    }
+  }, [draftKey, enabled])
 
-  // Debounced auto-save effect
+  // Auto-save draft with debouncing
   useEffect(() => {
     if (!enabled) return
 
@@ -108,53 +76,23 @@ export function useDraftPersistence<T = Record<string, unknown>>({
       clearTimeout(timeoutRef.current)
     }
 
-    // Set new timeout for auto-save
+    // Set new timeout
     timeoutRef.current = setTimeout(() => {
-      saveDraft(formData)
-    }, autoSaveInterval)
+      saveDraft()
+    }, debounceMs)
 
-    // Cleanup
+    // Cleanup timeout on unmount
     return () => {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current)
       }
     }
-  }, [formData, saveDraft, autoSaveInterval, enabled])
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current)
-      }
-    }
-  }, [])
+  }, [formData, saveDraft, debounceMs, enabled])
 
   return {
-    saveDraft,
     loadDraft,
+    saveDraft,
     clearDraft,
-    hasDraft,
-    storageKey
+    hasDraft
   }
 }
-
-// Utility function to get all draft keys (for cleanup/debugging)
-export function getAllDraftKeys(): string[] {
-  const keys: string[] = []
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i)
-    if (key?.startsWith('commercenest_draft_')) {
-      keys.push(key)
-    }
-  }
-  return keys
-}
-
-// Utility function to clear all drafts (for cleanup)
-export function clearAllDrafts(): void {
-  const draftKeys = getAllDraftKeys()
-  draftKeys.forEach(key => localStorage.removeItem(key))
-  console.log(`[Draft] Cleared ${draftKeys.length} drafts`)
-}
-

@@ -39,11 +39,11 @@ interface VariantOptionValue {
   id: string
   value: string
   display_value: string
-  color_hex?: string
-  image_url?: string
+  color_hex: string | null | undefined
+  image_url: string | null | undefined
   sort_order: number
-  price_adjustment_cents?: number
-  cost_adjustment_cents?: number
+  price_adjustment_cents: number | null | undefined
+  cost_adjustment_cents: number | null | undefined
 }
 
 interface VariantOptionData {
@@ -62,9 +62,17 @@ interface ProductDetailProps {
   product: ProductServerResponse
   images: Record<string, unknown>[]
   variantOptions?: VariantOption[]
+  variantCombinations?: Array<{
+    id: string
+    name: string
+    price_cents: number
+    stock: number
+    sku: string
+    attributes: Record<string, string>
+  }>
 }
 
-export function ProductDetail({ product, images, variantOptions = [] }: ProductDetailProps) {
+export function ProductDetail({ product, images, variantOptions = [], variantCombinations = [] }: ProductDetailProps) {
   const { addItem } = useCart()
   const tenant = useTenant()
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({})
@@ -78,11 +86,7 @@ export function ProductDetail({ product, images, variantOptions = [] }: ProductD
   const [showAskQuestion, setShowAskQuestion] = useState(false)
   const [peopleViewing, setPeopleViewing] = useState(29)
 
-  console.log('[ProductDetail] Rendering with:', { 
-    productName: product?.name, 
-    imagesCount: images?.length, 
-    variantOptionsCount: variantOptions?.length 
-  })
+  
 
   const formatPrice = (priceCents: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -97,7 +101,32 @@ export function ProductDetail({ product, images, variantOptions = [] }: ProductD
   const calculateCurrentPrice = () => {
     let currentPrice = product.price_cents
     
-    // Add price adjustments from selected variants
+    // Priority 1: Check for direct variant combination price
+    if (variantCombinations && variantCombinations.length > 0 && Object.keys(selectedVariants).length > 0) {
+      // Find matching variant combination based on selected variants
+      const matchingCombination = variantCombinations.find(combination => {
+        // Check if all selected variants match this combination's attributes
+        return Object.entries(selectedVariants).every(([optionName, selectedValue]) => {
+          // Find the option ID for this option name
+          const option = variantOptions?.find(opt => opt.variant_options.name === optionName)
+          if (!option) return false
+          
+          // Find the value ID for this value
+          const value = option.variant_options.variant_option_values.find(v => v.value === selectedValue)
+          if (!value) return false
+          
+          // Check if this combination has this option-value pair
+          return combination.attributes[option.variant_options.id] === value.id
+        })
+      })
+      
+      if (matchingCombination && matchingCombination.price_cents > 0) {
+        
+        return matchingCombination.price_cents
+      }
+    }
+    
+    // Priority 2: Fallback to base price + adjustments
     variantOptions?.forEach(option => {
       const variantOption = option.variant_options
       const selectedValue = selectedVariants[variantOption.name]
@@ -107,6 +136,7 @@ export function ProductDetail({ product, images, variantOptions = [] }: ProductD
         )
         if (optionValue?.price_adjustment_cents) {
           currentPrice += optionValue.price_adjustment_cents
+          
         }
       }
     })
@@ -208,7 +238,7 @@ export function ProductDetail({ product, images, variantOptions = [] }: ProductD
           : undefined,
       })
     } catch (e) {
-      console.error('Failed to add to cart', e)
+      
     }
   }
 
@@ -239,7 +269,7 @@ export function ProductDetail({ product, images, variantOptions = [] }: ProductD
       // Redirect to checkout
       window.location.href = `/checkout`
     } catch (e) {
-      console.error('Failed to buy now', e)
+      
     }
   }
 
@@ -351,7 +381,7 @@ export function ProductDetail({ product, images, variantOptions = [] }: ProductD
                   try {
                     const variantOption = option?.variant_options
                     if (!variantOption || !variantOption.variant_option_values) {
-                      console.warn('Invalid variant option:', option)
+                      
                       return null
                     }
                     
@@ -396,7 +426,7 @@ export function ProductDetail({ product, images, variantOptions = [] }: ProductD
                       </div>
                     )
                   } catch (error) {
-                    console.error('Error rendering variant option:', error, option)
+                    
                     return null
                   }
                 })}
@@ -854,7 +884,7 @@ export function ProductDetail({ product, images, variantOptions = [] }: ProductD
     </div>
   )
   } catch (error) {
-    console.error('[ProductDetail] Error rendering component:', error)
+    
     return (
       <div className="bg-white min-h-screen p-8">
         <div className="max-w-4xl mx-auto">

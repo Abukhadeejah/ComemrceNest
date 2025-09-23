@@ -19,6 +19,7 @@ export type ProductListItem = {
   currency: string
   hero_image_url: string | null
   stock: number
+  status: 'draft' | 'published'
   low_stock_threshold?: number | null
   // Badge System (optional until migration is applied)
   is_featured?: boolean
@@ -44,11 +45,11 @@ export type ProductListItem = {
         id: string
         value: string
         display_value: string
-        color_hex?: string
-        image_url?: string
-        sort_order: number
-        price_adjustment_cents?: number
-        cost_adjustment_cents?: number
+        color_hex: string | null | undefined
+        image_url: string | null | undefined
+        sort_order: number | null
+        price_adjustment_cents: number | null | undefined
+        cost_adjustment_cents: number | null | undefined
       }[]
     }
   }[]
@@ -362,6 +363,27 @@ export async function fetchProductVariants(tenantId: string, productId: string) 
 
   if (error) {
     console.error('[fetchProductVariants] query error', error)
+    return []
+  }
+
+  return data || []
+}
+
+// Bulk fetch variant combinations for multiple products (used by PLP/collections)
+export async function fetchVariantsForProducts(
+  tenantId: string,
+  productIds: string[]
+) {
+  if (!productIds || productIds.length === 0) return []
+  const { data, error } = await supabaseAdmin
+    .from('product_variants')
+    .select('id, name, sku, price_cents, stock, attributes, product_id')
+    .eq('tenant_id', tenantId)
+    .in('product_id', productIds)
+    .eq('is_active', true)
+
+  if (error) {
+    console.error('[fetchVariantsForProducts] query error', error)
     return []
   }
 
