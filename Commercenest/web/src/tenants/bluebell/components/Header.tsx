@@ -17,7 +17,7 @@ export default function Header() {
   const wishlistCount = 0; // TODO: Implement wishlist functionality later
   const tenant = useTenant();
   const basePath = `/${tenant.key || 'bluebell'}`;
-  const { setMode } = useBluebellHomeMode();
+  const { mode, setMode } = useBluebellHomeMode();
   // Feature flags (to be controlled from superadmin later)
   const showNewArrivals = false
   const showSale = false
@@ -126,24 +126,7 @@ export default function Header() {
                   <Link href={basePath} onClick={(e) => { e.preventDefault(); setMode('fabrics'); if (pathname !== basePath) { window.location.href = basePath; } }} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900">
                     Bluebell Fabric
                   </Link>
-                </div>
-              </div>
-              {/* FABRICS main nav with categories dropdown (positioned next to HOME) */}
-              <div className="relative group">
-                <Link href={`${basePath}/products`} className={`${navClass(`${basePath}/products`)} flex items-center gap-1`}>
-                  FABRICS
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </Link>
-                {/* Dropdown Menu from backend categories */}
-                <div className="absolute top-full left-0 bg-white shadow-lg border border-gray-200 rounded-md py-2 min-w-[220px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300">
-                  {categories.slice(0, 8).map(cat => (
-                    <Link key={cat.id} href={`${basePath}/products?category=${encodeURIComponent(cat.slug)}`} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900">
-                      {cat.name}
-                    </Link>
-                  ))}
-                  {/* Coming Soon nested dropdown */}
+                  {/* Coming Soon nested submenu moved to HOME */}
                   <div className="relative group/soon">
                     <button className="w-full flex items-center justify-between px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900">
                       <span>Coming Soon</span>
@@ -156,14 +139,35 @@ export default function Header() {
                       <span className="block px-4 py-2 text-sm text-gray-400 cursor-default">BB Bedsheets</span>
                     </div>
                   </div>
-                  {categories.length === 0 && (
-                    <div className="px-4 py-2 text-sm text-gray-500">No categories</div>
-                  )}
                 </div>
               </div>
-              <Link href={`${basePath}/portfolio`} className={navClass(`${basePath}/portfolio`)}>
-                PORTFOLIO
-              </Link>
+              {/* FABRICS main nav with categories dropdown (positioned next to HOME) */}
+              {mode === 'fabrics' && (
+                <div className="relative group">
+                  <Link href={`${basePath}/products`} className={`${navClass(`${basePath}/products`)} flex items-center gap-1`}>
+                    FABRICS
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </Link>
+                  {/* Dropdown Menu from backend categories */}
+                  <div className="absolute top-full left-0 bg-white shadow-lg border border-gray-200 rounded-md py-2 min-w-[220px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300">
+                    {categories.slice(0, 8).map(cat => (
+                      <Link key={cat.id} href={`${basePath}/products?category=${encodeURIComponent(cat.slug)}`} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900">
+                        {cat.name}
+                      </Link>
+                    ))}
+                    {categories.length === 0 && (
+                      <div className="px-4 py-2 text-sm text-gray-500">No categories</div>
+                    )}
+                  </div>
+                </div>
+              )}
+              {mode === 'interiors' && (
+                <Link href={`${basePath}/portfolio`} className={navClass(`${basePath}/portfolio`)}>
+                  PORTFOLIO
+                </Link>
+              )}
               {showNewArrivals ? (
                 <Link href={`${basePath}/new-arrivals`} className={navClass(`${basePath}/new-arrivals`)}>
                   NEW ARRIVALS
@@ -266,22 +270,7 @@ export default function Header() {
                   <div className="ml-4 space-y-1">
                     <Link href={basePath} className="block text-sm text-gray-600 hover:text-gray-800" onClick={(e) => { e.preventDefault(); setMode('interiors'); setIsMenuOpen(false); if (pathname !== basePath) { window.location.href = basePath; } }}>Bluebell Interiors</Link>
                     <Link href={basePath} className="block text-sm text-gray-600 hover:text-gray-800" onClick={(e) => { e.preventDefault(); setMode('fabrics'); setIsMenuOpen(false); if (pathname !== basePath) { window.location.href = basePath; } }}>Bluebell Fabric</Link>
-                  </div>
-                </div>
-                {/* FABRICS section on mobile with quick links */}
-                <div className="space-y-2">
-                  <Link 
-                    href={`${basePath}/products`} 
-                    className={`${mobileNavClass(`${basePath}/products`)} block`}
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    FABRICS
-                  </Link>
-                  <div className="ml-4 space-y-1">
-                    <Link href={`${basePath}/products/upholstery`} className="block text-sm text-gray-600 hover:text-gray-800" onClick={() => setIsMenuOpen(false)}>Upholstery Fabrics</Link>
-                    <Link href={`${basePath}/products/curtains`} className="block text-sm text-gray-600 hover:text-gray-800" onClick={() => setIsMenuOpen(false)}>Curtain & Drapery</Link>
-                    <Link href={`${basePath}/products/cushions`} className="block text-sm text-gray-600 hover:text-gray-800" onClick={() => setIsMenuOpen(false)}>Cushion Covers</Link>
-                    <Link href={`${basePath}/products/accessories`} className="block text-sm text-gray-600 hover:text-gray-800" onClick={() => setIsMenuOpen(false)}>Accessories</Link>
+                    {/* Coming Soon moved to HOME group on mobile */}
                     <div className="pt-2">
                       <div className="text-xs uppercase tracking-wider text-gray-400">Coming Soon</div>
                       <span className="block text-sm text-gray-400">BB Sofa</span>
@@ -291,13 +280,34 @@ export default function Header() {
                     </div>
                   </div>
                 </div>
-                <Link 
-                  href={`${basePath}/portfolio`} 
-                  className={mobileNavClass(`${basePath}/portfolio`)}
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  PORTFOLIO
-                </Link>
+                {/* FABRICS section on mobile with quick links (visible only in fabrics mode) */}
+                {mode === 'fabrics' && (
+                  <div className="space-y-2">
+                    <Link 
+                      href={`${basePath}/products`} 
+                      className={`${mobileNavClass(`${basePath}/products`)} block`}
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      FABRICS
+                    </Link>
+                    <div className="ml-4 space-y-1">
+                      <Link href={`${basePath}/products/upholstery`} className="block text-sm text-gray-600 hover:text-gray-800" onClick={() => setIsMenuOpen(false)}>Upholstery Fabrics</Link>
+                      <Link href={`${basePath}/products/curtains`} className="block text-sm text-gray-600 hover:text-gray-800" onClick={() => setIsMenuOpen(false)}>Curtain & Drapery</Link>
+                      <Link href={`${basePath}/products/cushions`} className="block text-sm text-gray-600 hover:text-gray-800" onClick={() => setIsMenuOpen(false)}>Cushion Covers</Link>
+                      <Link href={`${basePath}/products/accessories`} className="block text-sm text-gray-600 hover:text-gray-800" onClick={() => setIsMenuOpen(false)}>Accessories</Link>
+                      
+                    </div>
+                  </div>
+                )}
+                {mode === 'interiors' && (
+                  <Link 
+                    href={`${basePath}/portfolio`} 
+                    className={mobileNavClass(`${basePath}/portfolio`)}
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    PORTFOLIO
+                  </Link>
+                )}
                 {showNewArrivals ? (
                   <Link 
                     href={`${basePath}/new-arrivals`} 

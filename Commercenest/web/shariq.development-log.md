@@ -1,3 +1,49 @@
+## 2025-09-25 — Bluebell Nav + Fabrics Hero Updates
+
+### Summary of Changes
+- Moved the "Coming Soon" submenu (BB Sofa, BB Curtains, BB Cushion, BB Bedsheets) from FABRICS to the HOME dropdown (desktop nested submenu; mobile HOME group section).
+- Updated Fabrics hero images to new Pexels selections and removed previous Fabrics hero images.
+- Removed the in-hero top-right mode switcher; mode can now be changed only via the HOME dropdown in the header.
+
+### Files Touched
+- src/tenants/bluebell/components/Header.tsx
+  - Relocated "Coming Soon" submenu from FABRICS to HOME (desktop + mobile).
+- src/tenants/bluebell/components/Home.tsx
+  - Replaced Fabrics hero slides with:
+    - https://images.pexels.com/photos/276267/pexels-photo-276267.jpeg
+    - https://images.pexels.com/photos/365067/pexels-photo-365067.jpeg
+    - https://images.pexels.com/photos/276223/pexels-photo-276223.jpeg
+  - Removed the absolute-positioned mode select control (top-right of hero).
+
+### Verification
+- Desktop: HOME dropdown shows Interiors/Fabric options plus "Coming Soon" submenu; FABRICS dropdown lists only categories.
+- Mobile: HOME group shows Interiors/Fabric options plus "Coming Soon"; FABRICS quick links no longer include it.
+- Fabrics mode carousel displays the three new hero images.
+- Lint check: no errors.
+
+## 2025-09-25 — Dynamic Navigation by Homepage Mode (Bluebell)
+
+### Summary of Changes
+- Header navigation now reacts to the global homepage mode (`interiors` | `fabrics`).
+- In Interiors mode: hide FABRICS menu; show PORTFOLIO.
+- In Fabrics mode: show FABRICS (with categories); hide PORTFOLIO.
+- Applies to both desktop nav and mobile menu.
+
+### Files Touched
+- src/tenants/bluebell/components/Header.tsx
+  - Read `mode` from `useBluebellHomeMode` and conditionally render FABRICS/PORTFOLIO in desktop and mobile.
+  - Kept HOME dropdown behavior to set mode and navigate to base path if needed.
+
+### Implementation Details
+- Imported `mode` from the global Zustand store (`useBluebellHomeMode`).
+- Desktop: wrapped FABRICS block with `mode === 'fabrics'`; wrapped PORTFOLIO with `mode === 'interiors'`.
+- Mobile: wrapped FABRICS quick-links block with `mode === 'fabrics'`; wrapped PORTFOLIO link with `mode === 'interiors'`.
+
+### Verification
+- Switched modes via HOME dropdown and homepage select; header updates immediately without full reload when already on base path.
+- Lint check: no errors.
+
+
 ## 2025-09-24 — Development Log (Bluebell)
 
 ### Summary of Changes

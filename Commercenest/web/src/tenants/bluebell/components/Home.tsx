@@ -16,7 +16,7 @@ type HomeClientProps = {
 
 export default function Home({ products }: HomeClientProps) {
   const [loaded, setLoaded] = useState(false)
-  const { mode: storeMode, setMode } = useBluebellHomeMode()
+  const { mode: storeMode } = useBluebellHomeMode()
   const [viewMode, setViewMode] = useState<'interiors' | 'fabrics'>(storeMode)
   useEffect(() => setLoaded(true), [])
 
@@ -43,16 +43,19 @@ export default function Home({ products }: HomeClientProps) {
 
   const fabricsHeroSlides = [
     {
-      url: "https://images.pexels.com/photos/2170401/pexels-photo-2170401.jpeg",
-      alt: "Premium fabric rolls in studio",
+      // https://www.pexels.com/photo/color-shade-samples-276267/
+      url: "https://images.pexels.com/photos/276267/pexels-photo-276267.jpeg",
+      alt: "Color shade samples",
     },
     {
-      url: "https://images.pexels.com/photos/3738087/pexels-photo-3738087.jpeg",
-      alt: "Close-up textured fabric swatches",
+      // https://www.pexels.com/photo/pile-of-area-rugs-365067/
+      url: "https://images.pexels.com/photos/365067/pexels-photo-365067.jpeg",
+      alt: "Pile of area rugs",
     },
     {
-      url: "https://images.pexels.com/photos/3738092/pexels-photo-3738092.jpeg",
-      alt: "Curtain fabrics and patterns",
+      // Additional fabric-themed hero image (can be changed later if desired)
+      url: "https://images.pexels.com/photos/276223/pexels-photo-276223.jpeg",
+      alt: "Fabric swatches and palettes",
     },
   ]
 
@@ -87,19 +90,6 @@ export default function Home({ products }: HomeClientProps) {
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/25 via-black/10 to-transparent" />
         {/* Removed placeholder photo overlay that caused rounded window artifact */}
         <div className={`hero-content text-center z-10 px-4`}>
-          {/* Mode Switcher */}
-          <div className="absolute top-6 right-6">
-            <label className="sr-only" htmlFor="bluebell-home-mode">Select content</label>
-            <select
-              id="bluebell-home-mode"
-              className="bg-white/90 text-gray-900 border border-gray-200 rounded-md px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
-              value={viewMode}
-              onChange={(e) => { const v = e.target.value as 'interiors' | 'fabrics'; setViewMode(v); setMode(v) }}
-            >
-              <option value="interiors">Bluebell Interiors</option>
-              <option value="fabrics">Bluebell Fabrics</option>
-            </select>
-          </div>
           {/* Logo */}
           <div className="hero-logo mb-8">
             <svg width="220" height="140" viewBox="0 0 220 140" className="mx-auto drop-shadow-2xl animate-[pulse_3s_ease-in-out_infinite]">
