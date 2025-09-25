@@ -4,10 +4,14 @@
 - Moved the "Coming Soon" submenu (BB Sofa, BB Curtains, BB Cushion, BB Bedsheets) from FABRICS to the HOME dropdown (desktop nested submenu; mobile HOME group section).
 - Updated Fabrics hero images to new Pexels selections and removed previous Fabrics hero images.
 - Removed the in-hero top-right mode switcher; mode can now be changed only via the HOME dropdown in the header.
+ - Dynamic search placeholder in header:
+   - Fabrics mode → "Search for fabrics, patterns, colors..."
+   - Interiors mode → "Search interiors: rooms, styles..."
 
 ### Files Touched
 - src/tenants/bluebell/components/Header.tsx
   - Relocated "Coming Soon" submenu from FABRICS to HOME (desktop + mobile).
+  - Added mode-based search placeholder text.
 - src/tenants/bluebell/components/Home.tsx
   - Replaced Fabrics hero slides with:
     - https://images.pexels.com/photos/276267/pexels-photo-276267.jpeg

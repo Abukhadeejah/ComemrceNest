@@ -35,6 +35,10 @@ export default function Header() {
 
   const [categories, setCategories] = useState<Array<{ id: string; name: string; slug: string; parent_id: string | null }>>([])
 
+  const searchPlaceholder = mode === 'fabrics'
+    ? 'Search for fabrics, patterns, colors...'
+    : 'Search interiors:  rooms, styles...'
+
   useEffect(() => {
     let aborted = false
     async function load() {
@@ -204,7 +208,7 @@ export default function Header() {
               <div className="relative hidden md:block">
                 <input
                   type="text"
-                  placeholder="Search for fabrics, patterns, colors..."
+                  placeholder={searchPlaceholder}
                   className="pl-4 pr-10 py-2.5 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary w-48 lg:w-64 text-sm transition-all duration-300"
                 />
                 <svg className="absolute right-3 top-3 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
