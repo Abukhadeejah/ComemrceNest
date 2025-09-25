@@ -1,0 +1,11 @@
+node_modules/
+.next/
+.env
+.local
+supabase/.branches/
+supabase/.temp/
+playwright-report/
+test-results/
+
+# Twiggy
+.cursor/rules/file-structure.mdc
