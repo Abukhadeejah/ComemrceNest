@@ -1,0 +1,38 @@
+---
+description: Architecture guardrails for Commercenest — DB-first, documented, and validated before deploy
+globs:
+alwaysApply: true
+---
+
+# Architecture Guardrails (Commercenest)
+
+- Always use a **data‑driven, DB‑first** development approach; design or adjust tables, relationships, RLS, triggers, and functions before writing application code.  
+- Read and follow project docs in `Commercenest/docs/**` and all existing rules in `.cursor/rules/**` before proposing or implementing changes.  
+- Review Supabase state before coding: tables, relations, RLS policies, functions, triggers, and migrations; update migrations to reflect any schema changes.  
+- Before production deploys, run TypeScript checks, lint, and build; if any code changed, run a local browser build/test flow to verify the app loads and critical paths work.  
+
+## Required workflow
+
+1) Plan and validate the data model first  
+- Propose schema/changes (tables, columns, constraints, indexes).  
+- Define and/or verify RLS policies and required triggers/functions.  
+- Produce a migration file; do not hand-edit the database without a migration.  
+
+2) Implement with tenant and auth safety  
+- Use server-side paths that respect RLS and tenant isolation.  
+- Avoid ad‑hoc data flows; follow established module boundaries and server actions.  
+
+3) Documentation and review  
+- Update relevant docs under `Commercenest/docs/**` with the rationale and examples.  
+- Cross‑check against existing `.mdc` rules to avoid conflicting patterns.  
+
+4) Pre‑deploy checks (must pass)  
+- Type safety: `tsc --noEmit`.  
+- Lint: project linter command (no warnings for touched files).  
+- Build: production build succeeds.  
+- Local verification: start the app and sanity‑check the critical pages impacted by changes.  
+
+## Notes
+
+- If a proposal alters data shape or access patterns, update both migrations and RLS; never bypass RLS in app code.  
+- If a rule here conflicts with a specialized rule scoped by `globs`, the specialized rule wins for its scope.  

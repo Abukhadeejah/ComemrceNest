@@ -1,0 +1,8 @@
+{
+  "event": "payment.captured",
+  "payload": {
+    "order": { "entity": { "id": "order_R2nIbeMsevBDsi" } },
+    "payment": { "entity": { "id": "pay_test_123" } }
+  },
+  "id": "evt_test_123"
+}
