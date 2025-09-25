@@ -10,15 +10,15 @@ interface BluebellProductPageProps {
 
 export default async function BluebellProductPage({ params }: BluebellProductPageProps) {
   const { slug } = await params
-
+  
   // Resolve tenant dynamically (guardrails: avoid hardcoding tenant IDs)
   const tenantId = await resolveTenantIdFromRequest()
   if (!tenantId) {
     notFound()
   }
-
+  
   const { data: product, error } = await fetchProductBySlug(tenantId, slug)
-
+  
   if (error || !product) {
     notFound()
   }
@@ -40,37 +40,25 @@ export default async function BluebellProductPage({ params }: BluebellProductPag
 
 export async function generateMetadata({ params }: BluebellProductPageProps): Promise<Metadata> {
   const { slug } = await params
-
   const tenantId = await resolveTenantIdFromRequest()
-  if (!tenantId) {
-    return {
-      title: 'Product Not Found',
-      description: 'The requested product could not be found.'
-    }
-  }
-
+  if (!tenantId) return {}
   const { data: product } = await fetchProductBySlug(tenantId, slug)
-
-  if (!product) {
-    return {
-      title: 'Product Not Found',
-      description: 'The requested product could not be found.'
-    }
-  }
-
+  if (!product) return {}
+  const title = product.meta_title || `${product.name} | Bluebell Interiors`
+  const description = product.meta_description || (product.description ? product.description.slice(0, 160) : 'Premium interior fabric by Bluebell Interiors')
+  const images = product.hero_image_url ? [product.hero_image_url] : []
   return {
-    title: `${product.name} | Bluebell Interiors`,
-    description: product.description || `Shop ${product.name} at Bluebell Interiors - Premium fabrics and design materials.`,
+    title,
+    description,
     openGraph: {
-      title: `${product.name} | Bluebell Interiors`,
-      description: product.description || `Shop ${product.name} at Bluebell Interiors - Premium fabrics and design materials.`,
-      images: product.hero_image_url ? [{ url: product.hero_image_url, alt: product.name }] : [],
+      title,
+      description,
+      images
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${product.name} | Bluebell Interiors`,
-      description: product.description || `Shop ${product.name} at Bluebell Interiors - Premium fabrics and design materials.`,
-      images: product.hero_image_url ? [product.hero_image_url] : [],
-    },
+      title,
+      description
+    }
   }
 }

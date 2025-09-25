@@ -88,7 +88,7 @@ export default async function TenantLayoutServer({
 	try {
 		// Resolve tenant context with caching and fallbacks
 		const context = await resolveTenantContext(tenantKey)
-
+		
 		// Pre-resolve components server-side for better SSR
 		let Layout, Header, Footer
 		
@@ -163,7 +163,7 @@ export default async function TenantLayoutServer({
 					</ErrorBoundary>
 				</Layout>
 			</ErrorBoundary>
-		);
+		)
 	} catch (error) {
 		console.error(`[TenantLayoutServer] Failed to render tenant layout for ${tenantKey}:`, error)
 		
@@ -184,6 +184,6 @@ export default async function TenantLayoutServer({
 					</div>
 				</footer>
 			</div>
-		);
+		)
 	}
 }

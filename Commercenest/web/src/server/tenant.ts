@@ -67,25 +67,6 @@ export async function resolveTenantIdFromRequest(): Promise<string | null> {
     }
   } catch {}
 
-  // 2c. Enhanced fallback: Try to infer tenant from referer or other context
-  // This helps when accessing global routes like /checkout directly
-  try {
-    const referer = h.get('referer') || ''
-    if (referer) {
-      const refererUrl = new URL(referer)
-      const refererPath = refererUrl.pathname
-      const refererSegments = refererPath.split('/').filter(Boolean)
-      
-      if (refererSegments.length > 0) {
-        const refererTenant = refererSegments[0]
-        const refererTenantId = await resolveTenantIdFromKey(refererTenant)
-        if (refererTenantId) {
-          return refererTenantId
-        }
-      }
-    }
-  } catch {}
-
   // 3. Special handling for localhost development
   if (host === 'localhost') {
     const pathSegments = pathname.split('/').filter(Boolean)
@@ -137,7 +118,18 @@ async function resolveTenantIdFromKey(tenantKey: string): Promise<string | null>
     return tenantData.id
   }
 
-  // Try common tenant key mappings FIRST (before partial match)
+  // Try case-insensitive name match
+  const { data: tenantDataCI } = await supabaseAdmin
+    .from('tenants')
+    .select('id, name')
+    .ilike('name', `%${tenantKey}%`)
+    .maybeSingle()
+
+  if (tenantDataCI?.id) {
+    return tenantDataCI.id
+  }
+
+  // Try common tenant key mappings
   const keyMappings: Record<string, string> = {
     'bluebell': 'Bluebell Interiors',
     'senlysh': 'Senlysh Fashion',
@@ -154,17 +146,6 @@ async function resolveTenantIdFromKey(tenantKey: string): Promise<string | null>
     if (mappedTenant?.id) {
       return mappedTenant.id
     }
-  }
-
-  // Try case-insensitive name match LAST (after key mappings)
-  const { data: tenantDataCI } = await supabaseAdmin
-    .from('tenants')
-    .select('id, name')
-    .ilike('name', `%${tenantKey}%`)
-    .maybeSingle()
-
-  if (tenantDataCI?.id) {
-    return tenantDataCI.id
   }
 
   return null
@@ -231,10 +212,7 @@ export async function getTenantConfig(tenantId: string): Promise<TenantConfig> {
   const config: TenantConfig = {
     tenantId,
     name: tenant?.name || 'Unknown Tenant',
-    companyProfile: companyProfile ? {
-      name: typeof (companyProfile as Record<string, unknown>).name === 'string' ? (companyProfile as Record<string, unknown>).name as string : undefined,
-      brand_accent_hex: typeof (companyProfile as Record<string, unknown>).brand_accent_hex === 'string' ? (companyProfile as Record<string, unknown>).brand_accent_hex as string : undefined,
-    } : undefined,
+    companyProfile,
     theme: {
       primaryColor: companyProfile?.brand_accent_hex || '#01589D',
       secondaryColor: '#C9A227', // Mustard

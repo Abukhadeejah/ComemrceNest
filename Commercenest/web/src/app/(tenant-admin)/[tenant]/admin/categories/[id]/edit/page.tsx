@@ -36,13 +36,7 @@ export default async function EditCategoryPage({ params }: EditProps) {
           <CategoryForm
             mode="edit"
             tenantId={tenantId}
-            allCategories={(list || []).map(c => ({ 
-              id: c.id as string, 
-              name: c.name as string,
-              slug: (c as Record<string, unknown>).slug as string || '',
-              parent_id: (c as Record<string, unknown>).parent_id as string | null || null,
-              created_at: (c as Record<string, unknown>).created_at as string || new Date().toISOString()
-            }))}
+            allCategories={(list || []).map(c => ({ id: c.id as string, name: c.name as string }))}
             initialData={{ id: cat.id as string, name: cat.name as string, slug: cat.slug as string, parentId: (cat as { parent_id?: string | null }).parent_id ?? null }}
           />
         </div>

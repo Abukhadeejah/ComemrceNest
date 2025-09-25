@@ -12,17 +12,6 @@ function encodeSecretHex(secret: string | null | undefined): string | null {
   return `\\x${hex}`
 }
 
-function decodeSecretHex(hexValue: string | null | undefined): string | null {
-  if (!hexValue) return null
-  try {
-    // Remove \x prefix if present
-    const cleanHex = hexValue.startsWith('\\x') ? hexValue.slice(2) : hexValue
-    return Buffer.from(cleanHex, 'hex').toString('utf8')
-  } catch {
-    return null
-  }
-}
-
 export async function getPaymentSettings() {
   const tenantId = await resolveTenantIdFromRequest()
   if (!tenantId) throw new Error('Tenant not found')
@@ -30,7 +19,7 @@ export async function getPaymentSettings() {
 
   const { data, error } = await supabaseAdmin
     .from('tenant_payment_settings')
-    .select('env, enabled, razorpay_key_id, razorpay_key_secret, webhook_secret, test_mode')
+    .select('env, enabled, razorpay_key_id, test_mode')
     .eq('tenant_id', tenantId)
 
   if (error) throw new Error(`Failed to fetch payment settings: ${error.message}`)
@@ -38,19 +27,12 @@ export async function getPaymentSettings() {
   const enabledRow = data?.find((r) => r.enabled)
   const mode: PaymentEnv = enabledRow?.env === 'live' ? 'live' : 'test'
 
-  const testRow = data?.find((r) => r.env === 'test')
-  const liveRow = data?.find((r) => r.env === 'live')
-
   return {
     mode,
-    hasTest: !!testRow,
-    hasLive: !!liveRow,
-    testKeyId: testRow?.razorpay_key_id || '',
-    testKeySecret: decodeSecretHex(testRow?.razorpay_key_secret) || '',
-    testWebhookSecret: decodeSecretHex(testRow?.webhook_secret) || '',
-    liveKeyId: liveRow?.razorpay_key_id || '',
-    liveKeySecret: decodeSecretHex(liveRow?.razorpay_key_secret) || '',
-    liveWebhookSecret: decodeSecretHex(liveRow?.webhook_secret) || '',
+    hasTest: !!data?.find((r) => r.env === 'test'),
+    hasLive: !!data?.find((r) => r.env === 'live'),
+    testKeyId: data?.find((r) => r.env === 'test')?.razorpay_key_id || '',
+    liveKeyId: data?.find((r) => r.env === 'live')?.razorpay_key_id || '',
   }
 }
 

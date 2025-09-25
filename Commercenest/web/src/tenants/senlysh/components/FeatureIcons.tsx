@@ -14,11 +14,11 @@ interface FeatureIconsProps {
 }
 
 const defaultFeatures: FeatureIcon[] = [
-  { icon: '🚚', title: 'Free Shipping', description: 'Enjoy Free Shipping Across India!', href: '/senlysh/shipping' },
-  { icon: '🕐', title: 'Support 12/7', description: 'We support 12h a day', href: '/senlysh/contact' },
-  { icon: '💰', title: 'Cash Back Reward', description: 'Up to 50% for member', href: '/senlysh/rewards' },
-  { icon: '🔒', title: 'Payment Secure', description: 'We ensure secure payment', href: '/senlysh/security' },
-  { icon: '🎁', title: 'Discount', description: 'Up to 40% for member', href: '/senlysh/sale' }
+  { icon: '🚚', title: 'Free Shipping', description: 'Enjoy Free Shipping Across India!', href: '#' },
+  { icon: '🕐', title: 'Support 12/7', description: 'We support 12h a day', href: '#' },
+  { icon: '💰', title: 'Cash Back Reward', description: 'Up to 50% for member', href: '#' },
+  { icon: '🔒', title: 'Payment Secure', description: 'We ensure secure payment', href: '#' },
+  { icon: '🎁', title: 'Discount', description: 'Up to 40% for member', href: '#' }
 ];
 
 const FeatureIcons: React.FC<FeatureIconsProps> = ({

@@ -66,7 +66,6 @@ export interface Product {
     name: string
     values: string[]
   }[]
-  size_guides?: SizeGuide[]
 }
 
 // Type for form data used in admin product form
@@ -99,17 +98,15 @@ export interface ProductFormData {
   // Organization
   category_id: string
   status: 'draft' | 'published'
-  tags?: string[]
   
   // SEO
   meta_title: string
   meta_description: string
   seo_url?: string
   
-  // Shipping & Tax
+  // Shipping
   requires_shipping: boolean
   taxable: boolean
-  tax_class_id?: string
   hs_code?: string
   
   // Fashion-specific fields
@@ -136,19 +133,6 @@ export interface ProductFormData {
   
   // Media
   images: string[]
-  
-  // Badge System
-  is_featured: boolean
-  is_bestseller: boolean
-  is_new_arrival: boolean
-  is_on_sale: boolean
-  is_limited_edition: boolean
-  is_sold_out: boolean
-  custom_badge_text: string
-  badge_color: string
-  badge_priority: number
-  badge_display_until?: string
-  badge_display_from?: string
 }
 
 export interface VariantOption {
@@ -173,57 +157,3 @@ export interface SizeGuide {
   gender: string
   measurements: Record<string, Record<string, string>>
 }
-
-export interface ProductListItem {
-  id: string
-  name: string
-  slug: string
-  description?: string | null
-  price_cents: number
-  compare_at_price_cents?: number | null
-  stock: number
-  currency: string
-  hero_image_url?: string | null
-  is_featured?: boolean
-  badge_text?: string
-  badge_color?: string
-  badge_display_from?: string
-  badge_display_until?: string
-  status: 'draft' | 'published'
-  is_bestseller?: boolean
-  is_new_arrival?: boolean
-  is_on_sale?: boolean
-  is_limited_edition?: boolean
-  is_sold_out?: boolean
-  custom_badge_text?: string
-  badge_priority?: number
-  low_stock_threshold?: number
-  product_variant_options?: Array<{
-    variant_options: {
-      id: string
-      name: string
-      display_name: string
-      type: string
-      sort_order: number
-      variant_option_values: Array<{
-        id: string
-        value: string
-        display_value: string
-        color_hex?: string | null
-        image_url?: string | null
-        price_adjustment_cents?: number | null
-        cost_adjustment_cents?: number | null
-        sort_order?: number | null
-      }>
-    }
-  }>
-}
-
-export interface ProductImage {
-  url: string
-  alt: string | null
-  sort_order: number
-}
-
-// Tax Classes System - Use Supabase type for consistency
-export type TaxClass = import('@/types/supabase').TaxClass

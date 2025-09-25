@@ -4,33 +4,27 @@ import { useState, useTransition, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ADMIN_URLS } from '@/utils/admin-urls'
 import { useAdminTenantKey } from '@/components/admin/AdminBrandingWrapper'
-// Removed draft persistence - interferes with database operations
 import { 
   createProduct, 
   updateProduct,
-  updateProductVariants,
   uploadProductImage
 } from './actions'
-import { Category } from '@/utils/categoryUtils'
 import { BasicInformationSection } from './components/BasicInformationSection'
 import { PricingSection } from './components/PricingSection'
 import { InventorySection } from './components/InventorySection'
 import { ShippingSection } from './components/ShippingSection'
-import { TaxSection } from './components/TaxSection'
 import { OrganizationSection } from './components/OrganizationSection'
 
 import { MediaSection } from './components/MediaSection'
 import { SeoSection } from './components/SeoSection'
 import { ProductPreview } from './components/ProductPreview'
 import { VariantsSection } from './components/VariantsSection'
-import { BadgeSection } from './components/BadgeSection'
-import SizeGuideSection from '@/components/admin/products/SizeGuideSection'
 import { ProductFormData } from '@/types/product'
 
 interface ProductFormProps {
   mode: 'create' | 'edit'
   initialData?: Partial<ProductFormData> & { variantOptions?: unknown[]; variantCombinations?: unknown[] }
-  categories: Category[]
+  categories: Record<string, unknown>[]
 }
 
 export function ProductForm({ mode, initialData, categories }: ProductFormProps) {
@@ -67,26 +61,11 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
     gift_card_expiry_days: '',
     category_id: '',
     status: 'draft',
-    tax_class_id: '',
     images: [],
     variantOptions: [],
     sizeGuides: [],
-    sizeGuideId: '',
-    // Badge System
-    is_featured: false,
-    is_bestseller: false,
-    is_new_arrival: false,
-    is_on_sale: false,
-    is_limited_edition: false,
-    is_sold_out: false,
-    custom_badge_text: '',
-    badge_color: '#ef4444',
-    badge_priority: 0,
-    badge_display_until: '',
-    badge_display_from: ''
+    sizeGuideId: ''
   })
-
-  // Draft persistence removed - was interfering with database operations
 
   // State for images (can be File objects for new uploads or URL strings for existing images)
   const [imageFiles, setImageFiles] = useState<(File | string)[]>(initialData?.images || [])
@@ -115,72 +94,12 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
   // Populate form data when initialData is provided (edit mode)
   useEffect(() => {
     if (initialData && mode === 'edit') {
-      console.log('ProductForm: Loading initial data for edit mode:', {
-        has_variants: initialData.has_variants,
-        has_variants_type: typeof initialData.has_variants,
-        has_variants_boolean: Boolean(initialData.has_variants),
-        variantOptions_length: initialData.variantOptions?.length || 0
-      })
       setFormData(prev => ({
         ...prev,
-        ...initialData,
-        // Explicit handling for has_variants to prevent undefined
-        has_variants: Boolean(initialData.has_variants)
+        ...initialData
       }))
     }
   }, [initialData, mode])
-
-  // Draft persistence removed - was interfering with database operations
-
-  // Dedicated variant update handler
-  const handleVariantUpdate = async (variantData: {
-    hasVariants: boolean
-    variantOptions: Array<{
-      id: string
-      name: string
-      displayName: string
-      type: string
-      required: boolean
-      values: Array<{
-        id: string
-        value: string
-        displayValue: string
-        colorHex?: string
-        imageUrl?: string
-        priceAdjustmentCents?: number
-        costAdjustmentCents?: number
-      }>
-    }>
-    variantCombinations: Array<{
-      id: string
-      options: Record<string, string>
-      priceCents: number
-      stock: number
-      sku: string
-      imageUrl?: string
-    }>
-  }) => {
-    if (!formData.id) {
-      console.error('DEBUG: Cannot update variants - no product ID')
-      return
-    }
-
-    try {
-      console.log('DEBUG: ProductForm triggering variant update...')
-      await updateProductVariants(formData.id, variantData)
-      console.log('DEBUG: ProductForm variant update completed')
-      
-      // Update the local form state to reflect the changes
-          setFormData(prev => ({
-            ...prev,
-        has_variants: variantData.hasVariants
-      }))
-      
-    } catch (error) {
-      console.error('DEBUG: ProductForm variant update failed:', error)
-      throw error
-    }
-  }
 
   // Generate slug from name
   const generateSlug = (name: string) => {
@@ -219,13 +138,8 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
     
     const form = new FormData(e.currentTarget)
     
-    // Add all form data (excluding variant data which is handled separately)
+    // Add all form data
     Object.entries(formData).forEach(([key, value]) => {
-      // Skip variant data - handled by updateProductVariants action
-      if (key === 'variantOptions' || key === 'variantCombinations') {
-        return
-      }
-      
       if (Array.isArray(value)) {
         // Only append arrays if they have content
         if (value.length > 0) {
@@ -237,8 +151,9 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
       }
     })
 
-    // Variant data is handled separately via updateProductVariants action
-    // Do not include variant data in main product update
+    // Add variant data
+    form.append('variantOptions', JSON.stringify(variantOptions))
+    form.append('variantCombinations', JSON.stringify(variantCombinations))
 
     startTransition(async () => {
       try {
@@ -264,11 +179,7 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
           }
         } else {
           const result = await createProduct(form)
-          if ('id' in result) {
-            createdProductId = result.id
-          } else {
-            throw new Error(result.error || 'Failed to create product')
-          }
+          createdProductId = result.id
           
           // After product creation, upload images if any
           if (imageFiles.length > 0 && createdProductId) {
@@ -286,11 +197,6 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
             }
           }
         }
-        
-        // Draft persistence removed - no need to clear
-        
-        // Small delay to ensure cache invalidation completes
-        await new Promise(resolve => setTimeout(resolve, 100))
         
         router.push(ADMIN_URLS.products(tenantKey))
         router.refresh()
@@ -339,8 +245,6 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
-        {/* Draft notification removed - no longer using local storage drafts */}
-        
         {errors.general && (
           <div className="bg-red-50 border border-red-200 rounded-md p-4">
             <div className="text-sm text-red-800">{errors.general}</div>
@@ -370,12 +274,6 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
           errors={errors}
           onInputChange={handleInputChange}
         />
-
-        <TaxSection 
-          formData={formData} 
-          errors={errors}
-          onInputChange={handleInputChange}
-        />
         
         <OrganizationSection 
           formData={formData} 
@@ -391,13 +289,6 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
           onVariantOptionsChange={setVariantOptions}
           variantCombinations={variantCombinations}
           onVariantCombinationsChange={setVariantCombinations}
-          onUpdateVariants={mode === 'edit' ? handleVariantUpdate : undefined}
-          productId={formData.id}
-        />
-
-        <SizeGuideSection
-          formData={formData}
-          onInputChange={handleInputChange}
         />
         
         <MediaSection 
@@ -415,12 +306,6 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
             }))
           }}
           productId={data?.id as string}
-        />
-        
-        <BadgeSection 
-          formData={formData} 
-          errors={errors}
-          onInputChange={handleInputChange}
         />
         
         <SeoSection 

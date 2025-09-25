@@ -2,12 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
 import { assertTenantAdmin } from '@/server/auth'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
-import { revalidateTag } from 'next/cache'
-import { tenantProductsTag } from '@/server/cacheTags'
 
 export async function POST(request: NextRequest) {
     try {
-      const { name, slug, parentId, imageUrl, imageAlt } = await request.json();
+      const { name, slug, parentId } = await request.json();
   
       if (!name || !slug) {
         return NextResponse.json({ error: 'name and slug are required' }, { status: 400 });
@@ -42,8 +40,8 @@ export async function POST(request: NextRequest) {
   
       const { data, error } = await supabaseAdmin
         .from('categories')
-        .insert({ tenant_id: tenantId, name, slug, parent_id, image_url: imageUrl ?? null, image_alt: imageAlt ?? null })
-        .select('id, name, slug, parent_id, image_url, image_alt, created_at')
+        .insert({ tenant_id: tenantId, name, slug, parent_id })
+        .select('id, name, slug, parent_id, created_at')
         .maybeSingle();
   
       if (error) {
@@ -51,9 +49,6 @@ export async function POST(request: NextRequest) {
         // if (error.code === '23505') return NextResponse.json({ error: 'Slug already exists' }, { status: 409 });
         return NextResponse.json({ error: error.message }, { status: 500 });
       }
-  
-      // Invalidate cache after successful creation
-      revalidateTag(tenantProductsTag(tenantId))
   
       return NextResponse.json({ data }, { status: 201 });
     } catch (err: unknown) {
@@ -64,7 +59,7 @@ export async function POST(request: NextRequest) {
 
   export async function PUT(request: NextRequest) {
     try {
-      const { id, name, slug, parentId, imageUrl, imageAlt } = await request.json();
+      const { id, name, slug, parentId } = await request.json();
   
       if (!id || !name || !slug) {
         return NextResponse.json({ error: 'id, name and slug are required' }, { status: 400 });
@@ -101,10 +96,10 @@ export async function POST(request: NextRequest) {
   
       const { data, error } = await supabaseAdmin
         .from('categories')
-        .update({ name, slug, parent_id, image_url: imageUrl ?? null, image_alt: imageAlt ?? null })
+        .update({ name, slug, parent_id })
         .eq('id', id)
         .eq('tenant_id', tenantId)
-        .select('id, name, slug, parent_id, image_url, image_alt, created_at')
+        .select('id, name, slug, parent_id, created_at')
         .maybeSingle();
   
       if (error) {
@@ -114,9 +109,6 @@ export async function POST(request: NextRequest) {
         // }
         return NextResponse.json({ error: error.message }, { status: 500 });
       }
-  
-      // Invalidate cache after successful update
-      revalidateTag(tenantProductsTag(tenantId))
   
       return NextResponse.json({ data });
     } catch (err: unknown) {
@@ -177,9 +169,6 @@ export async function POST(request: NextRequest) {
       if (!deletedRows || deletedRows.length === 0) {
         return NextResponse.json({ error: 'Category not found' }, { status: 404 });
       }
-  
-      // Invalidate cache after successful deletion
-      revalidateTag(tenantProductsTag(tenantId))
   
       // Children auto-set parent_id = null via FK ON DELETE SET NULL (ensure constraint exists)
       return NextResponse.json({ success: true });

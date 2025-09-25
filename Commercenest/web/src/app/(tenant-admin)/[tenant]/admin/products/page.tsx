@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import { getProducts, getCategories } from '@/app/(admin)/admin/products/actions'
-import { ProductTable } from './ProductTable'
+import { ProductTable } from '@/app/(admin)/admin/products/ProductTable'
 import { ProductSearch } from '@/app/(admin)/admin/products/ProductSearch'
 import { ProductFilters } from '@/app/(admin)/admin/products/ProductFilters'
 import { CreateProductButton } from '@/app/(admin)/admin/products/CreateProductButton'

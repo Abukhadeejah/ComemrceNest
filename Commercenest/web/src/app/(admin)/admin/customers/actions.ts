@@ -1,13 +1,12 @@
 import { resolveTenantIdFromRequest } from '@/server/tenant'
 import { assertTenantAdmin } from '@/server/auth'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
-import type { AdminCustomerList } from '@/types/customer'
 
 export async function getCustomers(searchParams: {
   search?: string
   status?: string
   page?: string
-}): Promise<AdminCustomerList> {
+}) {
   try {
     const tenantId = await resolveTenantIdFromRequest()
     if (!tenantId) {

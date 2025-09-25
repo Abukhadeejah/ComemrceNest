@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import Image from 'next/image'
 import { ADMIN_URLS } from '@/utils/admin-urls'
 import { useAdminTenantKey } from '@/components/admin/AdminBrandingWrapper'
 
@@ -11,8 +10,6 @@ interface Category {
   id: string
   name: string
   slug: string
-  image_url?: string | null
-  image_alt?: string | null
   parent_id?: string | null
   created_at: string
 }
@@ -183,19 +180,6 @@ export function CategoryTable({ categories }: CategoryTableProps) {
                     checked={selectedCategories.includes(category.id)}
                     onChange={(e) => handleSelectCategory(category.id, e.target.checked)}
                   />
-                  {category.image_url ? (
-                    <Image
-                      src={category.image_url}
-                      alt={category.image_alt || category.name}
-                      width={40}
-                      height={40}
-                      className="h-10 w-10 rounded object-cover border border-gray-200 mr-3"
-                    />
-                  ) : (
-                    <div className="h-10 w-10 mr-3 rounded bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-400 text-xs">
-                      IMG
-                    </div>
-                  )}
                   <div className="text-sm font-medium text-gray-900" style={{ marginLeft: depth * 16 }}>
                     {category.name}
                   </div>
@@ -228,32 +212,12 @@ export function CategoryTable({ categories }: CategoryTableProps) {
                     className="text-red-600 hover:text-red-900"
                     onClick={async () => {
                       if (!confirm('Are you sure you want to delete this category?')) return
-                      
-                      try {
-                        const res = await fetch(`/api/admin/categories?id=${category.id}`, { method: 'DELETE' })
-                        
-                        if (!res.ok) {
-                          const errorData = await res.json().catch(() => ({}))
-                          const errorMessage = errorData.error || `Failed to delete category (${res.status})`
-                          alert(`Failed to delete category: ${errorMessage}`)
-                          return
-                        }
-                        
-                        // Show success message
-                        alert('Category deleted successfully!')
-                        
-                        // Refresh the page to show updated data
-                        router.refresh()
-                        
-                        // Also force a page reload as backup
-                        setTimeout(() => {
-                          window.location.reload()
-                        }, 100)
-                        
-                      } catch (error) {
-                        console.error('Delete category error:', error)
-                        alert('Failed to delete category: Network error')
+                      const res = await fetch(`/api/admin/categories?id=${category.id}`, { method: 'DELETE' })
+                      if (!res.ok) {
+                        alert('Failed to delete category')
+                        return
                       }
+                      router.refresh()
                     }}
                   >
                     Delete

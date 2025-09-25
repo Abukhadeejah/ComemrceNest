@@ -54,6 +54,24 @@ export function ShippingSection({ formData, errors, onInputChange }: ShippingSec
           </p>
         </div>
 
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            HS Code
+          </label>
+          <input
+            type="text"
+            value={String(formData.hs_code || '')}
+            onChange={(e) => onInputChange('hs_code', e.target.value)}
+            placeholder="HS code for customs"
+            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          />
+          {errors.hs_code && (
+            <p className="mt-1 text-sm text-red-600">{errors.hs_code}</p>
+          )}
+          <p className="mt-1 text-sm text-gray-500">
+            International trade classification code
+          </p>
+        </div>
 
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -80,6 +98,29 @@ export function ShippingSection({ formData, errors, onInputChange }: ShippingSec
             </button>
           </div>
 
+          <div className="flex items-center justify-between">
+            <div>
+              <label className="text-sm font-medium text-gray-700">
+                Taxable
+              </label>
+              <p className="text-sm text-gray-500">
+                Apply taxes to this product
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => onInputChange('taxable', !formData.taxable)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                formData.taxable ? 'bg-indigo-600' : 'bg-gray-200'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  formData.taxable ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
         </div>
       </div>
     </div>

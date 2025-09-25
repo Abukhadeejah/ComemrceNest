@@ -1,4 +1,5 @@
-import { fetchPublishedProductsPagedWithVariants, ProductListItem } from '@/server/modules/products/service'
+import { fetchPublishedProductsPaged, ProductListItem } from '@/server/modules/products/service'
+import { supabaseAdmin } from '@/server/supabaseAdmin'
 
 export interface GetProductsParams {
   tenantId: string | null
@@ -8,42 +9,6 @@ export interface GetProductsParams {
   sort?: string
   page?: number
   limit?: number
-  tag?: string
-  tags?: string[]
-  color?: string
-  size?: string
-  price?: string
-  fabric?: string
-  is_new_arrival?: boolean
-  is_featured?: boolean
-  is_bestseller?: boolean
-  is_on_sale?: boolean
-  is_limited_edition?: boolean
-  is_sold_out?: boolean
-}
-
-// Helper function to parse sort parameter from frontend
-function parseSortParameter(sortParam?: string): { sort: 'updated_at' | 'name' | 'price_cents', dir: 'asc' | 'desc' } {
-  if (!sortParam || sortParam === '') {
-    // Default to popularity (most recently updated)
-    return { sort: 'updated_at', dir: 'desc' }
-  }
-
-  // Parse combined sort_direction format
-  const [sortField, direction] = sortParam.split('_')
-  
-  switch (sortField) {
-    case 'price':
-      return { sort: 'price_cents', dir: direction as 'asc' | 'desc' }
-    case 'name':
-      return { sort: 'name', dir: direction as 'asc' | 'desc' }
-    case 'created':
-      // Map 'created' to 'updated_at' since that's the actual DB column
-      return { sort: 'updated_at', dir: direction as 'asc' | 'desc' }
-    default:
-      // Fallback to default
-      return { sort: 'updated_at', dir: 'desc' }
-  }
 }
 
 export async function getProducts(params: GetProductsParams): Promise<ProductListItem[]> {
@@ -51,78 +16,115 @@ export async function getProducts(params: GetProductsParams): Promise<ProductLis
     tenantId,
     search,
     category,
-    sort = '',
+    sort = 'updated_at',
     page = 1,
-    limit = 12,
-    tag,
-    tags,
-    color,
-    size,
-    price,
-    fabric,
-    is_new_arrival,
-    is_featured,
-    is_bestseller,
-    is_on_sale,
-    is_limited_edition,
-    is_sold_out
+    limit = 12
   } = params
 
-  // If no tenantId provided, return empty array (platform showcase not implemented yet)
+  // For platform-level products (null tenantId), fetch from all tenants
   if (!tenantId) {
-    console.log('[GET_PRODUCTS] No tenantId provided, returning empty array')
-    return []
+    let query = supabaseAdmin
+      .from('products')
+      .select(`
+        id,
+        name,
+        description,
+        price_cents,
+        currency,
+        status,
+        hero_image_url,
+        stock,
+        created_at,
+        updated_at,
+        slug,
+        tenant_id
+      `)
+      .eq('status', 'published')
+
+    // Apply search filter
+    if (search) {
+      query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`)
+    }
+
+    // Apply category filter if specified
+    if (category && category !== 'all') {
+      try {
+        // First, get the category ID
+        const { data: categoryData } = await supabaseAdmin
+          .from('categories')
+          .select('id')
+          .eq('slug', category)
+          .single()
+
+        if (categoryData) {
+          // Then get the product IDs for this category
+          const { data: productCategoryData } = await supabaseAdmin
+            .from('product_categories')
+            .select('product_id')
+            .eq('category_id', categoryData.id)
+
+          if (productCategoryData && productCategoryData.length > 0) {
+            const productIds = productCategoryData.map(pc => pc.product_id)
+            query = query.in('id', productIds)
+          } else {
+            // No products in this category, return empty result
+            return []
+          }
+        }
+      } catch (error) {
+        console.error('[PLATFORM_PRODUCTS] Error filtering by category:', error)
+        return []
+      }
+    }
+
+    // Apply sorting
+    query = query.order(sort, { ascending: sort === 'name' })
+
+    // Apply pagination
+    const offset = (page - 1) * limit
+    query = query.range(offset, offset + limit - 1)
+
+    try {
+      const { data: products, error } = await query
+
+      if (error) {
+        console.error('[PLATFORM_PRODUCTS] Error fetching platform products:', error)
+        return []
+      }
+
+      // Transform to ProductListItem format
+      return products?.map(product => ({
+        id: product.id,
+        name: product.name,
+        slug: product.slug,
+        description: product.description || null,
+        price_cents: product.price_cents,
+        currency: product.currency,
+        hero_image_url: product.hero_image_url,
+        stock: product.stock
+      })) || []
+    } catch (error) {
+      console.error('[PLATFORM_PRODUCTS] Error fetching platform products:', error)
+      return []
+    }
   }
 
-  // Parse sort parameter to get sort field and direction
-  const { sort: sortField, dir } = parseSortParameter(sort)
-  
-  console.log('[GET_PRODUCTS] Sort parameter:', sort, '→ Parsed:', { sort: sortField, dir })
-
-  // Map the parameters to match the service function
+  // For tenant-specific products, use the existing logic
   const serviceParams = {
     q: search,
-    sort: sortField,
-    dir,
+    sort: sort as 'updated_at' | 'name' | 'price_cents',
+    dir: 'desc' as const,
     page,
     pageSize: limit,
-    categoryId: category,
-    tag,
-    tags,
-    color,
-    size,
-    price,
-    fabric,
-    is_new_arrival,
-    is_featured,
-    is_bestseller,
-    is_on_sale,
-    is_limited_edition,
-    is_sold_out
+    categoryId: category
   }
 
-  const result = await fetchPublishedProductsPagedWithVariants(tenantId, serviceParams)
+  const result = await fetchPublishedProductsPaged(tenantId, serviceParams)
 
   // Handle potential error or null data
   if (result.error || !result.data) {
     return []
   }
 
-  // Type guard to ensure we have valid ProductListItem data
-  const isValidProduct = (item: unknown): item is ProductListItem => {
-    if (item === null || typeof item !== 'object') return false
-    
-    const obj = item as Record<string, unknown>
-    return 'id' in obj && 
-           'name' in obj && 
-           'slug' in obj &&
-           typeof obj.id === 'string' && 
-           typeof obj.name === 'string' &&
-           typeof obj.slug === 'string'
-  }
-
-  // Filter out any error objects and ensure we have valid products
-  const validProducts = (result.data.filter(isValidProduct) as unknown) as ProductListItem[]
-  
-  return validProducts
+  return result.data as unknown as ProductListItem[]
 }

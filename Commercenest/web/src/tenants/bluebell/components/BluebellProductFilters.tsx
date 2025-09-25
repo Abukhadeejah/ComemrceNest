@@ -110,18 +110,18 @@ export default function BluebellProductFilters({ products }: BluebellProductFilt
           <h4 className="text-bluebell-brown font-semibold mb-4 text-lg">Price Range</h4>
           <div className="space-y-3">
             {Object.entries(priceRangeCounts).map(([range, count]) => (
-              <label
-                key={range}
+              <label 
+                key={range} 
                 className={`filter-option flex items-center p-3 rounded-xl cursor-pointer transition-all duration-300 hover:bg-bluebell-mustard/10 hover:translate-x-1 ${
                   selectedPriceRange === range ? 'active bg-bluebell-blue/10 border-l-4 border-bluebell-blue' : ''
                 }`}
               >
-                <input
-                  type="radio"
-                  name="price"
+                <input 
+                  type="radio" 
+                  name="price" 
                   className="sr-only"
                   checked={selectedPriceRange === range}
-                  onChange={() => setSelectedPriceRange(range)}
+                  onChange={(e) => setSelectedPriceRange(e.target.value)}
                 />
                 <div className={`w-5 h-5 rounded-full border-2 mr-3 transition-all duration-300 ${
                   selectedPriceRange === range 

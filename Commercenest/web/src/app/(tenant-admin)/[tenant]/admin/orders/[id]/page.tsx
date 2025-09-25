@@ -4,11 +4,6 @@ import { resolveTenantIdFromRequest } from '@/server/tenant'
 export default async function OrderDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const tenantId = await resolveTenantIdFromRequest()
-  
-  if (!tenantId) {
-    return <div className="p-6">Tenant not found</div>
-  }
-  
   const { data: order } = await supabaseAdmin
     .from('orders')
     .select('*')

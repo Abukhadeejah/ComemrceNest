@@ -6,18 +6,18 @@ import { usePathname } from 'next/navigation';
 import { Playfair_Display } from 'next/font/google';
 import { useCart } from '@/lib/cart';
 import { useTenant } from '@/hooks/useTenant';
-import { useCustomerAuth } from '@/hooks/useCustomerAuth';
+import { useBluebellHomeMode } from '@/lib/bluebellHomeMode';
 
 const playfair = Playfair_Display({ subsets: ['latin'], weight: ['700','800','900'] });
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { state } = useCart();
-  const { isCustomer } = useCustomerAuth();
   const cartCount = state.itemCount;
   const wishlistCount = 0; // TODO: Implement wishlist functionality later
   const tenant = useTenant();
   const basePath = `/${tenant.key || 'bluebell'}`;
+  const { setMode } = useBluebellHomeMode();
   // Feature flags (to be controlled from superadmin later)
   const showNewArrivals = false
   const showSale = false
@@ -58,9 +58,9 @@ export default function Header() {
       <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-blue-900 text-white py-2 sm:py-3 overflow-hidden border-b border-blue-600 shadow-sm">
         <div className="flex whitespace-nowrap animate-marquee" style={{ animationDuration: '40s' }}>
           <div className="flex items-center px-4 sm:px-6 md:px-8">
-            <span className="text-sm sm:text-base md:text-lg font-semibold mr-16 sm:mr-32 md:mr-48 drop-shadow-sm">Welcome to Bluebell Interiors - Premium Fabrics & Design</span>
+            <span className="text-sm sm:text-base md:text-lg font-semibold mr-16 sm:mr-32 md:mr-48 drop-shadow-sm">Welcome to Bluebell Interiors Studio - Premium Fabrics & Design</span>
             <span className="text-sm sm:text-base md:text-lg font-semibold mr-16 sm:mr-32 md:mr-48 drop-shadow-sm">Transform Your Space with Timeless Elegance</span>
-            <span className="text-sm sm:text-base md:text-lg font-semibold mr-16 sm:mr-32 md:mr-48 drop-shadow-sm">Welcome to Bluebell Interiors - Premium Fabrics & Design</span>
+            <span className="text-sm sm:text-base md:text-lg font-semibold mr-16 sm:mr-32 md:mr-48 drop-shadow-sm">Welcome to Bluebell Interiors Studio - Premium Fabrics & Design</span>
             <span className="text-sm sm:text-base md:text-lg font-semibold mr-16 sm:mr-32 md:mr-48 drop-shadow-sm">Transform Your Space with Timeless Elegance</span>
           </div>
         </div>
@@ -103,17 +103,32 @@ export default function Header() {
               </div>
               <div className="hidden sm:block">
                 <h1 className={`${playfair.className} text-xl sm:text-2xl font-bold text-primary`}>
-                  Bluebell Interiors
+                  Bluebell Interiors Studio
                 </h1>
-                <p className="text-xs text-gray-600">Premium Fabrics & Design</p>
+                <p className="text-xs text-gray-600">Feel the luxurious life</p>
               </div>
             </Link>
 
             {/* Navigation Menu - Desktop */}
             <nav className="hidden lg:flex space-x-8">
-              <Link href={basePath} className={navClass(basePath)}>
-                HOME
-              </Link>
+              <div className="relative group">
+                <Link href={basePath} className={`${navClass(basePath)} flex items-center gap-1`}>
+                  HOME
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </Link>
+                {/* HOME Dropdown */}
+                <div className="absolute top-full left-0 bg-white shadow-lg border border-gray-200 rounded-md py-2 min-w-[220px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300">
+                  <Link href={basePath} onClick={(e) => { e.preventDefault(); setMode('interiors'); if (pathname !== basePath) { window.location.href = basePath; } }} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900">
+                    Bluebell Interiors
+                  </Link>
+                  <Link href={basePath} onClick={(e) => { e.preventDefault(); setMode('fabrics'); if (pathname !== basePath) { window.location.href = basePath; } }} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900">
+                    Bluebell Fabric
+                  </Link>
+                </div>
+              </div>
+              {/* FABRICS main nav with categories dropdown (positioned next to HOME) */}
               <div className="relative group">
                 <Link href={`${basePath}/products`} className={`${navClass(`${basePath}/products`)} flex items-center gap-1`}>
                   FABRICS
@@ -128,6 +143,19 @@ export default function Header() {
                       {cat.name}
                     </Link>
                   ))}
+                  {/* Coming Soon nested dropdown */}
+                  <div className="relative group/soon">
+                    <button className="w-full flex items-center justify-between px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900">
+                      <span>Coming Soon</span>
+                      <svg className="w-4 h-4 text-gray-400 group-hover/soon:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/></svg>
+                    </button>
+                    <div className="absolute top-0 left-full ml-1 bg-white shadow-lg border border-gray-200 rounded-md py-2 min-w-[200px] opacity-0 invisible group-hover/soon:opacity-100 group-hover/soon:visible transition-all duration-200">
+                      <span className="block px-4 py-2 text-sm text-gray-400 cursor-default">BB Sofa</span>
+                      <span className="block px-4 py-2 text-sm text-gray-400 cursor-default">BB Curtains</span>
+                      <span className="block px-4 py-2 text-sm text-gray-400 cursor-default">BB Cushion</span>
+                      <span className="block px-4 py-2 text-sm text-gray-400 cursor-default">BB Bedsheets</span>
+                    </div>
+                  </div>
                   {categories.length === 0 && (
                     <div className="px-4 py-2 text-sm text-gray-500">No categories</div>
                   )}
@@ -188,54 +216,12 @@ export default function Header() {
               </Link>
 
               {/* User Account */}
-              {isCustomer ? (
-                <div className="relative group">
-                  <button className="text-gray-700 hover:text-primary transition-colors relative">
-                    <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                    <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs rounded-full w-3 h-3 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">●</span>
-                  </button>
-                  {/* Dropdown Menu */}
-                  <div className="absolute right-0 top-full mt-2 bg-white shadow-lg border border-gray-200 rounded-md py-2 min-w-[160px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
-                    <Link 
-                      href={`${basePath}/profile`} 
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-                    >
-                      <div className="flex items-center gap-2">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
-                        My Profile
-                      </div>
-                    </Link>
-                    <form action="/api/auth/signout" method="post" className="block">
-                      <button 
-                        type="submit" 
-                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-                      >
-                        <div className="flex items-center gap-2">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                          </svg>
-                          Sign Out
-                        </div>
-                      </button>
-                    </form>
-                  </div>
-                </div>
-              ) : (
-                <Link 
-                  href={`${basePath}/login`} 
-                  className="text-gray-700 hover:text-primary transition-colors relative group"
-                  title="Sign In"
-                >
-                  <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                  <span className="absolute -top-2 -right-2 bg-gray-500 text-white text-xs rounded-full w-3 h-3 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">●</span>
-                </Link>
-              )}
+              <Link href="/login" className="text-gray-700 hover:text-primary transition-colors relative group">
+                <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs rounded-full w-3 h-3 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">●</span>
+              </Link>
 
               {/* Wishlist */}
               <Link href="/wishlist" className="text-gray-700 hover:text-primary transition-colors relative">
@@ -269,13 +255,20 @@ export default function Header() {
           <div className="lg:hidden bg-white border-b border-gray-200 shadow-lg">
             <nav className="container mx-auto px-4 py-4">
               <div className="flex flex-col space-y-4">
-                <Link 
-                  href={basePath} 
-                  className={mobileNavClass(basePath)}
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  HOME
-                </Link>
+                <div className="space-y-2">
+                  <Link 
+                    href={basePath} 
+                    className={`${mobileNavClass(basePath)} block`}
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    HOME
+                  </Link>
+                  <div className="ml-4 space-y-1">
+                    <Link href={basePath} className="block text-sm text-gray-600 hover:text-gray-800" onClick={(e) => { e.preventDefault(); setMode('interiors'); setIsMenuOpen(false); if (pathname !== basePath) { window.location.href = basePath; } }}>Bluebell Interiors</Link>
+                    <Link href={basePath} className="block text-sm text-gray-600 hover:text-gray-800" onClick={(e) => { e.preventDefault(); setMode('fabrics'); setIsMenuOpen(false); if (pathname !== basePath) { window.location.href = basePath; } }}>Bluebell Fabric</Link>
+                  </div>
+                </div>
+                {/* FABRICS section on mobile with quick links */}
                 <div className="space-y-2">
                   <Link 
                     href={`${basePath}/products`} 
@@ -285,10 +278,17 @@ export default function Header() {
                     FABRICS
                   </Link>
                   <div className="ml-4 space-y-1">
-                    <Link href={`${basePath}/products/upholstery`} className="block text-sm text-gray-600 hover:text-gray-800">Upholstery Fabrics</Link>
-                    <Link href={`${basePath}/products/curtains`} className="block text-sm text-gray-600 hover:text-gray-800">Curtain & Drapery</Link>
-                    <Link href={`${basePath}/products/cushions`} className="block text-sm text-gray-600 hover:text-gray-800">Cushion Covers</Link>
-                    <Link href={`${basePath}/products/accessories`} className="block text-sm text-gray-600 hover:text-gray-800">Accessories</Link>
+                    <Link href={`${basePath}/products/upholstery`} className="block text-sm text-gray-600 hover:text-gray-800" onClick={() => setIsMenuOpen(false)}>Upholstery Fabrics</Link>
+                    <Link href={`${basePath}/products/curtains`} className="block text-sm text-gray-600 hover:text-gray-800" onClick={() => setIsMenuOpen(false)}>Curtain & Drapery</Link>
+                    <Link href={`${basePath}/products/cushions`} className="block text-sm text-gray-600 hover:text-gray-800" onClick={() => setIsMenuOpen(false)}>Cushion Covers</Link>
+                    <Link href={`${basePath}/products/accessories`} className="block text-sm text-gray-600 hover:text-gray-800" onClick={() => setIsMenuOpen(false)}>Accessories</Link>
+                    <div className="pt-2">
+                      <div className="text-xs uppercase tracking-wider text-gray-400">Coming Soon</div>
+                      <span className="block text-sm text-gray-400">BB Sofa</span>
+                      <span className="block text-sm text-gray-400">BB Curtains</span>
+                      <span className="block text-sm text-gray-400">BB Cushion</span>
+                      <span className="block text-sm text-gray-400">BB Bedsheets</span>
+                    </div>
                   </div>
                 </div>
                 <Link 

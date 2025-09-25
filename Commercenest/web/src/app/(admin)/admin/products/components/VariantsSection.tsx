@@ -18,8 +18,6 @@ interface VariantOptionValue {
   displayValue: string
   colorHex?: string
   imageUrl?: string
-  priceAdjustmentCents?: number
-  costAdjustmentCents?: number
 }
 
 interface VariantCombination {
@@ -38,8 +36,6 @@ interface VariantsSectionProps {
   onVariantOptionsChange: (options: VariantOption[]) => void
   variantCombinations: VariantCombination[]
   onVariantCombinationsChange: (combinations: VariantCombination[]) => void
-  onUpdateVariants?: (variantData: { hasVariants: boolean, variantOptions: VariantOption[], variantCombinations: VariantCombination[] }) => Promise<void>
-  productId?: string
 }
 
 export function VariantsSection({
@@ -48,20 +44,11 @@ export function VariantsSection({
   variantOptions,
   onVariantOptionsChange,
   variantCombinations,
-  onVariantCombinationsChange,
-  onUpdateVariants,
-  productId
+  onVariantCombinationsChange
 }: VariantsSectionProps) {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['options']))
   const [newOptionName, setNewOptionName] = useState('')
   const [newOptionType, setNewOptionType] = useState<'text' | 'color' | 'image' | 'select'>('select')
-  const [isUpdatingVariants, setIsUpdatingVariants] = useState(false)
-
-  // Client-side validity checks when variants are enabled
-  const optionHasValues = (opt: VariantOption) => Array.isArray(opt.values) && opt.values.length > 0
-  const allOptionsValid = variantOptions.every(opt => opt.name?.trim() && optionHasValues(opt))
-  const combinationsValid = variantCombinations.length > 0 && variantCombinations.every(c => (c.priceCents ?? 0) >= 0 && (c.stock ?? 0) >= 0 && Object.keys(c.options || {}).length > 0)
-  const canUpdateVariants = hasVariants ? (variantOptions.length > 0 && allOptionsValid && combinationsValid) : true
 
   const toggleSection = (section: string) => {
     const newExpanded = new Set(expandedSections)
@@ -93,7 +80,7 @@ export function VariantsSection({
   const removeVariantOption = (optionId: string) => {
     onVariantOptionsChange(variantOptions.filter(opt => opt.id !== optionId))
     // Also clean up combinations that reference this option
-    const updatedCombinations = (variantCombinations || []).map(combo => {
+    const updatedCombinations = variantCombinations.map(combo => {
       const newOptions = { ...combo.options }
       delete newOptions[optionId]
       return { ...combo, options: newOptions }
@@ -109,25 +96,7 @@ export function VariantsSection({
           value: value.toLowerCase().replace(/\s+/g, '_'),
           displayValue
         }
-        return { ...option, values: [...(option.values || []), newValue] }
-      }
-      return option
-    })
-    onVariantOptionsChange(updatedOptions)
-  }
-
-  const updateOptionValue = (optionId: string, valueId: string, field: keyof VariantOptionValue, value: string | number) => {
-    const updatedOptions = variantOptions.map(option => {
-      if (option.id === optionId) {
-        return {
-          ...option,
-          values: (option.values || []).map(v => {
-            if (v.id === valueId) {
-              return { ...v, [field]: value }
-            }
-            return v
-          })
-        }
+        return { ...option, values: [...option.values, newValue] }
       }
       return option
     })
@@ -137,14 +106,14 @@ export function VariantsSection({
   const removeOptionValue = (optionId: string, valueId: string) => {
     const updatedOptions = variantOptions.map(option => {
       if (option.id === optionId) {
-        return { ...option, values: (option.values || []).filter(v => v.id !== valueId) }
+        return { ...option, values: option.values.filter(v => v.id !== valueId) }
       }
       return option
     })
     onVariantOptionsChange(updatedOptions)
 
     // Clean up combinations that reference this value
-    const updatedCombinations = (variantCombinations || []).map(combo => {
+    const updatedCombinations = variantCombinations.map(combo => {
       const newOptions = { ...combo.options }
       if (newOptions[optionId] === valueId) {
         delete newOptions[optionId]
@@ -165,7 +134,7 @@ export function VariantsSection({
 
       if (restOptions.length === 0) {
         return firstOption.values.map(value => ({
-          id: crypto.randomUUID(),
+          id: `combo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           options: { [firstOption.id]: value.id },
           priceCents: 0,
           stock: 0,
@@ -180,7 +149,7 @@ export function VariantsSection({
       firstOption.values.forEach(value => {
         restCombinations.forEach(restCombo => {
           combinations.push({
-            id: crypto.randomUUID(),
+            id: `combo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             options: { [firstOption.id]: value.id, ...restCombo.options },
             priceCents: 0,
             stock: 0,
@@ -198,7 +167,7 @@ export function VariantsSection({
   }
 
   const updateCombination = (comboId: string, field: keyof VariantCombination, value: string | number) => {
-    const updatedCombinations = (variantCombinations || []).map(combo => {
+    const updatedCombinations = variantCombinations.map(combo => {
       if (combo.id === comboId) {
         return { ...combo, [field]: value }
       }
@@ -208,7 +177,7 @@ export function VariantsSection({
   }
 
   const removeCombination = (comboId: string) => {
-    onVariantCombinationsChange((variantCombinations || []).filter(combo => combo.id !== comboId))
+    onVariantCombinationsChange(variantCombinations.filter(combo => combo.id !== comboId))
   }
 
   const getCombinationDisplayName = (combo: VariantCombination) => {
@@ -219,34 +188,6 @@ export function VariantsSection({
         return value?.displayValue || value?.value || 'Unknown'
       })
       .join(' / ')
-  }
-
-  const handleUpdateVariants = async () => {
-    if (!onUpdateVariants || !productId) return
-    
-    setIsUpdatingVariants(true)
-    try {
-      console.log('DEBUG: Updating variants with payload:', {
-        productId,
-        hasVariants,
-        variantOptions_count: variantOptions.length,
-        variantOptions,
-        variantCombinations_count: variantCombinations.length,
-        variantCombinations
-      })
-      
-      await onUpdateVariants({
-        hasVariants,
-        variantOptions,
-        variantCombinations
-      })
-      
-      console.log('DEBUG: Variant update completed successfully')
-    } catch (error) {
-      console.error('DEBUG: Variant update failed:', error)
-    } finally {
-      setIsUpdatingVariants(false)
-    }
   }
 
   return (
@@ -267,11 +208,6 @@ export function VariantsSection({
         <p className="text-sm text-gray-500 mt-1">
           Create multiple variations of this product (size, color, material, etc.)
         </p>
-        {hasVariants && (
-          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded mt-2 p-2">
-            When enabled, at least one <strong>Variant Option</strong> with values and at least one <strong>Variant Combination</strong> are required. Price and Stock must be non‑negative.
-          </p>
-        )}
       </div>
 
       {!hasVariants ? (
@@ -282,27 +218,21 @@ export function VariantsSection({
         <div className="space-y-6">
           {/* Variant Options Section */}
           <div className="border border-gray-200 rounded-lg">
-            <div className="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-t-lg">
-              <button
-                type="button"
-                onClick={() => toggleSection('options')}
-                className="flex items-center space-x-2 flex-1"
-              >
-                <span className="font-medium text-gray-900">Variant Options{hasVariants && <span className="text-red-600"> *</span>}</span>
+            <button
+              type="button"
+              onClick={() => toggleSection('options')}
+              className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-t-lg"
+            >
+              <div className="flex items-center space-x-2">
+                <span className="font-medium text-gray-900">Variant Options</span>
                 <span className="text-sm text-gray-500">({variantOptions.length})</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => toggleSection('options')}
-                className="p-1 text-gray-500 hover:text-gray-700"
-              >
-                {expandedSections.has('options') ? (
-                  <ChevronUpIcon className="h-5 w-5" />
-                ) : (
-                  <ChevronDownIcon className="h-5 w-5" />
-                )}
-              </button>
-            </div>
+              </div>
+              {expandedSections.has('options') ? (
+                <ChevronUpIcon className="h-5 w-5 text-gray-500" />
+              ) : (
+                <ChevronDownIcon className="h-5 w-5 text-gray-500" />
+              )}
+            </button>
 
             {expandedSections.has('options') && (
               <div className="p-4 space-y-4">
@@ -356,50 +286,24 @@ export function VariantsSection({
                       {/* Option Values */}
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-gray-700">Values{hasVariants && <span className="text-red-600"> *</span>}</span>
+                          <span className="text-sm font-medium text-gray-700">Values</span>
                           <AddValueButton
                             option={option}
                             onAdd={(value, displayValue) => addOptionValue(option.id, value, displayValue)}
                           />
                         </div>
 
-                        <div className="space-y-2">
-                          {(option.values || []).map((value) => (
-                            <div key={value.id} className="bg-gray-50 px-3 py-2 rounded-md">
-                              <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm font-medium text-gray-700">{value.displayValue}</span>
-                                <button
-                                  type="button"
-                                  onClick={() => removeOptionValue(option.id, value.id)}
-                                  className="text-red-500 hover:text-red-700"
-                                >
-                                  <XMarkIcon className="h-3 w-3" />
-                                </button>
-                              </div>
-                              <div className="grid grid-cols-2 gap-2">
-                                <div>
-                                  <label className="text-xs text-gray-500">Price Adjustment (₹)</label>
-                                  <input
-                                    type="number"
-                                    value={value.priceAdjustmentCents ? value.priceAdjustmentCents / 100 : 0}
-                                    onChange={(e) => updateOptionValue(option.id, value.id, 'priceAdjustmentCents', parseFloat(e.target.value) * 100)}
-                                    className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-indigo-500 focus:border-indigo-500"
-                                    placeholder="0.00"
-                                    step="0.01"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="text-xs text-gray-500">Cost Adjustment (₹)</label>
-                                  <input
-                                    type="number"
-                                    value={value.costAdjustmentCents ? value.costAdjustmentCents / 100 : 0}
-                                    onChange={(e) => updateOptionValue(option.id, value.id, 'costAdjustmentCents', parseFloat(e.target.value) * 100)}
-                                    className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-indigo-500 focus:border-indigo-500"
-                                    placeholder="0.00"
-                                    step="0.01"
-                                  />
-                                </div>
-                              </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                          {option.values.map((value) => (
+                            <div key={value.id} className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-md">
+                              <span className="text-sm text-gray-700">{value.displayValue}</span>
+                              <button
+                                type="button"
+                                onClick={() => removeOptionValue(option.id, value.id)}
+                                className="text-red-500 hover:text-red-700"
+                              >
+                                <XMarkIcon className="h-3 w-3" />
+                              </button>
                             </div>
                           ))}
                         </div>
@@ -414,15 +318,15 @@ export function VariantsSection({
           {/* Variant Combinations Section */}
           {variantOptions.length > 0 && (
             <div className="border border-gray-200 rounded-lg">
-              <div className="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-t-lg">
-                <button
-                  type="button"
-                  onClick={() => toggleSection('combinations')}
-                  className="flex items-center space-x-2 flex-1"
-                >
-                  <span className="font-medium text-gray-900">Variant Combinations{hasVariants && <span className="text-red-600"> *</span>}</span>
-                  <span className="text-sm text-gray-500">({(variantCombinations || []).length})</span>
-                </button>
+              <button
+                type="button"
+                onClick={() => toggleSection('combinations')}
+                className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100"
+              >
+                <div className="flex items-center space-x-2">
+                  <span className="font-medium text-gray-900">Variant Combinations</span>
+                  <span className="text-sm text-gray-500">({variantCombinations.length})</span>
+                </div>
                 <div className="flex items-center space-x-2">
                   <button
                     type="button"
@@ -431,38 +335,17 @@ export function VariantsSection({
                   >
                     Generate
                   </button>
-                  {onUpdateVariants && (
-                    <button
-                      type="button"
-                      onClick={handleUpdateVariants}
-                      disabled={isUpdatingVariants || (hasVariants && !canUpdateVariants)}
-                      className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isUpdatingVariants ? 'Updating...' : 'Update Variants'}
-                    </button>
+                  {expandedSections.has('combinations') ? (
+                    <ChevronUpIcon className="h-5 w-5 text-gray-500" />
+                  ) : (
+                    <ChevronDownIcon className="h-5 w-5 text-gray-500" />
                   )}
-                  <button
-                    type="button"
-                    onClick={() => toggleSection('combinations')}
-                    className="p-1 text-gray-500 hover:text-gray-700"
-                  >
-                    {expandedSections.has('combinations') ? (
-                      <ChevronUpIcon className="h-5 w-5" />
-                    ) : (
-                      <ChevronDownIcon className="h-5 w-5" />
-                    )}
-                  </button>
                 </div>
-              </div>
+              </button>
 
               {expandedSections.has('combinations') && (
                 <div className="p-4">
-                  {hasVariants && !canUpdateVariants && (
-                    <div className="mb-3 text-xs text-red-700 bg-red-50 border border-red-200 rounded p-2">
-                      Complete requirements before saving: at least one option with values, at least one combination, non‑negative price and stock.
-                    </div>
-                  )}
-                  {(variantCombinations || []).length === 0 ? (
+                  {variantCombinations.length === 0 ? (
                     <div className="text-center py-8 text-gray-500">
                       <p>No combinations generated yet.</p>
                       <p className="text-sm mt-1">Click &quot;Generate&quot; to create all possible combinations.</p>
@@ -491,7 +374,7 @@ export function VariantsSection({
                             </tr>
                           </thead>
                           <tbody className="bg-white divide-y divide-gray-200">
-                            {(variantCombinations || []).map((combo) => (
+                            {variantCombinations.map((combo) => (
                               <tr key={combo.id}>
                                 <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                                   {getCombinationDisplayName(combo)}

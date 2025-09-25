@@ -5,14 +5,6 @@ const storageHostname = process.env.NEXT_PUBLIC_SUPABASE_URL
   : undefined;
 
 const nextConfig: NextConfig = {
-  typescript: {
-    // Disable TypeScript errors during build to prevent Vercel failures
-    ignoreBuildErrors: true,
-  },
-  eslint: {
-    // Disable ESLint during builds
-    ignoreDuringBuilds: true,
-  },
   images: {
     remotePatterns: [
       ...(storageHostname
@@ -32,21 +24,6 @@ const nextConfig: NextConfig = {
       {
         protocol: "https" as const,
         hostname: "images.pexels.com",
-        pathname: "/**",
-      },
-      {
-        protocol: "https" as const,
-        hostname: "razorpay.com",
-        pathname: "/**",
-      },
-      {
-        protocol: "https" as const,
-        hostname: "upload.wikimedia.org",
-        pathname: "/**",
-      },
-      {
-        protocol: "https" as const,
-        hostname: "seeklogo.com",
         pathname: "/**",
       },
     ],

@@ -37,16 +37,6 @@ export function PricingSection({ formData, errors, onInputChange }: PricingSecti
     return margin.toFixed(1)
   }
 
-  const calculateMarkup = () => {
-    const priceCents = typeof formData.price_cents === 'number' ? formData.price_cents : 0
-    const costCents = typeof formData.cost_per_item_cents === 'number' ? formData.cost_per_item_cents : 0
-    
-    if (!priceCents || !costCents) return null
-    const profit = priceCents - costCents
-    const markup = (profit / costCents) * 100
-    return markup.toFixed(1)
-  }
-
   const handlePriceChange = (value: string) => {
     setPriceInput(value)
     // Don't update form data while typing - only update on blur
@@ -174,21 +164,12 @@ export function PricingSection({ formData, errors, onInputChange }: PricingSecti
         </div>
       </div>
 
-      {/* Profit Calculations Display */}
+      {/* Profit Margin Display */}
       {formData.price_cents && formData.cost_per_item_cents && (
-        <div className="mt-4 space-y-2">
-          <div className="p-3 bg-green-50 border border-green-200 rounded-md">
-            <p className="text-sm text-green-800">
-              <span className="font-medium">Profit Margin:</span> {calculateProfitMargin()}%
-              <span className="text-xs text-green-600 ml-2">(Profit as % of selling price)</span>
-            </p>
-          </div>
-          <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
-            <p className="text-sm text-blue-800">
-              <span className="font-medium">Markup:</span> {calculateMarkup()}%
-              <span className="text-xs text-blue-600 ml-2">(Profit as % of cost price)</span>
-            </p>
-          </div>
+        <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-md">
+          <p className="text-sm text-green-800">
+            <span className="font-medium">Profit Margin:</span> {calculateProfitMargin()}%
+          </p>
         </div>
       )}
     </div>

@@ -45,26 +45,3 @@
 - Monthly support: ₹35k–₹75k
 
 
-
-## 2025-09-02
-
-### Summary
-- Added unauthenticated admin guard in `src/middleware.ts`: visiting `/admin` or `/{tenant}/admin` without a Supabase auth cookie redirects to `/login` while preserving tenant via cookie/header.
-- Hardened `src/app/(admin)/admin/settings/actions.ts` to return safe defaults on unauthenticated/DB errors; resolves “application error” on Settings in staging/local.
-- Fixed TS error by removing unsupported init options from `NextResponse.redirect`.
-- Rechecked middleware behavior: host- and path-based tenancy aligned with plan; minor no-op rewrite block remains harmless.
-
-### Staging E2E (Bluebell + Senlysh)
-- Bluebell Storefront: Home → Products → PDP → Cart → Checkout → Portfolio list/detail → Info pages. UI renders; totals compute. Note: Prior run observed PDP Add-to-Cart redirecting to `http://localhost:3000/cart` (likely absolute origin). Needs recheck and fix to relative path or use `request.nextUrl.origin`.
-- Bluebell Admin: Dashboard, Products, Categories, Orders, Customers, Portfolio, Analytics, Settings all load without runtime errors. Console shows repeated `_next/static` media 404 warnings.
-- Senlysh Storefront: Home → Products → PDP → Add-to-Cart → Cart → Checkout flows render with GST/total; product cards, filters and PDP actions OK. Console shows repeated `_next/static` media 404 warnings. Footer Customer Service links appear unscoped (e.g., `/contact`, `/shipping`) — should be tenant-scoped (`/senlysh/contact`, etc.).
-- Senlysh Admin: All modules load (Products, Categories, Orders, Customers, Portfolio, Analytics, Settings) with no crashes.
-
-### Issues Noted (no code changes made)
-1. Repeated `_next/static` media 404 warnings on staging across both tenants. Action: verify build artifact integrity, remotePatterns, and asset paths; clear CDN cache if needed.
-2. Bluebell PDP Add-to-Cart redirected to `localhost` (observed earlier). Action: ensure cart navigation uses relative paths or derives origin from request; avoid hardcoded `localhost`.
-3. Senlysh footer Customer Service links not tenant-scoped (point to `/contact`, `/shipping`, etc.). Action: update to `/senlysh/...` to keep branding/context.
-
-### Next
-- If approved, address the three issues above locally, re-deploy to staging, then re-run E2E.
-

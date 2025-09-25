@@ -1,7 +1,9 @@
 "use client"
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { Playfair_Display } from 'next/font/google'
-import type { ProductListItem } from '@/types/product'
+import { useBluebellHomeMode } from '@/lib/bluebellHomeMode'
+import type { ProductListItem } from '@/server/modules/products/service'
 import Testimonials from '@/components/patterns/Testimonials'
 import { bluebellTestimonials } from './testimonialsData'
 
@@ -9,15 +11,22 @@ const playfair = Playfair_Display({ subsets: ['latin'], weight: ['700','800','90
 
 type HomeClientProps = {
   products: ProductListItem[]
-  projects: { id: string; title: string; slug: string; hero_image_url?: string }[]
+  projects: { id: string; title: string; slug: string; hero_image_url: string | null }[]
 }
 
 export default function Home({ products }: HomeClientProps) {
   const [loaded, setLoaded] = useState(false)
+  const { mode: storeMode, setMode } = useBluebellHomeMode()
+  const [viewMode, setViewMode] = useState<'interiors' | 'fabrics'>(storeMode)
   useEffect(() => setLoaded(true), [])
+
+  // Sync with global store when it changes elsewhere (e.g., header)
+  useEffect(() => {
+    setViewMode(storeMode)
+  }, [storeMode])
   // Testimonials grid is static for now; slider removed for modularity
 
-  const heroSlides = [
+  const interiorsHeroSlides = [
     {
       url: "https://images.pexels.com/photos/7545787/pexels-photo-7545787.jpeg",
       alt: "Luxury bedroom with premium textiles",
@@ -32,11 +41,27 @@ export default function Home({ products }: HomeClientProps) {
     },
   ]
 
+  const fabricsHeroSlides = [
+    {
+      url: "https://images.pexels.com/photos/2170401/pexels-photo-2170401.jpeg",
+      alt: "Premium fabric rolls in studio",
+    },
+    {
+      url: "https://images.pexels.com/photos/3738087/pexels-photo-3738087.jpeg",
+      alt: "Close-up textured fabric swatches",
+    },
+    {
+      url: "https://images.pexels.com/photos/3738092/pexels-photo-3738092.jpeg",
+      alt: "Curtain fabrics and patterns",
+    },
+  ]
+
   const [slideIndex, setSlideIndex] = useState(0)
   useEffect(() => {
-    const id = setInterval(() => setSlideIndex((i) => (i + 1) % heroSlides.length), 4500)
+    const list = viewMode === 'interiors' ? interiorsHeroSlides : fabricsHeroSlides
+    const id = setInterval(() => setSlideIndex((i) => (i + 1) % list.length), 4500)
     return () => clearInterval(id)
-  }, [heroSlides.length])
+  }, [viewMode, interiorsHeroSlides, fabricsHeroSlides])
 
   return (
     <main className="p-0">
@@ -45,7 +70,7 @@ export default function Home({ products }: HomeClientProps) {
       <section id="home" className="hero-gradient min-h-[90vh] flex items-center justify-center relative overflow-hidden">
         {/* Hero carousel */}
         <div className="absolute inset-0">
-          {heroSlides.map((s, idx) => (
+          {(viewMode === 'interiors' ? interiorsHeroSlides : fabricsHeroSlides).map((s, idx) => (
             <div
               key={s.url}
               className={`absolute inset-0 bg-cover bg-center transition-opacity duration-700 ${slideIndex === idx ? 'opacity-90' : 'opacity-0'}`}
@@ -62,6 +87,19 @@ export default function Home({ products }: HomeClientProps) {
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/25 via-black/10 to-transparent" />
         {/* Removed placeholder photo overlay that caused rounded window artifact */}
         <div className={`hero-content text-center z-10 px-4`}>
+          {/* Mode Switcher */}
+          <div className="absolute top-6 right-6">
+            <label className="sr-only" htmlFor="bluebell-home-mode">Select content</label>
+            <select
+              id="bluebell-home-mode"
+              className="bg-white/90 text-gray-900 border border-gray-200 rounded-md px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              value={viewMode}
+              onChange={(e) => { const v = e.target.value as 'interiors' | 'fabrics'; setViewMode(v); setMode(v) }}
+            >
+              <option value="interiors">Bluebell Interiors</option>
+              <option value="fabrics">Bluebell Fabrics</option>
+            </select>
+          </div>
           {/* Logo */}
           <div className="hero-logo mb-8">
             <svg width="220" height="140" viewBox="0 0 220 140" className="mx-auto drop-shadow-2xl animate-[pulse_3s_ease-in-out_infinite]">
@@ -93,21 +131,33 @@ export default function Home({ products }: HomeClientProps) {
             </svg>
           </div>
           <h1 className="hero-title text-5xl md:text-7xl font-serif font-black text-white mb-6 leading-tight">
-            Timeless Interiors,
-            <br />
-            <span className="text-mustard">Beautiful Fabrics</span>
+            {viewMode === 'interiors' ? (
+              <>
+                Timeless Interiors,
+                <br />
+                <span className="text-mustard">Beautiful Spaces</span>
+              </>
+            ) : (
+              <>
+                Premium Fabrics,
+                <br />
+                <span className="text-mustard">Elegant Textures</span>
+              </>
+            )}
           </h1>
           <p className="hero-subtitle text-lg md:text-xl text-white/90 mb-10 max-w-3xl mx-auto font-light leading-relaxed">
-            Discover our curated collection of premium fabrics that transform spaces into extraordinary experiences
+            {viewMode === 'interiors'
+              ? 'Explore our portfolio of stunning interiors crafted with Bluebell quality.'
+              : 'Discover our curated fabric collection for every interior design vision.'}
           </p>
-          <a href="#products" className="inline-flex items-center gap-2 hero-cta bg-mustard text-brown font-bold py-4 px-8 rounded-full text-lg transition-all duration-300 transform hover:scale-105 shadow-2xl btn-glow">
-            Explore Collection
+          <a href={viewMode === 'interiors' ? '#portfolio' : '#products'} className="inline-flex items-center gap-2 hero-cta bg-mustard text-brown font-bold py-4 px-8 rounded-full text-lg transition-all duration-300 transform hover:scale-105 shadow-2xl btn-glow">
+            {viewMode === 'interiors' ? 'View Portfolio' : 'Explore Collection'}
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/></svg>
           </a>
         </div>
         {/* Dots */}
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex gap-2">
-          {heroSlides.map((_, idx) => (
+          {(viewMode === 'interiors' ? interiorsHeroSlides : fabricsHeroSlides).map((_, idx) => (
             <button
               key={idx}
               onClick={() => setSlideIndex(idx)}
@@ -140,7 +190,8 @@ export default function Home({ products }: HomeClientProps) {
         </svg>
       </div>
 
-      {/* Portfolio Section */}
+      {/* Portfolio Section (Interiors only) */}
+      {viewMode === 'interiors' && (
       <section id="portfolio" className="py-24 bg-gradient-to-br from-white to-gray-50 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center mb-16">
@@ -186,6 +237,7 @@ export default function Home({ products }: HomeClientProps) {
           </div>
         </div>
       </section>
+      )}
 
       {/* Divider */}
       <div className="section-divider bg-white">
@@ -194,7 +246,8 @@ export default function Home({ products }: HomeClientProps) {
         </svg>
       </div>
 
-      {/* Products Section */}
+      {/* Products Section (Fabrics only) */}
+      {viewMode === 'fabrics' && (
       <section id="products" className="py-24 bg-white relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center mb-16">
@@ -304,6 +357,7 @@ export default function Home({ products }: HomeClientProps) {
           </div>
         </div>
       </section>
+      )}
 
       {/* Testimonials Section (modular) */}
       <div className="section-divider bg-white">
@@ -351,9 +405,22 @@ export default function Home({ products }: HomeClientProps) {
               Get Free Consultation
               <svg className="ml-2 w-5 h-5 transition-transform group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/></svg>
             </a>
-            <a className="inline-flex items-center justify-center bg-white/10 text-white font-bold py-4 px-8 rounded-full text-lg transition-all duration-300 backdrop-blur-sm shadow-[0_12px_40px_rgba(1,88,157,0.35)] hover:bg-white/20 hover:-translate-y-0.5" href="#products">
-              Browse Catalog
-            </a>
+            {viewMode === 'interiors' ? (
+              <Link
+                className="inline-flex items-center justify-center bg-white/10 text-white font-bold py-4 px-8 rounded-full text-lg transition-all duration-300 backdrop-blur-sm shadow-[0_12px_40px_rgba(1,88,157,0.35)] hover:bg-white/20 hover:-translate-y-0.5"
+                href="/bluebell/portfolio"
+              >
+                View Portfolio
+              </Link>
+            ) : (
+              <a
+                className="inline-flex items-center justify-center bg-white/10 text-white font-bold py-4 px-8 rounded-full text-lg transition-all duration-300 backdrop-blur-sm shadow-[0_12px_40px_rgba(1,88,157,0.35)] hover:bg-white/20 hover:-translate-y-0.5"
+                href="/catalog.pdf"
+                download
+              >
+                Browse Catalog
+              </a>
+            )}
           </div>
 
           {/* Contact Info Cards */}

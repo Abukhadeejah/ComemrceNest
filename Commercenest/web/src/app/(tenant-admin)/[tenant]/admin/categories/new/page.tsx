@@ -25,13 +25,7 @@ export default async function NewCategoryPage() {
           <CategoryForm 
             mode="create"
             tenantId={tenantId}
-            allCategories={categories.map(c => ({ 
-              id: c.id, 
-              name: c.name,
-              slug: c.slug,
-              parent_id: (c as Record<string, unknown>).parent_id as string | null || null,
-              created_at: c.created_at
-            }))}
+            allCategories={categories.map(c => ({ id: c.id, name: c.name }))}
           />
         </div>
       </div>
