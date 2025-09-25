@@ -1,0 +1,10 @@
+[33m4e8c2f4[m[33m ([m[1;36mHEAD -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m Fix lightningcss build issue - prepare for clean deployment
+[33ma9dfe12[m Regenerate package-lock.json for Vercel deployment
+[33me277c0a[m Fix lint and TypeScript errors, remove duplicate lockfile
+[33m85ad74d[m Add multi-tenant path-based routing for Bluebell and Senlysh
+[33m7d2970e[m Update deployment checklist for Vercel Pro
+[33m4b34585[m[33m ([m[1;32mfeat/p1.3c-pdp[m[33m)[m Add deployment documentation and project rules
+[33mbfb8553[m Complete Senlysh homepage with membership section and prepare for Vercel Pro deployment
+[33me695f03[m[33m ([m[1;31morigin/feat/p1.3c-pdp[m[33m, [m[1;31morigin/feat/p1.3b-plp-pdp[m[33m, [m[1;32mfeat/p1.3b-plp-pdp[m[33m)[m updated github workflow to neglect supabase
+[33m7e78b85[m updated github workflow added
+[33md129ee8[m github workflow added

@@ -1,5 +1,6 @@
 "use client"
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { Playfair_Display } from 'next/font/google'
 import { useBluebellHomeMode } from '@/lib/bluebellHomeMode'
 import type { ProductListItem } from '@/server/modules/products/service'
@@ -13,7 +14,7 @@ type HomeClientProps = {
   projects: { id: string; title: string; slug: string; hero_image_url: string | null }[]
 }
 
-export default function Home({ products, projects: _projects }: HomeClientProps) {
+export default function Home({ products }: HomeClientProps) {
   const [loaded, setLoaded] = useState(false)
   const { mode: storeMode, setMode } = useBluebellHomeMode()
   const [viewMode, setViewMode] = useState<'interiors' | 'fabrics'>(storeMode)
@@ -60,7 +61,7 @@ export default function Home({ products, projects: _projects }: HomeClientProps)
     const list = viewMode === 'interiors' ? interiorsHeroSlides : fabricsHeroSlides
     const id = setInterval(() => setSlideIndex((i) => (i + 1) % list.length), 4500)
     return () => clearInterval(id)
-  }, [viewMode])
+  }, [viewMode, interiorsHeroSlides, fabricsHeroSlides])
 
   return (
     <main className="p-0">
@@ -405,12 +406,12 @@ export default function Home({ products, projects: _projects }: HomeClientProps)
               <svg className="ml-2 w-5 h-5 transition-transform group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/></svg>
             </a>
             {viewMode === 'interiors' ? (
-              <a
+              <Link
                 className="inline-flex items-center justify-center bg-white/10 text-white font-bold py-4 px-8 rounded-full text-lg transition-all duration-300 backdrop-blur-sm shadow-[0_12px_40px_rgba(1,88,157,0.35)] hover:bg-white/20 hover:-translate-y-0.5"
                 href="/bluebell/portfolio"
               >
                 View Portfolio
-              </a>
+              </Link>
             ) : (
               <a
                 className="inline-flex items-center justify-center bg-white/10 text-white font-bold py-4 px-8 rounded-full text-lg transition-all duration-300 backdrop-blur-sm shadow-[0_12px_40px_rgba(1,88,157,0.35)] hover:bg-white/20 hover:-translate-y-0.5"

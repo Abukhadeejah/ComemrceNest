@@ -181,6 +181,7 @@ export default function CheckoutPage() {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async function createTestOrder() {
     setBusy(true)
     setMessage(null)
@@ -212,6 +213,7 @@ export default function CheckoutPage() {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async function simulatePayment() {
     if (!orderId) return
     setBusy(true)

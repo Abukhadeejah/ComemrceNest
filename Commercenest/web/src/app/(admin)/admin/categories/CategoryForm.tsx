@@ -17,7 +17,7 @@ interface CategoryFormProps {
   }
 }
 
-export function CategoryForm({ mode, tenantId: _tenantId, allCategories = [], initialData }: CategoryFormProps) {
+export function CategoryForm({ mode, allCategories = [], initialData }: CategoryFormProps) {
   const router = useRouter()
   const tenantKey = useAdminTenantKey()
   const [formData, setFormData] = useState({
