@@ -61,13 +61,20 @@ function ProductCard({ product }: { product: ProductListItem }) {
   
   const badge = getBadgeType()
   
-  const productUrl = useMemo(() => `/bluebell/products/${product.slug}`,[product.slug])
-  // Use external QR generator to avoid extra dependency
-  const qrDataUrl = useMemo(() => {
-    const base = 'https://api.qrserver.com/v1/create-qr-code/'
-    const size = '128x128'
-    return `${base}?size=${size}&data=${encodeURIComponent(productUrl)}`
-  }, [productUrl])
+  const productUrl = useMemo(() => {
+  if (typeof window !== "undefined") {
+    return `${window.location.origin}/bluebell/products/${product.slug}`;
+  }
+  return "";
+}, [product.slug]);
+
+// Use external QR generator to avoid extra dependency
+const qrDataUrl = useMemo(() => {
+  if (!productUrl) return "";
+  const base = "https://api.qrserver.com/v1/create-qr-code/";
+  const size = "128x128";
+  return `${base}?size=${size}&data=${encodeURIComponent(productUrl)}`;
+}, [productUrl]);
 
   return (
     <div className="product-card bg-white rounded-2xl overflow-hidden shadow-lg group flex flex-col">
