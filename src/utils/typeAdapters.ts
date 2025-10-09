@@ -216,28 +216,28 @@ export function adaptCategory(
  */
 export function adaptSettings(
   companyProfile: unknown
-): { name: string; logo_url: string; address: string; phone: string; email: string; gstin: string; brand_accent_hex: string; gst_rate_percent?: number | string } {
+): { name: string; logo_url: string | null; address: string | null; phone: string | null; email: string | null; gstin: string | null; brand_accent_hex: string | null; gst_rate_percent?: number | string } {
   if (!companyProfile) {
     return {
       name: '',
-      logo_url: '',
-      address: '',
-      phone: '',
-      email: '',
-      gstin: '',
-      brand_accent_hex: '#000000',
+      logo_url: null,
+      address: null,
+      phone: null,
+      email: null,
+      gstin: null,
+      brand_accent_hex: null,
       gst_rate_percent: 0
     }
   }
   const cp = typeof companyProfile === 'object' && companyProfile !== null ? (companyProfile as Record<string, unknown>) : {}
   return {
     name: typeof cp.name === 'string' ? cp.name : '',
-    logo_url: typeof cp.logo_url === 'string' ? cp.logo_url : '',
-    address: typeof cp.address === 'string' ? cp.address : '',
-    phone: typeof cp.phone === 'string' ? cp.phone : '',
-    email: typeof cp.email === 'string' ? cp.email : '',
-    gstin: typeof cp.gstin === 'string' ? cp.gstin : '',
-    brand_accent_hex: typeof cp.brand_accent_hex === 'string' ? cp.brand_accent_hex : '#000000',
+    logo_url: typeof cp.logo_url === 'string' ? cp.logo_url : null,
+    address: typeof cp.address === 'string' ? cp.address : null,
+    phone: typeof cp.phone === 'string' ? cp.phone : null,
+    email: typeof cp.email === 'string' ? cp.email : null,
+    gstin: typeof cp.gstin === 'string' ? cp.gstin : null,
+    brand_accent_hex: typeof cp.brand_accent_hex === 'string' ? cp.brand_accent_hex : null,
     gst_rate_percent: typeof cp.gst_rate_percent === 'number' ? cp.gst_rate_percent : 0
   }
 }

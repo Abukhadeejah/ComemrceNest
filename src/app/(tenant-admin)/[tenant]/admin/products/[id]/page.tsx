@@ -6,7 +6,7 @@ import Image from 'next/image'
 import { ArrowLeftIcon, PencilIcon } from '@heroicons/react/24/outline'
 
 interface ProductViewPageProps {
-  params: { id: string; tenant: string }
+  params: Promise<{ id: string; tenant: string }>
 }
 
 interface ProductImage {
@@ -16,7 +16,7 @@ interface ProductImage {
 }
 
 export default async function ProductViewPage({ params }: ProductViewPageProps) {
-  const { id, tenant } = params
+  const { id, tenant } = await params
   
   try {
     const tenantId = await resolveTenantIdFromRequest()

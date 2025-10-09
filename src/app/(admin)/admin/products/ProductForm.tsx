@@ -38,12 +38,14 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
     name: '',
     slug: '',
     description: '',
+    short_description: '',
     price_cents: '',
     compare_at_price_cents: '',
     cost_per_item_cents: '',
     currency: 'INR',
     stock: 0,
     sku: '',
+    barcode: '',
     weight: '',
     dimensions: '',
     has_variants: false,
@@ -66,12 +68,17 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
     gift_card_amount_cents: '',
     gift_card_expiry_days: '',
     category_id: '',
+    category_ids: [],
     status: 'draft',
     tax_class_id: '',
     images: [],
     variantOptions: [],
     sizeGuides: [],
     sizeGuideId: '',
+    // Fashion-specific fields
+    brand: '',
+    color: '',
+    material: '',
     // Badge System
     is_featured: false,
     is_bestseller: false,
@@ -83,7 +90,9 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
     badge_color: '#ef4444',
     badge_priority: 0,
     badge_display_until: '',
-    badge_display_from: ''
+    badge_display_from: '',
+    // Tags
+    tags: []
   })
 
   // Draft persistence removed - was interfering with database operations

@@ -3,12 +3,12 @@
 
 interface Settings {
   name: string
-  logo_url: string
-  address: string
-  phone: string
-  email: string
-  gstin: string
-  brand_accent_hex: string
+  logo_url: string | null
+  address: string | null
+  phone: string | null
+  email: string | null
+  gstin: string | null
+  brand_accent_hex: string | null
   gst_rate_percent?: number | string
 }
 
@@ -58,7 +58,7 @@ export function SettingsForm({ settings, paymentSettings }: SettingsFormProps) {
             type="email"
             name="email"
             id="email"
-            defaultValue={settings.email}
+            defaultValue={settings.email || ''}
             className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
             placeholder="store@example.com"
           />
@@ -72,7 +72,7 @@ export function SettingsForm({ settings, paymentSettings }: SettingsFormProps) {
             type="tel"
             name="phone"
             id="phone"
-            defaultValue={settings.phone}
+            defaultValue={settings.phone || ''}
             className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
             placeholder="+91 98765 43210"
           />
@@ -86,7 +86,7 @@ export function SettingsForm({ settings, paymentSettings }: SettingsFormProps) {
             type="text"
             name="gstin"
             id="gstin"
-            defaultValue={settings.gstin}
+            defaultValue={settings.gstin || ''}
             className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
             placeholder="22AAAAA0000A1Z5"
           />
@@ -100,7 +100,7 @@ export function SettingsForm({ settings, paymentSettings }: SettingsFormProps) {
             type="url"
             name="logo_url"
             id="logo_url"
-            defaultValue={settings.logo_url}
+            defaultValue={settings.logo_url || ''}
             className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
             placeholder="https://example.com/logo.png"
           />
@@ -114,7 +114,7 @@ export function SettingsForm({ settings, paymentSettings }: SettingsFormProps) {
             name="address"
             id="address"
             rows={3}
-            defaultValue={settings.address}
+            defaultValue={settings.address || ''}
             className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
             placeholder="Enter store address"
           />
@@ -146,12 +146,12 @@ export function SettingsForm({ settings, paymentSettings }: SettingsFormProps) {
               type="color"
               name="brand_accent_hex"
               id="brand_accent_hex"
-              defaultValue={settings.brand_accent_hex}
+              defaultValue={settings.brand_accent_hex || ''}
               className="h-10 w-20 border border-gray-300 rounded-md"
             />
             <input
               type="text"
-              defaultValue={settings.brand_accent_hex}
+              defaultValue={settings.brand_accent_hex || ''}
               className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
               placeholder="#C9A227"
             />

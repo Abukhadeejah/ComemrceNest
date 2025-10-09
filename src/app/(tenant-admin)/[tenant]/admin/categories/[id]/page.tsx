@@ -5,10 +5,10 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { resolveTenantKeyFromId } from '@/server/tenant'
 
-interface ViewProps { params: { id: string; tenant?: string } }
+interface ViewProps { params: Promise<{ id: string; tenant?: string }> }
 
 export default async function ViewCategoryPage({ params }: ViewProps) {
-  const p = params
+  const p = await params
   const tenantId = await resolveTenantIdFromRequest()
   if (!tenantId) notFound()
   const tenantKey = await resolveTenantKeyFromId(tenantId)

@@ -29,10 +29,10 @@ export type ProductListItem = {
   is_limited_edition?: boolean
   is_sold_out?: boolean
   custom_badge_text?: string | null
-  badge_color?: string | null
+  badge_color?: string | undefined
   badge_priority?: number | null
-  badge_display_until?: string | null
-  badge_display_from?: string | null
+  badge_display_until?: string | undefined
+  badge_display_from?: string | undefined
   // Variant options for PLP cards
   product_variant_options?: {
     variant_options: {

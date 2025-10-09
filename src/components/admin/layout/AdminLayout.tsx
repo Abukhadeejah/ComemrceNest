@@ -1,40 +1,38 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { AdminSidebar } from './AdminSidebar'
 import { AdminHeader } from './AdminHeader'
 
 interface AdminLayoutProps {
   children: React.ReactNode
-  title?: string
-  breadcrumbs?: Array<{ label: string; href?: string }>
 }
 
-export function AdminLayout({ children, title, breadcrumbs }: AdminLayoutProps) {
+export function AdminLayout({ children }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
+  useEffect(() => {
+    if (sidebarOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = 'unset'
+    }
+    return () => {
+      document.body.style.overflow = 'unset'
+    }
+  }, [sidebarOpen])
+
   return (
-    <div className="fixed inset-0 bg-gray-50">
-      {/* Sidebar */}
+    <>
       <AdminSidebar open={sidebarOpen} setOpen={setSidebarOpen} />
       
-      {/* Main content */}
-      <div className="lg:pl-72 h-full flex flex-col">
-        {/* Header */}
-        <AdminHeader 
-          onMenuClick={() => setSidebarOpen(true)}
-          title={title}
-          breadcrumbs={breadcrumbs}
-        />
+      <div className="lg:pl-64 flex flex-col min-h-screen">
+        <AdminHeader onMenuClick={() => setSidebarOpen(true)} />
         
-        {/* Page content */}
-        <main className="flex-1 overflow-auto py-6">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            {children}
-          </div>
+        <main className="flex-1 bg-gray-50">
+          {children}
         </main>
       </div>
-    </div>
+    </>
   )
 }
-

@@ -4,15 +4,15 @@ import { CustomerTable } from '../../../../(admin)/admin/customers/CustomerTable
 import { CustomerFilters } from '../../../../(admin)/admin/customers/CustomerFilters'
 
 interface CustomersPageProps {
-  searchParams: {
+  searchParams: Promise<{
     search?: string
     status?: string
     page?: string
-  }
+  }>
 }
 
 export default async function CustomersPage({ searchParams }: CustomersPageProps) {
-  const params = searchParams
+  const params = await searchParams
   
   return (
     <div className="space-y-6">

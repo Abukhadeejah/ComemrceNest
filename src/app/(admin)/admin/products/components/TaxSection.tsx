@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { ProductFormData, TaxClass } from '@/types/product'
 import { getTaxClasses } from '../../tax-classes/actions'
 
@@ -15,20 +15,12 @@ export function TaxSection({ formData, errors, onInputChange }: TaxSectionProps)
   const [loading, setLoading] = useState(true)
   const [showAdvanced, setShowAdvanced] = useState(false)
 
-  // Load tax classes on component mount
+  // Load tax classes on component mount ONLY
   useEffect(() => {
     const loadTaxClasses = async () => {
       try {
         const classes = await getTaxClasses()
         setTaxClasses(classes)
-        
-        // If no tax class is selected and product is taxable, set default
-        if (formData.taxable && !formData.tax_class_id) {
-          const defaultClass = classes.find(c => c.is_default)
-          if (defaultClass) {
-            onInputChange('tax_class_id', defaultClass.id)
-          }
-        }
       } catch (error) {
         console.error('Failed to load tax classes:', error)
       } finally {
@@ -37,9 +29,19 @@ export function TaxSection({ formData, errors, onInputChange }: TaxSectionProps)
     }
 
     loadTaxClasses()
-  }, [formData.taxable, formData.tax_class_id, onInputChange])
+  }, []) // ✅ FIXED: Empty dependency array - only runs once on mount
 
-  const handleTaxableChange = (taxable: boolean) => {
+  // Set default tax class when taxable is enabled
+  useEffect(() => {
+    if (formData.taxable && !formData.tax_class_id && taxClasses.length > 0) {
+      const defaultClass = taxClasses.find(c => c.is_default)
+      if (defaultClass) {
+        onInputChange('tax_class_id', defaultClass.id)
+      }
+    }
+  }, [formData.taxable, formData.tax_class_id, taxClasses]) // ✅ FIXED: Removed onInputChange from dependencies
+
+  const handleTaxableChange = useCallback((taxable: boolean) => {
     onInputChange('taxable', taxable)
     
     if (taxable && !formData.tax_class_id) {
@@ -52,11 +54,11 @@ export function TaxSection({ formData, errors, onInputChange }: TaxSectionProps)
       // Clear tax class when disabling taxable
       onInputChange('tax_class_id', null)
     }
-  }
+  }, [formData.tax_class_id, taxClasses, onInputChange]) // ✅ FIXED: Wrapped with useCallback
 
-  const handleTaxClassChange = (taxClassId: string) => {
+  const handleTaxClassChange = useCallback((taxClassId: string) => {
     onInputChange('tax_class_id', taxClassId || null)
-  }
+  }, [onInputChange]) // ✅ FIXED: Wrapped with useCallback
 
   const selectedTaxClass = taxClasses.find(c => c.id === formData.tax_class_id)
   const defaultTaxClass = taxClasses.find(c => c.is_default)
@@ -102,7 +104,7 @@ export function TaxSection({ formData, errors, onInputChange }: TaxSectionProps)
             ) : (
               <div className="space-y-3">
                 <select
-                  value={formData.tax_class_id || ''}
+                  value={formData.tax_class_id || ''} // ✅ FIXED: Ensures controlled input
                   onChange={(e) => handleTaxClassChange(e.target.value)}
                   className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                 >
@@ -223,4 +225,3 @@ export function TaxSection({ formData, errors, onInputChange }: TaxSectionProps)
     </div>
   )
 }
-

@@ -98,6 +98,7 @@ export interface ProductFormData {
   
   // Organization
   category_id: string
+  category_ids: string[]
   status: 'draft' | 'published'
   tags?: string[]
   
@@ -186,9 +187,9 @@ export interface ProductListItem {
   hero_image_url?: string | null
   is_featured?: boolean
   badge_text?: string
-  badge_color?: string
-  badge_display_from?: string
-  badge_display_until?: string
+  badge_color?: string | undefined
+  badge_display_from?: string | undefined
+  badge_display_until?: string | undefined
   status: 'draft' | 'published'
   is_bestseller?: boolean
   is_new_arrival?: boolean
@@ -221,7 +222,7 @@ export interface ProductListItem {
 
 export interface ProductImage {
   url: string
-  alt: string | null
+  alt: string | undefined
   sort_order: number
 }
 

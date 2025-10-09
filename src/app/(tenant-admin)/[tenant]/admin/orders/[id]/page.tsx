@@ -1,8 +1,8 @@
 import { supabaseAdmin } from '@/server/supabaseAdmin'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
 
-export default async function OrderDetail({ params }: { params: { id: string } }) {
-  const { id } = params
+export default async function OrderDetail({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const tenantId = await resolveTenantIdFromRequest()
   
   if (!tenantId) {

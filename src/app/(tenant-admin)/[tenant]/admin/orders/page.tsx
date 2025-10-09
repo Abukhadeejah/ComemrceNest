@@ -3,15 +3,15 @@ import { OrderTable } from '../../../../(admin)/admin/orders/OrderTable'
 import { OrderFilters } from '../../../../(admin)/admin/orders/OrderFilters'
 
 interface AdminOrdersProps {
-  searchParams: {
+  searchParams: Promise<{
     search?: string
     status?: string
     page?: string
-  }
+  }>
 }
 
 export default async function AdminOrders({ searchParams }: AdminOrdersProps) {
-  const params = searchParams
+  const params = await searchParams
   
   const orders = await getOrders(params)
 

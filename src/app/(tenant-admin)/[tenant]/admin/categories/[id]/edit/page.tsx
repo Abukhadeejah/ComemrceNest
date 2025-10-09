@@ -3,10 +3,10 @@ import { resolveTenantIdFromRequest } from '@/server/tenant'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
 import { CategoryForm } from '@/app/(admin)/admin/categories/CategoryForm'
 
-interface EditProps { params: { id: string; tenant?: string } }
+interface EditProps { params: Promise<{ id: string; tenant?: string }> }
 
 export default async function EditCategoryPage({ params }: EditProps) {
-  const p = params
+  const p = await params
   const tenantId = await resolveTenantIdFromRequest()
   if (!tenantId) notFound()
 

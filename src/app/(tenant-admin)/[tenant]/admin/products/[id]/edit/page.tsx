@@ -4,11 +4,11 @@ import { notFound } from 'next/navigation'
 import { ProductForm } from '../../../../../../(admin)/admin/products/ProductForm'
 
 interface EditProductPageProps {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 export default async function EditProductPage({ params }: EditProductPageProps) {
-  const { id } = params
+  const { id } = await params
   
   try {
     const tenantId = await resolveTenantIdFromRequest()
@@ -184,15 +184,38 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
       material_composition: productWithRelations.material_composition || '',
       care_instructions: productWithRelations.care_instructions || '',
       fit_type: productWithRelations.fit_type || '',
-      model_height_cm: productWithRelations.model_height_cm ?? undefined,
-      model_weight_kg: productWithRelations.model_weight_kg ?? undefined,
+      model_height_cm: productWithRelations.model_height_cm ?? '',
+      model_weight_kg: productWithRelations.model_weight_kg ?? '',
       model_wearing_size: productWithRelations.model_wearing_size || '',
       is_gift_card: productWithRelations.is_gift_card || false,
       gift_card_amount_cents: productWithRelations.gift_card_amount_cents ?? undefined,
       gift_card_expiry_days: productWithRelations.gift_card_expiry_days ?? undefined,
       // Variant data
       variantOptions: productWithRelations.variant_options || [],
-      variantCombinations: productWithRelations.variants || []
+      variantCombinations: productWithRelations.variants || [],
+      // Required missing properties
+      short_description: '',
+      currency: 'INR',
+      barcode: '',
+      tags: [],
+      seo_url: '',
+      tax_class_id: '',
+      brand: '',
+      color: '',
+      material: '',
+      sizeGuides: [],
+      sizeGuideId: '',
+      is_featured: productWithRelations.is_featured || false,
+      is_bestseller: productWithRelations.is_bestseller || false,
+      is_new_arrival: productWithRelations.is_new_arrival || false,
+      is_on_sale: productWithRelations.is_on_sale || false,
+      is_limited_edition: false,
+      is_sold_out: false,
+      custom_badge_text: '',
+      badge_color: '',
+      badge_priority: 0,
+      badge_display_until: '',
+      badge_display_from: ''
     }
 
     return (

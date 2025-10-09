@@ -9,21 +9,21 @@ import { redirect } from 'next/navigation'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
 
 interface TenantAdminProductsProps {
-  params: {
+  params: Promise<{
     tenant: string
-  }
-  searchParams: {
+  }>
+  searchParams: Promise<{
     search?: string
     status?: string
     category?: string
     page?: string
     sort?: string
-  }
+  }>
 }
 
 export default async function TenantAdminProducts({ params, searchParams }: TenantAdminProductsProps) {
-  const { tenant } = params
-  const searchParamsData = searchParams
+  const { tenant } = await params
+  const searchParamsData = await searchParams
   
   // Get tenant ID and validate
   const tenantId = await resolveTenantIdFromRequest()

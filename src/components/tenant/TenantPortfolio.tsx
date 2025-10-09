@@ -8,9 +8,9 @@ const playfair = Playfair_Display({ subsets: ['latin'], weight: ['700','800','90
 interface Project {
   id: string
   title: string
-  description?: string
-  location?: string
-  hero_image_url?: string
+  description?: string | null
+  location?: string | null
+  hero_image_url?: string | null
   featured?: boolean
   slug?: string
 }

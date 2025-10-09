@@ -155,7 +155,7 @@ export default function Header() {
                     </svg>
                   </Link>
                   {/* Dropdown Menu from backend categories */}
-                  <div className="absolute top-full left-0 bg-white shadow-lg border border-gray-200 rounded-md py-2 min-w-[220px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300">
+                  {/* <div className="absolute top-full left-0 bg-white shadow-lg border border-gray-200 rounded-md py-2 min-w-[220px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300">
                     {categories.slice(0, 8).map(cat => (
                       <Link key={cat.id} href={`${basePath}/products?category=${encodeURIComponent(cat.slug)}`} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900">
                         {cat.name}
@@ -164,7 +164,7 @@ export default function Header() {
                     {categories.length === 0 && (
                       <div className="px-4 py-2 text-sm text-gray-500">No categories</div>
                     )}
-                  </div>
+                  </div> */}
                 </div>
               )}
               {mode === 'interiors' && (

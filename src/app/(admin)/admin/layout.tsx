@@ -2,10 +2,10 @@ import type { Metadata } from 'next'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
 import { redirect } from 'next/navigation'
 import { headers, cookies } from 'next/headers'
-import { AdminSidebar } from '@/components/admin/layout/AdminSidebar'
 import AdminBrandingWrapper from '@/components/admin/AdminBrandingWrapper'
 import type { TenantKey } from '@/registry/types'
 import { getEnabledModules } from '@/server/adminModules'
+import { AdminLayout } from '@/components/admin/layout/AdminLayout'
 
 export async function generateMetadata(): Promise<Metadata> {
   const hdrs = await headers()
@@ -25,7 +25,7 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 }
 
-export default async function AdminLayout({
+export default async function AdminRootLayout({
   children,
 }: {
   children: React.ReactNode
@@ -87,21 +87,16 @@ export default async function AdminLayout({
     }
   }
 
-  // Fetch enabled modules server-side and pass to client via data attribute
+  // Fetch enabled modules server-side
   const enabledModules = await getEnabledModules(resolvedTenantId)
 
   return (
     <AdminBrandingWrapper tenantKey={tenantKey || 'bluebell'}>
       <div className="min-h-screen bg-gray-50" data-enabled-modules={JSON.stringify(Array.from(enabledModules))}>
-        <AdminSidebar />
-        <div className="lg:pl-64">
-          <main className="py-6">
-            {children}
-          </main>
-        </div>
+        <AdminLayout>
+          {children}
+        </AdminLayout>
       </div>
     </AdminBrandingWrapper>
   )
 }
-
-
