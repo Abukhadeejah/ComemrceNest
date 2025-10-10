@@ -19,7 +19,8 @@
     "guardrail:deploy-check": "node scripts/guardrail-test.js deploy-check",
     "guardrail:validate": "npx ts-node src/server/guardrail-validator.ts",
     "guardrail:security-test": "npx ts-node src/test/guardrail-break-test.ts",
-    "test:performance": "npx playwright test tests/performance/"
+    "test:performance": "npx playwright test tests/performance/",
+    "postinstall": "npm rebuild lightningcss || true"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.7",
@@ -61,7 +62,16 @@
     "typescript": "^5",
     "vitest": "^3.2.4"
   },
+  "optionalDependencies": {
+    "lightningcss": "^1.28.2",
+    "lightningcss-darwin-arm64": "^1.28.2",
+    "lightningcss-darwin-x64": "^1.28.2",
+    "lightningcss-linux-x64-gnu": "^1.28.2",
+    "lightningcss-linux-x64-musl": "^1.28.2",
+    "lightningcss-win32-x64-msvc": "^1.28.2"
+  },
   "engines": {
-    "node": ">=20"
+    "node": "20.x",
+    "npm": ">=10.0.0"
   }
 }
