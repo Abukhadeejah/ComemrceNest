@@ -107,7 +107,7 @@ export default function Header() {
               </div>
               <div className="hidden sm:block">
                 <h1 className={`${playfair.className} text-xl sm:text-2xl font-bold text-primary`}>
-                  Bluebell Interiors Studio
+                  Bluebell Interiors Studio LLP
                 </h1>
                 <p className="text-xs text-gray-600">Feel the luxurious life</p>
               </div>

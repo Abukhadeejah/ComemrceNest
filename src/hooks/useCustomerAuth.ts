@@ -51,7 +51,7 @@ export function useCustomerAuth(): CustomerAuthState {
     checkAuth()
 
     // Listen for auth changes
-    const { data: { subscription } } = supabaseClient.auth.onAuthStateChange((event) => {
+    const { data: { subscription } } = supabaseClient.auth.onAuthStateChange((event: string) => {
       if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
         checkAuth()
       }
@@ -64,5 +64,3 @@ export function useCustomerAuth(): CustomerAuthState {
 
   return authState
 }
-
-

@@ -6,25 +6,31 @@ import { useBluebellHomeMode } from '@/lib/bluebellHomeMode'
 import type { ProductListItem } from '@/types/product'
 import Testimonials from '@/components/patterns/Testimonials'
 import { bluebellTestimonials } from './testimonialsData'
+import { WHATSAPP_NUMBER } from '@/tenants/bluebell/config'
+
 
 const playfair = Playfair_Display({ subsets: ['latin'], weight: ['700','800','900'] })
+
 
 type HomeClientProps = {
   products: ProductListItem[]
   projects: { id: string; title: string; slug: string; hero_image_url?: string }[]
+  whatsappNumber?: string // Add WhatsApp prop
 }
 
-export default function Home({ products }: HomeClientProps) {
+
+export default function Home({ products, whatsappNumber = WHATSAPP_NUMBER }: HomeClientProps) {
   const [loaded, setLoaded] = useState(false)
   const { mode: storeMode } = useBluebellHomeMode()
   const [viewMode, setViewMode] = useState<'interiors' | 'fabrics'>(storeMode)
   useEffect(() => setLoaded(true), [])
 
+
   // Sync with global store when it changes elsewhere (e.g., header)
   useEffect(() => {
     setViewMode(storeMode)
   }, [storeMode])
-  // Testimonials grid is static for now; slider removed for modularity
+
 
   const interiorsHeroSlides = [
     {
@@ -41,6 +47,7 @@ export default function Home({ products }: HomeClientProps) {
     },
   ]
 
+
   const fabricsHeroSlides = [
     {
       url: "https://images.pexels.com/photos/276267/pexels-photo-276267.jpeg",
@@ -56,6 +63,7 @@ export default function Home({ products }: HomeClientProps) {
     },
   ]
 
+
   const [slideIndex, setSlideIndex] = useState(0)
   useEffect(() => {
     const list = viewMode === 'interiors' ? interiorsHeroSlides : fabricsHeroSlides
@@ -63,9 +71,9 @@ export default function Home({ products }: HomeClientProps) {
     return () => clearInterval(id)
   }, [viewMode, interiorsHeroSlides, fabricsHeroSlides])
 
+
   return (
     <main className="p-0">
-      {/* Header is provided by layout; remove local navbar duplication */}
       {/* Hero Section */}
       <section id="home" className="hero-gradient min-h-[90vh] flex items-center justify-center relative overflow-hidden">
         {/* Hero carousel */}
@@ -85,7 +93,6 @@ export default function Home({ products }: HomeClientProps) {
         <div className="pointer-events-none absolute inset-0 opacity-10 [background-image:repeating-linear-gradient(45deg,rgba(255,255,255,0.1),rgba(255,255,255,0.1)_12px,transparent_12px,transparent_24px)]" />
         {/* Bottom vignette for readability */}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/25 via-black/10 to-transparent" />
-        {/* Removed placeholder photo overlay that caused rounded window artifact */}
         <div className={`hero-content text-center z-10 px-4`}>
           {/* Logo */}
           <div className="hero-logo mb-8">
@@ -168,6 +175,7 @@ export default function Home({ products }: HomeClientProps) {
         </div>
       </section>
 
+
       {/* Divider */}
       <div className="section-divider bg-white">
         <svg viewBox="0 0 1200 120" className="w-full h-16 fill-white">
@@ -176,6 +184,7 @@ export default function Home({ products }: HomeClientProps) {
           <path d="M0,0V5.63C149.93,59,314.09,71.32,475.83,42.57c43-7.64,84.23-20.12,127.61-26.46,59-8.63,112.48,12.24,165.56,35.4C827.93,77.22,886,95.24,951.2,90c86.53-7,172.46-45.71,248.8-84.81V0Z"></path>
         </svg>
       </div>
+
 
       {/* Portfolio Section (Interiors only) */}
       {viewMode === 'interiors' && (
@@ -189,6 +198,7 @@ export default function Home({ products }: HomeClientProps) {
             </p>
           </div>
 
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-start">
             {[
               { title: 'Modern Living Room', badge: 'Featured Project', bg: 'from-primary via-blue-600 to-[color:var(--color-mustard)]' },
@@ -196,7 +206,6 @@ export default function Home({ products }: HomeClientProps) {
               { title: 'Classic Study', badge: 'Classic Design', bg: 'from-[color:var(--color-brown)] via-amber-800 to-[color:var(--color-primary)]' },
             ].map((card, idx) => (
               <div key={card.title} className={`group bg-white rounded-2xl overflow-hidden border border-primary/10 hover:border-mustard/40 shadow-md hover:shadow-lg transition-all duration-700 ease-out hover:-translate-y-1 relative ${loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'} ${idx===1 ? 'md:mt-10' : ''}`} style={{ transitionDelay: `${idx * 120}ms` }}>
-                {/* Light yellow shadow animation */}
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-200/20 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out z-10"></div>
                 
                 <div className={`h-72 bg-gradient-to-br ${card.bg} relative overflow-hidden`}>
@@ -226,6 +235,7 @@ export default function Home({ products }: HomeClientProps) {
       </section>
       )}
 
+
       {/* Divider */}
       <div className="section-divider bg-white">
         <svg viewBox="0 0 1200 120" className="w-full h-20 fill-white rotate-180">
@@ -233,7 +243,8 @@ export default function Home({ products }: HomeClientProps) {
         </svg>
       </div>
 
-      {/* Products Section (Fabrics only) */}
+
+      {/* Products Section (Fabrics only) - PRICES REMOVED, WHATSAPP BUTTONS ADDED */}
       {viewMode === 'fabrics' && (
       <section id="products" className="py-24 bg-white relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -245,47 +256,62 @@ export default function Home({ products }: HomeClientProps) {
             </p>
           </div>
 
-          {/* Top Row - Mock Data (Original Design) */}
+
+          {/* Top Row - Mock Data (PRICE REMOVED) */}
           <div className="mb-12">
             <h3 className="text-2xl font-bold text-primary mb-6 text-center">Design Preview (Mock Data)</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
               {[
-                { title: 'Ocean Breeze', price: '₹ 6,999', tone: 'from-[color:var(--color-primary)] via-blue-600 to-[color:var(--color-primary)]/70' },
-                { title: 'Crimson Velvet', price: '₹ 11,999', tone: 'from-[color:var(--color-crimson)] via-red-600 to-[color:var(--color-crimson)]/70' },
-                { title: 'Golden Silk', price: '₹ 15,999', tone: 'from-[color:var(--color-mustard)] via-yellow-400 to-yellow-300' },
-                { title: 'Earth Linen', price: '₹ 8,999', tone: 'from-[color:var(--color-brown)] via-amber-800 to-amber-700' },
-              ].map((p, idx) => (
-                <div key={p.title} className={`group bg-white rounded-2xl p-8 shadow-md hover:shadow-xl border border-primary/20 hover:border-primary transition-all duration-700 ease-out hover:-translate-y-1 hover:scale-[1.02] relative overflow-hidden ${loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`} style={{ transitionDelay: `${idx * 120}ms` }}>
-                  {/* Light yellow shadow animation */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-200/20 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out"></div>
-                  
-                  <div className={`product-image h-56 bg-gradient-to-br ${p.tone} rounded-xl mb-6 relative overflow-hidden`}>
-                    <div className="absolute inset-0 opacity-25 [background-image:repeating-linear-gradient(45deg,transparent,transparent_8px,rgba(255,255,255,0.15)_8px,rgba(255,255,255,0.15)_16px)]"></div>
-                    <div className="absolute top-3 right-3 w-4 h-4 rounded-full bg-mustard/90 shadow-[0_0_0_3px_rgba(255,255,255,0.6)]"></div>
-                    <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1">
-                      <span className="text-xs font-semibold text-primary">Premium</span>
+                { title: 'Ocean Breeze', tone: 'from-[color:var(--color-primary)] via-blue-600 to-[color:var(--color-primary)]/70' },
+                { title: 'Crimson Velvet', tone: 'from-[color:var(--color-crimson)] via-red-600 to-[color:var(--color-crimson)]/70' },
+                { title: 'Golden Silk', tone: 'from-[color:var(--color-mustard)] via-yellow-400 to-yellow-300' },
+                { title: 'Earth Linen', tone: 'from-[color:var(--color-brown)] via-amber-800 to-amber-700' },
+              ].map((p, idx) => {
+                const whatsappMessage = `Hi, I'm interested in ${p.title}. Can you provide more details?`
+                const whatsappLink = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(whatsappMessage)}`
+                
+                return (
+                  <div key={p.title} className={`group bg-white rounded-2xl p-8 shadow-md hover:shadow-xl border border-primary/20 hover:border-primary transition-all duration-700 ease-out hover:-translate-y-1 hover:scale-[1.02] relative overflow-hidden ${loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`} style={{ transitionDelay: `${idx * 120}ms` }}>
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-200/20 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out"></div>
+                    
+                    <div className={`product-image h-56 bg-gradient-to-br ${p.tone} rounded-xl mb-6 relative overflow-hidden`}>
+                      <div className="absolute inset-0 opacity-25 [background-image:repeating-linear-gradient(45deg,transparent,transparent_8px,rgba(255,255,255,0.15)_8px,rgba(255,255,255,0.15)_16px)]"></div>
+                      <div className="absolute top-3 right-3 w-4 h-4 rounded-full bg-mustard/90 shadow-[0_0_0_3px_rgba(255,255,255,0.6)]"></div>
+                      <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1">
+                        <span className="text-xs font-semibold text-primary">Premium</span>
+                      </div>
                     </div>
+                    <h3 className="text-2xl font-serif font-bold text-primary mb-3">{p.title}</h3>
+                    <p className="text-brown mb-6 leading-relaxed">Premium blend with subtle texture and exceptional durability</p>
+                    
+                    {/* WhatsApp Button - ADDED */}
+                    <a
+                      href={whatsappLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 py-3 text-center font-semibold text-white shadow-md transition-all duration-300 hover:bg-[#20BA5A] active:scale-[0.98] mb-3"
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="flex-shrink-0">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                      </svg>
+                      Message on WhatsApp
+                    </a>
+                    
+                    <button className="w-full bg-mustard text-brown font-bold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 btn-glow">
+                      View Details
+                    </button>
                   </div>
-                  <h3 className="text-2xl font-serif font-bold text-primary mb-3">{p.title}</h3>
-                  <p className="text-brown mb-6 leading-relaxed">Premium blend with subtle texture and exceptional durability</p>
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-2xl font-bold text-primary">{p.price}</span>
-                    <span className="text-sm text-brown">per metre</span>
-                  </div>
-                  <button className="w-full bg-mustard text-brown font-bold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 btn-glow">
-                    View Details
-                  </button>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
 
-          {/* Bottom Row - Real Backend Data */}
+
+          {/* Bottom Row - Real Backend Data (PRICE REMOVED) */}
           <div>
             <h3 className="text-2xl font-bold text-primary mb-6 text-center">Live Products (Backend Data)</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
               {products.slice(0, 8).map((p, idx) => {
-                // Generate dynamic pattern colors based on product characteristics
                 const patternColors = [
                   { bg: 'from-[color:var(--color-primary)] via-blue-600 to-[color:var(--color-primary)]/70', accent: 'var(--color-mustard)' },
                   { bg: 'from-[color:var(--color-crimson)] via-red-600 to-[color:var(--color-crimson)]/70', accent: 'var(--color-mustard)' },
@@ -300,21 +326,17 @@ export default function Home({ products }: HomeClientProps) {
                 const pattern = patternColors[idx % patternColors.length]
                 const badgeText = ['Premium', 'Luxury', 'Elegant', 'Natural', 'Exclusive', 'Artisan', 'Heritage', 'Modern'][idx % 8]
                 
+                const whatsappMessage = `Hi, I'm interested in ${p.name}. Can you provide more details?`
+                const whatsappLink = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(whatsappMessage)}`
+                
                 return (
-                  <a key={p.id} href={`/bluebell/products/${p.slug}`} className={`group bg-white rounded-2xl p-8 shadow-md hover:shadow-xl border border-primary/20 hover:border-primary transition-all duration-700 ease-out hover:-translate-y-1 hover:scale-[1.02] relative overflow-hidden ${loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`} style={{ transitionDelay: `${idx * 120}ms` }}>
-                    {/* Light yellow shadow animation */}
+                  <div key={p.id} className={`group bg-white rounded-2xl p-8 shadow-md hover:shadow-xl border border-primary/20 hover:border-primary transition-all duration-700 ease-out hover:-translate-y-1 hover:scale-[1.02] relative overflow-hidden ${loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`} style={{ transitionDelay: `${idx * 120}ms` }}>
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-200/20 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out"></div>
                     
                     <div className="product-image h-56 rounded-xl mb-6 relative overflow-hidden">
-                      {/* Dynamic Pattern Background */}
                       <div className={`absolute inset-0 bg-gradient-to-br ${pattern.bg} relative overflow-hidden`}>
-                        {/* Diagonal Striped Pattern */}
                         <div className="absolute inset-0 opacity-25 [background-image:repeating-linear-gradient(45deg,transparent,transparent_8px,rgba(255,255,255,0.15)_8px,rgba(255,255,255,0.15)_16px)]"></div>
-                        
-                        {/* Accent Circle */}
                         <div className="absolute top-3 right-3 w-4 h-4 rounded-full shadow-[0_0_0_3px_rgba(255,255,255,0.6)]" style={{ backgroundColor: pattern.accent }}></div>
-                        
-                        {/* Product Image Overlay (if available) */}
                         {p.hero_image_url && (
                           <div className="absolute inset-0 opacity-20">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -322,22 +344,30 @@ export default function Home({ products }: HomeClientProps) {
                           </div>
                         )}
                       </div>
-                      
-                      {/* Badge */}
                       <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1">
                         <span className="text-xs font-semibold text-primary">{badgeText}</span>
                       </div>
                     </div>
                     <h3 className="text-2xl font-serif font-bold text-primary mb-3">{p.name}</h3>
                     <p className="text-brown mb-6 leading-relaxed">{p.description || 'Premium blend with subtle texture and exceptional durability'}</p>
-                    <div className="flex items-center justify-between mb-4">
-                      <span className="text-2xl font-bold text-primary">₹{Math.round((p.price_cents || 0)/100).toLocaleString('en-IN')}</span>
-                      <span className="text-sm text-brown">per metre</span>
-                    </div>
-                    <div className="w-full bg-mustard text-brown text-center font-bold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 btn-glow">
+                    
+                    {/* WhatsApp Button - ADDED */}
+                    <a
+                      href={whatsappLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 py-3 text-center font-semibold text-white shadow-md transition-all duration-300 hover:bg-[#20BA5A] active:scale-[0.98] mb-3"
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="flex-shrink-0">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                      </svg>
+                      Message on WhatsApp
+                    </a>
+                    
+                    <a href={`/bluebell/products/${p.slug}`} className="block w-full bg-mustard text-brown text-center font-bold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 btn-glow">
                       View Details
-                    </div>
-                  </a>
+                    </a>
+                  </div>
                 )
               })}
             </div>
@@ -346,6 +376,7 @@ export default function Home({ products }: HomeClientProps) {
       </section>
       )}
 
+
       {/* Testimonials Section (modular) */}
       <div className="section-divider bg-white">
         <svg viewBox="0 0 1200 120" className="w-full h-16 fill-white">
@@ -353,11 +384,13 @@ export default function Home({ products }: HomeClientProps) {
         </svg>
       </div>
 
+
       <Testimonials
         title="What Our Clients Say"
         subtitle="Trusted by interior designers and homeowners"
         items={bluebellTestimonials}
       />
+
 
       {/* CTA Section */}
       <div className="section-divider bg-white">
@@ -368,15 +401,14 @@ export default function Home({ products }: HomeClientProps) {
         </svg>
       </div>
 
+
       <section id="contact" className="py-24 bg-gradient-to-br from-primary via-blue-700 to-primary relative overflow-hidden text-white">
-        {/* decorative shapes */}
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute -left-6 top-24 w-6 h-6 rotate-45 bg-white/10 rounded-sm" />
           <div className="absolute right-16 top-20 w-16 h-16 rounded-full bg-white/10 blur-xl" />
           <div className="absolute left-1/2 -translate-x-1/2 top-10 w-1.5 h-6 bg-white/60 rounded-full" />
         </div>
         <div className="max-w-6xl mx-auto text-center px-4 sm:px-6 lg:px-8 relative z-10">
-          {/* headline */}
           <h2 className={`${playfair.className} text-4xl md:text-6xl font-black leading-tight tracking-tight drop-shadow-[0_2px_10px_rgba(0,0,0,0.25)]`}>
             Ready to Transform
             <br />
@@ -386,7 +418,7 @@ export default function Home({ products }: HomeClientProps) {
             Let our expert team help you find the perfect fabrics for your next interior design project. Experience the Bluebell difference today.
           </p>
 
-          {/* CTAs */}
+
           <div className="mt-8 flex flex-col sm:flex-row gap-6 justify-center">
             <a className="group inline-flex items-center justify-center bg-mustard text-brown font-bold py-4 px-8 rounded-full text-lg transition-all duration-300 shadow-[0_12px_40px_rgba(253,206,89,0.35)] hover:shadow-[0_16px_50px_rgba(253,206,89,0.55)] hover:-translate-y-0.5" href="#contact">
               Get Free Consultation
@@ -410,7 +442,7 @@ export default function Home({ products }: HomeClientProps) {
             )}
           </div>
 
-          {/* Contact Info Cards */}
+
           <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300">
               <div className="w-12 h-12 bg-mustard rounded-full flex items-center justify-center mx-auto mb-4">
@@ -420,6 +452,7 @@ export default function Home({ products }: HomeClientProps) {
               <p className="text-white/80">(+91) 98765-43210</p>
             </div>
 
+
             <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300">
               <div className="w-12 h-12 bg-crimson rounded-full flex items-center justify-center mx-auto mb-4">
                 <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
@@ -427,6 +460,7 @@ export default function Home({ products }: HomeClientProps) {
               <h3 className="text-white font-bold text-lg mb-1">Email Us</h3>
               <p className="text-white/80">hello@bluebellFabrics.com</p>
             </div>
+
 
             <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300">
               <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mx-auto mb-4">
@@ -441,13 +475,3 @@ export default function Home({ products }: HomeClientProps) {
     </main>
   )
 }
-
-
-
-
-
-
-
-
-
-

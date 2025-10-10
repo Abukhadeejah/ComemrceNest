@@ -69,6 +69,7 @@ export interface Product {
   size_guides?: SizeGuide[]
 }
 
+
 // Type for form data used in admin product form
 export interface ProductFormData {
   // ID for edit mode
@@ -152,6 +153,7 @@ export interface ProductFormData {
   badge_display_from?: string
 }
 
+
 export interface VariantOption {
   id: string
   name: string
@@ -160,12 +162,14 @@ export interface VariantOption {
   values: VariantValue[]
 }
 
+
 export interface VariantValue {
   id: string
   value: string
   displayValue: string
   colorHex?: string
 }
+
 
 export interface SizeGuide {
   id: string
@@ -174,6 +178,7 @@ export interface SizeGuide {
   gender: string
   measurements: Record<string, Record<string, string>>
 }
+
 
 export interface ProductListItem {
   id: string
@@ -185,20 +190,20 @@ export interface ProductListItem {
   stock: number
   currency: string
   hero_image_url?: string | null
-  is_featured?: boolean
-  badge_text?: string
-  badge_color?: string | undefined
-  badge_display_from?: string | undefined
-  badge_display_until?: string | undefined
+  is_featured?: boolean | null  // ← Changed to allow null
+  badge_text?: string | null
+  badge_color?: string | null  // ← Changed to allow null
+  badge_display_from?: string | null  // ← Changed to allow null
+  badge_display_until?: string | null  // ← Changed to allow null
   status: 'draft' | 'published'
-  is_bestseller?: boolean
-  is_new_arrival?: boolean
-  is_on_sale?: boolean
-  is_limited_edition?: boolean
-  is_sold_out?: boolean
-  custom_badge_text?: string
-  badge_priority?: number
-  low_stock_threshold?: number
+  is_bestseller?: boolean | null  // ← Changed to allow null
+  is_new_arrival?: boolean | null  // ← Changed to allow null
+  is_on_sale?: boolean | null  // ← Changed to allow null
+  is_limited_edition?: boolean | null  // ← Changed to allow null
+  is_sold_out?: boolean | null  // ← Changed to allow null
+  custom_badge_text?: string | null  // ← Changed to allow null
+  badge_priority?: number | null  // ← Changed to allow null
+  low_stock_threshold?: number | null  // ← Changed to allow null
   product_variant_options?: Array<{
     variant_options: {
       id: string
@@ -217,14 +222,16 @@ export interface ProductListItem {
         sort_order?: number | null
       }>
     }
-  }>
+  }> | null  // ← Allow null
 }
+
 
 export interface ProductImage {
   url: string
-  alt: string | undefined
+  alt: string | null  // ← Changed from undefined to null
   sort_order: number
 }
+
 
 // Tax Classes System - Use Supabase type for consistency
 export type TaxClass = import('@/types/supabase').TaxClass

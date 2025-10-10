@@ -8,12 +8,12 @@ export interface ProductBadge {
 }
 
 export interface BadgeConfig {
-  is_featured?: boolean
-  is_bestseller?: boolean
-  is_new_arrival?: boolean
-  is_on_sale?: boolean
-  is_limited_edition?: boolean
-  is_sold_out?: boolean
+  is_featured?: boolean | null
+  is_bestseller?: boolean | null
+  is_new_arrival?: boolean | null
+  is_on_sale?: boolean | null
+  is_limited_edition?: boolean | null
+  is_sold_out?: boolean | null
   custom_badge_text?: string | null
   badge_color?: string | null
   badge_priority?: number | null
@@ -141,4 +141,3 @@ export function getBadgeStyle(badge: ProductBadge, customColor?: string | null):
   }
   return {}
 }
-

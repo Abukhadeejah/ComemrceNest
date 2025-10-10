@@ -130,7 +130,7 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
         has_variants_boolean: Boolean(initialData.has_variants),
         variantOptions_length: initialData.variantOptions?.length || 0
       })
-      setFormData(prev => ({
+      setFormData((prev: ProductFormData) => ({
         ...prev,
         ...initialData,
         // Explicit handling for has_variants to prevent undefined
@@ -180,8 +180,8 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
       console.log('DEBUG: ProductForm variant update completed')
       
       // Update the local form state to reflect the changes
-          setFormData(prev => ({
-            ...prev,
+      setFormData((prev: ProductFormData) => ({
+        ...prev,
         has_variants: variantData.hasVariants
       }))
       
@@ -200,7 +200,7 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
   }
 
   const handleInputChange = (field: keyof ProductFormData, value: string | number | boolean | null | unknown[]) => {
-    setFormData(prev => ({
+    setFormData((prev: ProductFormData) => ({
       ...prev,
       [field]: value
     }))
@@ -208,15 +208,15 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
     // Auto-generate slug when name changes
     if (field === 'name' && typeof value === 'string' && value.trim()) {
       const generatedSlug = generateSlug(value)
-      setFormData(prev => ({
+      setFormData((prev: ProductFormData) => ({
         ...prev,
         slug: generatedSlug
       }))
     }
     
     // Clear error for this field
-    if (errors[field]) {
-      setErrors(prev => ({
+    if (errors[field as keyof typeof errors]) {
+      setErrors((prev) => ({
         ...prev,
         [field]: ''
       }))
@@ -418,7 +418,7 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
             const imageUrls = images
               .filter(item => typeof item === 'string')
               .map(item => item as string)
-            setFormData(prev => ({
+            setFormData((prev: ProductFormData) => ({
               ...prev,
               images: imageUrls
             }))

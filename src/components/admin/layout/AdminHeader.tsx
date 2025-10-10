@@ -17,7 +17,7 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
     <header className={`sticky top-0 z-30 flex h-16 shrink-0 items-center gap-x-4 border-b px-4 shadow-sm sm:px-6 lg:px-8 ${
       brandingConfig?.headerBg || 'border-gray-200 bg-white'
     }`}>
-      {/* Mobile menu button - ALWAYS VISIBLE */}
+      {/* Mobile menu button - ALWAYS VISIBLE ON MOBILE */}
       <button
         type="button"
         className="p-2 text-gray-700 hover:text-gray-900 lg:hidden"
@@ -27,15 +27,11 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
         <Bars3Icon className="h-6 w-6" aria-hidden="true" />
       </button>
 
-      {/* Separator */}
+      {/* Separator - Mobile only */}
       <div className="h-6 w-px bg-gray-200 lg:hidden" aria-hidden="true" />
 
-      {/* Logo or Brand Name (Optional) */}
-      <div className="flex-1">
-        <h1 className="text-lg font-semibold text-gray-900 hidden lg:block">
-          {brandingConfig?.brandName || 'Admin Dashboard'}
-        </h1>
-      </div>
+      {/* Spacer to push items to the right */}
+      <div className="flex-1" />
 
       {/* Right side actions */}
       <div className="flex items-center gap-x-3 lg:gap-x-4">
@@ -45,12 +41,12 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
           <BellIcon className="h-6 w-6" aria-hidden="true" />
         </button>
 
-        {/* Separator */}
+        {/* Separator - Desktop only */}
         <div className="hidden lg:block lg:h-6 lg:w-px lg:bg-gray-200" aria-hidden="true" />
 
         {/* Profile dropdown */}
         <Menu as="div" className="relative">
-          <Menu.Button className="flex items-center p-1.5 hover:bg-gray-50 rounded-full">
+          <Menu.Button className="flex items-center p-1.5 hover:bg-gray-50 rounded-full transition-colors">
             <span className="sr-only">Open user menu</span>
             <div className="h-8 w-8 rounded-full bg-indigo-600 flex items-center justify-center">
               <span className="text-sm font-medium text-white">A</span>
@@ -67,7 +63,7 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
           >
             <Menu.Items className="absolute right-0 z-10 mt-2.5 w-48 origin-top-right rounded-md bg-white py-2 shadow-lg ring-1 ring-gray-900/5 focus:outline-none">
               <Menu.Item>
-                {({ active }) => (
+                {({ active }: { active: boolean }) => (
                   <Link
                     href="/admin/profile"
                     className={`${active ? 'bg-gray-50' : ''} block px-4 py-2 text-sm text-gray-900`}
@@ -77,7 +73,7 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
                 )}
               </Menu.Item>
               <Menu.Item>
-                {({ active }) => (
+                {({ active }: { active: boolean }) => (
                   <form action="/api/auth/signout" method="post">
                     <button
                       type="submit"

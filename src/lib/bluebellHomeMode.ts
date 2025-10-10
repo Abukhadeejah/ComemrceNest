@@ -10,7 +10,7 @@ type BluebellHomeModeState = {
 }
 
 export const useBluebellHomeMode = create<BluebellHomeModeState>((set) => ({
-	mode: 'interiors',
+	mode: 'fabrics',
 	setMode: (mode) => set({ mode }),
 }))
 

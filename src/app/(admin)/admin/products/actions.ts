@@ -551,7 +551,7 @@ export async function updateProduct(productId: string, formData: FormData) {
     gift_card_amount_cents: formData.get('gift_card_amount_cents') ? parseInt(formData.get('gift_card_amount_cents') as string) : null,
     gift_card_expiry_days: formData.get('gift_card_expiry_days') ? parseInt(formData.get('gift_card_expiry_days') as string) : null,
     category_id: formData.get('category_id') as string,
-    category_ids: JSON.parse(formData.get('category_ids') as string || '[]'),
+    //category_ids: JSON.parse(formData.get('category_ids') as string || '[]'),
     status: formData.get('status') as string,
     tax_class_id: formData.get('tax_class_id') as string,
     images: formData.getAll('images') as string[],
