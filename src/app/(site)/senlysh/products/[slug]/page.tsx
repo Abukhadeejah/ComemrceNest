@@ -8,11 +8,10 @@ interface SenlyshProductPageProps {
   params: Promise<{ slug: string }>
 }
 
-
 export default async function SenlyshProductPage({ params }: SenlyshProductPageProps) {
   const { slug } = await params
 
-  // Resolve tenant dynamically (guardrails: avoid hardcoding tenant IDs)
+  // Resolve tenant dynamically
   const tenantId = await resolveTenantIdFromRequest()
   if (!tenantId) {
     notFound()
@@ -28,21 +27,22 @@ export default async function SenlyshProductPage({ params }: SenlyshProductPageP
   const variantOptionsRaw = await fetchProductVariantOptions(tenantId, product.id)
   const variantCombinations = await fetchProductVariants(tenantId, product.id)
   
+  // FIXED: Match ProductDetail exact interface naming
   const variantOptions = (variantOptionsRaw || []).map(item => ({
-    variant_options: {
+    variantoptions: {
       id: item.variant_options.id,
       name: item.variant_options.name,
-      display_name: item.variant_options.display_name,
+      displayname: item.variant_options.display_name,  // Changed to 'displayname'
       type: item.variant_options.type,
-      variant_option_values: (item.variant_options.variant_option_values || []).map(v => ({
+      variantoptionvalues: (item.variant_options.variant_option_values || []).map(v => ({  // Changed to 'variantoptionvalues'
         id: v.id,
         value: v.value,
-        display_value: v.display_value,
-        color_hex: v.color_hex,
-        image_url: v.image_url,
-        sort_order: v.sort_order,
-        price_adjustment_cents: v.price_adjustment_cents,
-        cost_adjustment_cents: v.cost_adjustment_cents
+        displayvalue: v.display_value,  // Changed to 'displayvalue'
+        colorhex: v.color_hex,  // Changed to 'colorhex'
+        imageurl: v.image_url,  // Changed to 'imageurl'
+        sortorder: v.sort_order,  // Changed to 'sortorder'
+        priceadjustmentcents: v.price_adjustment_cents,  // Changed to 'priceadjustmentcents'
+        costadjustmentcents: v.cost_adjustment_cents  // Changed to 'costadjustmentcents'
       }))
     }
   }))
@@ -60,7 +60,7 @@ export default async function SenlyshProductPage({ params }: SenlyshProductPageP
       variantCombinations={variantCombinations?.map(vc => ({
         id: vc.id,
         name: vc.name,
-        price_cents: vc.price_cents,
+        pricecents: vc.price_cents,  // Changed to 'pricecents'
         stock: vc.stock || 0,
         sku: vc.sku || '',
         attributes: vc.attributes as Record<string, string>
@@ -93,5 +93,3 @@ export async function generateMetadata({ params }: SenlyshProductPageProps): Pro
     }
   }
 }
-
-
