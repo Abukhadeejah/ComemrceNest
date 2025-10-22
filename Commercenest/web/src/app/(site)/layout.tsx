@@ -12,20 +12,11 @@ export async function generateMetadata(): Promise<Metadata> {
   const segments = pathname.split('/').filter(Boolean)
   const first = segments[0]?.toLowerCase()
   const isTenant = first === 'bluebell' || first === 'senlysh'
-  let tenantKey: string | undefined = isTenant ? first : undefined
+  const tenantKey: string | undefined = isTenant ? first : undefined
 
-  // Fallback to cookie when path does not include tenant prefix
-  if (!tenantKey) {
-    try {
-      const cookieStore = await cookies()
-      const cookieTenant = cookieStore.get('tenant')?.value?.toLowerCase()
-      if (cookieTenant === 'bluebell' || cookieTenant === 'senlysh') {
-        tenantKey = cookieTenant
-      }
-    } catch {
-      // ignore cookie parsing errors
-    }
-  }
+  // CRITICAL FIX: generateMetadata should NOT use tenant cookies for root routes
+  // This prevents metadata contamination and ensures consistent branding
+  // Only tenant-prefixed routes should use cookies
 
   if (!tenantKey) {
     return {
@@ -85,8 +76,7 @@ export default async function SiteLayout({
   const headersList = await headers()
   const pathname = headersList.get('x-pathname') || '/'
   
-  // Extract tenant key from pathname, but only for tenant-specific routes
-  // Root routes (/, /products, etc.) should not have a tenant key
+  // Extract tenant key from pathname first
   const pathSegments = pathname.split('/').filter(Boolean)
   let tenantKey: string | undefined = undefined
   
@@ -98,16 +88,17 @@ export default async function SiteLayout({
     }
   }
 
-  // Fallback to cookie if still undefined
+  // For root routes (/, /products, etc.), check cookies for tenant context
+  // This allows shared routes to maintain tenant branding when accessed from tenant context
   if (!tenantKey) {
     try {
       const cookieStore = await cookies()
-      const cookieTenant = cookieStore.get('tenant')?.value?.toLowerCase()
+      const cookieTenant = cookieStore.get('tenant')?.value
       if (cookieTenant === 'bluebell' || cookieTenant === 'senlysh') {
         tenantKey = cookieTenant
       }
     } catch {
-      // ignore
+      // Ignore cookie errors
     }
   }
 

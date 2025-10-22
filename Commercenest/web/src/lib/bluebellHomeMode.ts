@@ -2,16 +2,16 @@
 
 import { create } from 'zustand'
 
-export type BluebellHomeMode = 'interiors' | 'fabrics'
+type BluebellHomeMode = 'interiors' | 'fabrics'
 
 type BluebellHomeModeState = {
-  mode: BluebellHomeMode
-  setMode: (mode: BluebellHomeMode) => void
+	mode: BluebellHomeMode
+	setMode: (mode: BluebellHomeMode) => void
 }
 
 export const useBluebellHomeMode = create<BluebellHomeModeState>((set) => ({
-  mode: 'interiors',
-  setMode: (mode) => set({ mode }),
+	mode: 'fabrics',
+	setMode: (mode) => set({ mode }),
 }))
 
 

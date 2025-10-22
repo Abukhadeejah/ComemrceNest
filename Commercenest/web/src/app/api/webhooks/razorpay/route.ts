@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
-import { resolveTenantIdFromRequest } from '@/server/tenant'
+import { creditOrderCashback } from '@/server/rewards'
+import { revalidateTag } from 'next/cache'
+import { tenantOrdersTag } from '@/server/cacheTags'
 
 export const runtime = 'nodejs'
 
@@ -11,9 +13,15 @@ async function getActiveWebhookSecret(tenantId?: string | null): Promise<string 
       .from('tenant_payment_settings')
       .select('env, enabled, webhook_secret')
       .eq('tenant_id', tenantId)
-    if (error || !data?.length) return null
+    if (error || !data?.length) {
+      // Fallback to platform webhook secret if no tenant settings
+      return process.env.RAZORPAY_WEBHOOK_SECRET || null
+    }
     const active = data.find(r => r.enabled)
-    if (!active?.webhook_secret) return null
+    if (!active?.webhook_secret) {
+      // Fallback to platform webhook secret if tenant has no webhook secret
+      return process.env.RAZORPAY_WEBHOOK_SECRET || null
+    }
     // Stored as hex with \x prefix
     const hex = String(active.webhook_secret).replace(/^\\x/i, '')
     try {
@@ -33,12 +41,45 @@ export async function POST(req: Request) {
     const rawBody = await req.text()
     const sig = req.headers.get('x-razorpay-signature') || ''
 
-    // Attempt to resolve tenant (may be null for external webhook calls)
-    const tenantId = await resolveTenantIdFromRequest().catch(() => null)
+    // Parse JSON first to get the order ID for tenant resolution
+    let payload: Record<string, unknown>
+    try {
+      payload = JSON.parse(rawBody)
+    } catch {
+      return NextResponse.json({ ok: false, error: 'invalid_json' }, { status: 400 })
+    }
+
+    // DEBUG: Log the actual payload structure
+    console.log('🔍 WEBHOOK DEBUG - Raw payload received:', JSON.stringify(payload, null, 2))
+    console.log('🔍 WEBHOOK DEBUG - Event type:', payload?.event)
+    console.log('🔍 WEBHOOK DEBUG - Payload keys:', Object.keys(payload))
+
+    // Extract order ID from payload to resolve tenant
+    let tenantId: string | null = null
+    if (payload?.event === 'payment.captured' && (payload as { payload?: { order?: { entity?: { id?: string } } } })?.payload?.order?.entity?.id) {
+      const razorpayOrderId = (payload as { payload: { order: { entity: { id: string } } } }).payload.order.entity.id
+      
+      // Find the order to get tenant_id
+      const { data: order } = await supabaseAdmin
+        .from('orders')
+        .select('tenant_id')
+        .eq('razorpay_order_id', razorpayOrderId)
+        .maybeSingle()
+      
+      if (order) {
+        tenantId = order.tenant_id
+      }
+    }
+
+    // Get webhook secret for the tenant
     const secret = await getActiveWebhookSecret(tenantId)
 
-    // In development, allow webhook without verification if no secret configured
-    const allowUnverified = !secret && process.env.NODE_ENV !== 'production'
+    // In development or staging, allow webhook without verification if no secret configured
+    const allowUnverified = !secret && (
+      process.env.NODE_ENV !== 'production' || 
+      process.env.VERCEL_ENV === 'preview' ||
+      process.env.VERCEL_URL?.includes('staging')
+    )
 
     let verified = false
     if (secret) {
@@ -47,24 +88,130 @@ export async function POST(req: Request) {
       hmac.update(rawBody)
       const expected = hmac.digest('hex')
       verified = Boolean(sig && crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected)))
+      console.log('🔍 WEBHOOK DEBUG - Signature verification:', {
+        hasSecret: !!secret,
+        hasSignature: !!sig,
+        verified,
+        expected: expected.substring(0, 10) + '...',
+        received: sig?.substring(0, 10) + '...'
+      })
+    } else {
+      console.log('🔍 WEBHOOK DEBUG - No webhook secret configured, allowUnverified:', allowUnverified)
     }
 
     if (!verified && !allowUnverified) {
+      console.log('🔍 WEBHOOK DEBUG - Webhook rejected due to invalid signature')
       return NextResponse.json({ ok: false, error: 'invalid_signature' }, { status: 401 })
     }
 
-    // Parse JSON safely after signature verification
-    // let payload: unknown
-    // try {
-    //   payload = JSON.parse(rawBody)
-    // } catch {
-    //   payload = null
-    // }
+    // Payload already parsed above for tenant resolution
 
-    // TODO: Map events (e.g. payment.captured) to order state transitions
-    // For now, just acknowledge
-    return NextResponse.json({ ok: true, verified, tenantId: tenantId || null })
+    // Handle payment.captured event
+    console.log('🔍 WEBHOOK DEBUG - Checking payment.captured event...')
+    console.log('🔍 WEBHOOK DEBUG - Event match:', payload?.event === 'payment.captured')
+    
+    // Check for the correct payload structure: event.payload.payment.entity.order_id
+    const paymentEntity = (payload as { payload?: { payment?: { entity?: { order_id?: string } } } })?.payload?.payment?.entity
+    console.log('🔍 WEBHOOK DEBUG - Payment entity:', paymentEntity)
+    console.log('🔍 WEBHOOK DEBUG - Order ID from payment:', paymentEntity?.order_id)
+    
+    if (payload?.event === 'payment.captured' && paymentEntity?.order_id) {
+      const razorpayOrderId = paymentEntity.order_id
+      console.log('🔍 WEBHOOK DEBUG - Extracted order ID:', razorpayOrderId)
+      
+      // Find the order in our database
+      const { data: order } = await supabaseAdmin
+        .from('orders')
+        .select(`
+          id,
+          tenant_id,
+          order_number,
+          total_cents,
+          currency,
+          email,
+          order_items (
+            product_id,
+            quantity,
+            unit_price_cents,
+            subtotal_cents
+          )
+        `)
+        .eq('razorpay_order_id', razorpayOrderId)
+        .maybeSingle()
+
+      if (order) {
+        // Update order status to paid
+        await supabaseAdmin
+          .from('orders')
+          .update({ status: 'paid' })
+          .eq('id', order.id)
+
+        // Invalidate orders cache to ensure admin panel shows updated status
+        revalidateTag(tenantOrdersTag(order.tenant_id))
+        revalidateTag('orders')
+
+        // Find customer by email
+        const { data: customer } = await supabaseAdmin
+          .from('customers')
+          .select('id')
+          .eq('tenant_id', order.tenant_id)
+          .eq('email', order.email)
+          .maybeSingle()
+
+        if (customer) {
+          // Calculate order context for cashback
+          const orderItems = order.order_items || []
+          const subtotal_cents = orderItems.reduce((sum: number, item: { subtotal_cents: number }) => sum + item.subtotal_cents, 0)
+          
+          // Get actual product costs from the database
+          const productIds = orderItems.map((item: { product_id: string }) => item.product_id)
+          const { data: products } = await supabaseAdmin
+            .from('products')
+            .select('id, cost_per_item_cents')
+            .in('id', productIds)
+          
+          // Calculate total cost based on actual product costs
+          let cost_cents = 0
+          if (products) {
+            cost_cents = orderItems.reduce((sum: number, item: { product_id: string; quantity: number }) => {
+              const product = products.find(p => p.id === item.product_id)
+              const itemCost = product?.cost_per_item_cents || 0
+              return sum + (itemCost * item.quantity)
+            }, 0)
+          }
+          
+          const shipping_cents = 0 // No shipping cost in current setup
+          const discounts_cents = 0 // No discounts in current setup
+
+          // Credit cashback to customer's wallet
+          const cashbackResult = await creditOrderCashback(
+            order.tenant_id,
+            customer.id,
+            order.id,
+            {
+              subtotal_cents,
+              shipping_cents,
+              cost_cents,
+              discounts_cents,
+              currency: order.currency || 'INR'
+            }
+          )
+
+          console.log('Cashback credit result:', cashbackResult)
+        }
+      }
+    } else {
+      console.log('🔍 WEBHOOK DEBUG - Event not processed. Reasons:')
+      console.log('  - Event type:', payload?.event)
+      console.log('  - Is payment.captured?', payload?.event === 'payment.captured')
+      console.log('  - Has order ID?', !!(payload as { payload?: { order?: { entity?: { id?: string } } } })?.payload?.order?.entity?.id)
+      console.log('  - Full payload structure:', JSON.stringify(payload, null, 2))
+    }
+
+    console.log('🔍 WEBHOOK DEBUG - Webhook processing completed, verified:', verified)
+    return NextResponse.json({ ok: true, verified })
   } catch (err) {
+    console.error('🔍 WEBHOOK DEBUG - Error occurred:', err)
     return NextResponse.json({ ok: false, error: (err as Error).message }, { status: 500 })
   }
 }

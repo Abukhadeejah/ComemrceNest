@@ -10,13 +10,15 @@ import {
   DocumentTextIcon,
   ChartBarIcon,
   Cog6ToothIcon,
-  UserGroupIcon
+  UserGroupIcon,
+  CalculatorIcon
 } from '@heroicons/react/24/outline'
 
 const navigation = [
   { name: 'Dashboard', href: '/admin', icon: Squares2X2Icon },
   { name: 'Products', href: '/admin/products', icon: CubeIcon },
   { name: 'Categories', href: '/admin/categories', icon: TagIcon },
+  { name: 'Tax Classes', href: '/admin/tax-classes', icon: CalculatorIcon },
   { name: 'Orders', href: '/admin/orders', icon: ShoppingCartIcon },
   { name: 'Content', href: '/admin/content', icon: DocumentTextIcon },
   { name: 'Analytics', href: '/admin/analytics', icon: ChartBarIcon },

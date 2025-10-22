@@ -5,6 +5,10 @@ export default async function OrderStatus({ params }: { params: Promise<{ orderI
   const { orderId } = await params
   const tenantId = await resolveTenantIdFromRequest()
 
+  if (!tenantId) {
+    return <div className="p-6">Tenant not found</div>
+  }
+
   // Look up by Razorpay order id first, then by internal id
   const { data: byRzp } = await supabaseAdmin
     .from('orders')

@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import AutoCarousel from '@/components/tenant/AutoCarousel';
 
 interface Category {
   name: string;
@@ -15,6 +16,15 @@ interface Category {
   salePrice?: string;
 }
 
+interface ApiCategory {
+  id: string;
+  name: string;
+  slug: string;
+  parent_id?: string;
+  image_url?: string;
+  image_alt?: string;
+}
+
 interface CategoryRow {
   title: string;
   categories: Category[];
@@ -26,6 +36,7 @@ interface CategoriesSectionProps {
   subtitle?: string;
   categoryRows?: CategoryRow[];
   bgColor?: string;
+  categories?: ApiCategory[];
 }
 
 const defaultCategoryRows: CategoryRow[] = [
@@ -48,7 +59,7 @@ const defaultCategoryRows: CategoryRow[] = [
         isNew: true
       },
       { 
-        name: 'Jeans', 
+        name: 'Men Jeans', 
         image: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=400&h=400&fit=crop', 
         url: '/shop/men/jeans',
         count: '40+ Items',
@@ -103,7 +114,7 @@ const defaultCategoryRows: CategoryRow[] = [
         count: '45+ Items'
       },
       { 
-        name: 'Jeans', 
+        name: 'Women Jeans', 
         image: 'https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=400&h=400&fit=crop', 
         url: '/shop/women/jeans',
         count: '55+ Items',
@@ -132,9 +143,86 @@ const defaultCategoryRows: CategoryRow[] = [
 const CategoriesSection: React.FC<CategoriesSectionProps> = ({
   title = "Shop by Category",
   subtitle = "Discover the latest trends in men's and women's fashion",
-  categoryRows = defaultCategoryRows,
-  bgColor = "bg-gray-50"
+  categoryRows: propCategoryRows,
+  bgColor = "bg-gray-50",
+  categories: propCategories
 }) => {
+  const [categoryRows, setCategoryRows] = useState<CategoryRow[]>(propCategoryRows || defaultCategoryRows);
+
+  useEffect(() => {
+    if (propCategories && propCategories.length > 0) {
+      // Group categories by type
+      const menCategories = propCategories.filter(cat => 
+        cat.name.toLowerCase().includes('men') || 
+        cat.name.toLowerCase().includes('shirt') ||
+        cat.name.toLowerCase().includes('jeans') ||
+        cat.name.toLowerCase().includes('trouser') ||
+        cat.name.toLowerCase().includes('jacket') ||
+        cat.name.toLowerCase().includes('sweater') ||
+        cat.name.toLowerCase().includes('hoodie') ||
+        cat.name.toLowerCase().includes('t-shirt')
+      );
+      
+      const womenCategories = propCategories.filter(cat => 
+        cat.name.toLowerCase().includes('women') || 
+        cat.name.toLowerCase().includes('dress') ||
+        cat.name.toLowerCase().includes('top') ||
+        cat.name.toLowerCase().includes('skirt') ||
+        cat.name.toLowerCase().includes('blouse')
+      );
+      
+      const otherCategories = propCategories.filter(cat => 
+        !menCategories.includes(cat) && !womenCategories.includes(cat)
+      );
+
+      const rows: CategoryRow[] = [];
+      
+      if (menCategories.length > 0) {
+        rows.push({
+          title: "Men's Fashion",
+          description: "Discover the latest trends in men's clothing and accessories",
+          categories: menCategories.slice(0, 6).map(cat => ({
+            name: cat.name,
+            image: cat.image_url || `https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400&h=400&fit=crop`,
+            url: `/senlysh/products?category=${cat.slug}`,
+            count: '50+ Items',
+            isTrending: Math.random() > 0.7
+          }))
+        });
+      }
+      
+      if (womenCategories.length > 0) {
+        rows.push({
+          title: "Women's Fashion",
+          description: "Explore stunning women's clothing, accessories, and footwear",
+          categories: womenCategories.slice(0, 6).map(cat => ({
+            name: cat.name,
+            image: cat.image_url || `https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?w=400&h=400&fit=crop`,
+            url: `/senlysh/products?category=${cat.slug}`,
+            count: '65+ Items',
+            isNew: Math.random() > 0.8
+          }))
+        });
+      }
+      
+      if (otherCategories.length > 0) {
+        rows.push({
+          title: "Other Categories",
+          description: "Explore our diverse range of products",
+          categories: otherCategories.slice(0, 6).map(cat => ({
+            name: cat.name,
+            image: cat.image_url || `https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=400&fit=crop`,
+            url: `/senlysh/products?category=${cat.slug}`,
+            count: '40+ Items',
+            hasSale: Math.random() > 0.6,
+            salePercentage: Math.floor(Math.random() * 30) + 10
+          }))
+        });
+      }
+      
+      setCategoryRows(rows);
+    }
+  }, [propCategories]);
   return (
     <section className={`py-12 sm:py-16 md:py-20 ${bgColor}`}>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -159,103 +247,104 @@ const CategoriesSection: React.FC<CategoriesSectionProps> = ({
                 <div className="w-24 h-1 bg-gradient-to-r from-purple-500 to-pink-500 mx-auto rounded-full"></div>
               </div>
 
-              {/* Categories Grid - Horizontal Scrollable */}
-              <div className="relative">
-                <div className="flex gap-4 sm:gap-6 overflow-x-auto scrollbar-hide pb-4 sm:pb-6
-                  scroll-smooth snap-x snap-mandatory
-                  [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                  {row.categories.map((category) => (
-                    <Link key={category.name} href={category.url} className="group flex-shrink-0 w-48 sm:w-56 md:w-64 snap-start">
-                      <div className="relative overflow-hidden rounded-xl shadow-lg 
-                        transition-transform duration-300 ease-out will-change-transform
-                        group-hover:scale-105 group-hover:shadow-xl
-                        group-hover:-translate-y-1 motion-reduce:transition-none">
-                        {/* Category Image */}
-                        <div className="relative h-32 sm:h-40 md:h-48">
-                          <Image
-                            src={category.image}
-                            alt={category.name}
-                            fill
-                            loading="lazy"
-                            className="object-cover 
-                              transition-transform duration-300 ease-out will-change-transform
-                              group-hover:scale-110 motion-reduce:transition-none"
-                          />
-                          {/* Optimized Base Overlay */}
-                          <div className="absolute inset-0 
-                            bg-gradient-to-t from-black/60 via-black/20 to-transparent
-                            group-hover:from-black/50 group-hover:via-black/15
-                            transition-all duration-300 motion-reduce:transition-none"></div>
-                        </div>
-                        
-                        {/* Optimized Badges */}
-                        <div className="absolute top-2 left-2 flex flex-col gap-1">
-                          {category.isTrending && (
-                            <span className="bg-orange-500 text-white text-xs px-2 py-1 rounded-full font-semibold 
-                              animate-pulse motion-reduce:animate-none">
-                              🔥 Trending
-                            </span>
-                          )}
-                          {category.isNew && (
-                            <span className="bg-green-500 text-white text-xs px-2 py-1 rounded-full font-semibold">
-                              ✨ New
-                            </span>
-                          )}
-                          {category.hasSale && (
-                            <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-semibold">
-                              {category.salePercentage}% OFF
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Optimized Category Info */}
-                        <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4">
-                          <h4 className="text-white text-sm sm:text-base font-semibold mb-1
-                            transition-colors duration-300 motion-reduce:transition-none
-                            group-hover:text-yellow-200">
-                            {category.name}
-                          </h4>
-                          {category.count && (
-                            <p className="text-white/80 text-xs sm:text-sm
-                              transition-colors duration-300 motion-reduce:transition-none
-                              group-hover:text-white">
-                              {category.count}
-                            </p>
-                          )}
-                          {/* Optimized Price Info for Sale Items */}
-                          {category.hasSale && category.salePercentage && (
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-yellow-300 text-xs font-semibold
-                                transition-colors duration-300 motion-reduce:transition-none
-                                group-hover:text-yellow-200">
-                                Up to {category.salePercentage}% off
-                              </span>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Optimized Hover Effect */}
-                        <div className="absolute inset-0 
-                          bg-gradient-to-t from-purple-500/20 to-transparent 
-                          opacity-0 group-hover:opacity-100 
-                          transition-opacity duration-300 motion-reduce:transition-none"></div>
+              {/* Categories Auto-Play Carousel */}
+              <AutoCarousel
+                itemsPerView={{
+                  mobile: 2.5,
+                  tablet: 3,
+                  desktop: 4
+                }}
+                autoPlay={true}
+                autoPlayInterval={8000}
+                showControls={false}  // Remove play/pause button
+                showIndicators={true}
+                showProgress={true}
+                className="px-4"
+              >
+                {row.categories.map((category, index) => (
+                  <Link key={`${rowIndex}-${category.name}-${index}`} href={category.url} className="group flex-shrink-0 w-full px-2">
+                    <div className="relative overflow-hidden rounded-xl shadow-lg
+                      transition-transform duration-300 ease-out will-change-transform
+                      group-hover:scale-105 group-hover:shadow-xl
+                      group-hover:-translate-y-1 motion-reduce:transition-none">
+                      {/* Category Image */}
+                      <div className="relative h-32 sm:h-40 md:h-48">
+                        <Image
+                          src={category.image}
+                          alt={category.name}
+                          fill
+                          loading="lazy"
+                          className="object-cover
+                            transition-transform duration-300 ease-out will-change-transform
+                            group-hover:scale-110 motion-reduce:transition-none"
+                        />
+                        {/* Optimized Base Overlay */}
+                        <div className="absolute inset-0
+                          bg-gradient-to-t from-black/60 via-black/20 to-transparent
+                          group-hover:from-black/50 group-hover:via-black/15
+                          transition-all duration-300 motion-reduce:transition-none"></div>
                       </div>
-                    </Link>
-                  ))}
-                </div>
 
-                {/* Scroll Indicators */}
-                <div className="flex justify-center mt-4 space-x-2">
-                  <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
-                  <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
-                  <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
-                </div>
-              </div>
+                      {/* Optimized Badges */}
+                      <div className="absolute top-2 left-2 flex flex-col gap-1">
+                        {category.isTrending && (
+                          <span className="bg-orange-500 text-white text-xs px-2 py-1 rounded-full font-semibold
+                            animate-pulse motion-reduce:animate-none">
+                            🔥 Trending
+                          </span>
+                        )}
+                        {category.isNew && (
+                          <span className="bg-green-500 text-white text-xs px-2 py-1 rounded-full font-semibold">
+                            ✨ New
+                          </span>
+                        )}
+                        {category.hasSale && (
+                          <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-semibold">
+                            {category.salePercentage}% OFF
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Optimized Category Info */}
+                      <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4">
+                        <h4 className="text-white text-sm sm:text-base font-semibold mb-1
+                          transition-colors duration-300 motion-reduce:transition-none
+                          group-hover:text-yellow-200">
+                          {category.name}
+                        </h4>
+                        {category.count && (
+                          <p className="text-white/80 text-xs sm:text-sm
+                            transition-colors duration-300 motion-reduce:transition-none
+                            group-hover:text-white">
+                            {category.count}
+                          </p>
+                        )}
+                        {/* Optimized Price Info for Sale Items */}
+                        {category.hasSale && category.salePercentage && (
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-yellow-300 text-xs font-semibold
+                              transition-colors duration-300 motion-reduce:transition-none
+                              group-hover:text-yellow-200">
+                              Up to {category.salePercentage}% off
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Optimized Hover Effect */}
+                      <div className="absolute inset-0
+                        bg-gradient-to-t from-purple-500/20 to-transparent
+                        opacity-0 group-hover:opacity-100
+                        transition-opacity duration-300 motion-reduce:transition-none"></div>
+                    </div>
+                  </Link>
+                ))}
+              </AutoCarousel>
 
               {/* Optimized View All Button for each row */}
               <div className="text-center">
                 <Link 
-                  href={rowIndex === 0 ? '/shop/men' : '/shop/women'}
+                  href={rowIndex === 0 ? '/senlysh/products?category=men' : '/senlysh/products?category=women'}
                   className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-3 rounded-full font-semibold 
                     transition-all duration-300 shadow-lg hover:shadow-xl 
                     transform hover:scale-105 hover:-translate-y-1

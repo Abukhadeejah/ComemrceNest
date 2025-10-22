@@ -6,13 +6,14 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData()
     await updateSettings(formData)
     
-    return NextResponse.json({ success: true })
+    // Redirect to the admin dashboard with success message
+    const referer = request.headers.get('referer') || request.url
+    return NextResponse.redirect(new URL(referer + '?success=settings-updated'))
   } catch (error) {
     console.error('Settings update error:', error)
-    return NextResponse.json(
-      { error: 'Failed to update settings' },
-      { status: 500 }
-    )
+    // Redirect with error message
+    const referer = request.headers.get('referer') || request.url
+    return NextResponse.redirect(new URL(referer + '?error=settings-failed'))
   }
 }
 

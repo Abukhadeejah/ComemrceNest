@@ -3,7 +3,7 @@ import type { TenantConfig } from '../types'
 export const bluebellConfig: TenantConfig = {
   key: 'bluebell',
   brand: {
-    name: 'Bluebell FABRICS',
+    name: 'Bluebell Interiors Studio LLP',
     tagline: 'Creating beautiful interiors with premium fabrics since 1985',
   },
   theme: {
@@ -49,8 +49,9 @@ export const bluebellConfig: TenantConfig = {
     },
     contact: {
       address: '123 Design Street New Delhi, 110001',
-      phone: '(+91) 98765-43210',
+      phone: '(+91) 83838-58285',
       email: 'hello@bluebellFabrics.com',
+      whatsapp: '918383858285',
     },
   },
   features: {
@@ -61,4 +62,6 @@ export const bluebellConfig: TenantConfig = {
   },
 }
 
-
+// Export WhatsApp number with optional chaining and nullish coalescing
+// This safely handles if contact or whatsapp is undefined
+export const WHATSAPP_NUMBER = bluebellConfig.content.contact?.whatsapp ?? '919876543210'

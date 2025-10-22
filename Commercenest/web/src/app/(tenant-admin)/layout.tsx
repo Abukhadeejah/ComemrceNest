@@ -1,11 +1,11 @@
 import type { Metadata } from 'next'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
 import { redirect } from 'next/navigation'
-import { AdminSidebar } from '@/components/admin/layout/AdminSidebar'
 import AuthGate from '@/components/admin/AuthGate'
 import AdminBrandingWrapper from '@/components/admin/AdminBrandingWrapper'
 import type { TenantKey } from '@/registry/types'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
+import { AdminLayout } from '@/components/admin/layout/AdminLayout'
 
 export const metadata: Metadata = {
   title: 'Admin Dashboard',
@@ -19,9 +19,14 @@ export const metadata: Metadata = {
 
 export default async function TenantAdminLayout({
   children,
+  params,
 }: {
   children: React.ReactNode
+  params: Promise<{ tenant: string }>  // ← Changed to Promise
 }) {
+  // Await params (Next.js 15 requirement)
+  const { tenant } = await params
+  
   const tenantId = await resolveTenantIdFromRequest()
   
   if (!tenantId) {
@@ -35,16 +40,11 @@ export default async function TenantAdminLayout({
   }
 
   return (
-    <AdminBrandingWrapper tenantKey={tenantKey as TenantKey}>
+    <AdminBrandingWrapper tenantKey={tenantKey || 'bluebell'}>
       <AuthGate>
-        <div className="min-h-screen bg-gray-50">
-          <AdminSidebar />
-          <div className="lg:pl-64">
-            <main className="py-6">
-              {children}
-            </main>
-          </div>
-        </div>
+        <AdminLayout>
+          {children}
+        </AdminLayout>
       </AuthGate>
     </AdminBrandingWrapper>
   )
@@ -67,6 +67,3 @@ async function getTenantKeyFromId(tenantId: string): Promise<string | null> {
   
   return nameToKey[data.name] || null
 }
-
-
-

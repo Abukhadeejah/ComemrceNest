@@ -1,11 +1,13 @@
-"use client"
-import { useState } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { useRouter } from 'next/navigation'
+'use client'
 
-export default function LoginPage() {
-  const supabase = createClientComponentClient()
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { supabaseClient } from '@/lib/supabaseClient'
+import { PasswordInput } from '@/components/PasswordInput'
+
+export default function AdminLoginPage() {
   const router = useRouter()
+  const supabase = supabaseClient
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -15,72 +17,90 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true)
     setError(null)
-    
-    const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    })
+
     setLoading(false)
-    
+
     if (error) {
       setError(error.message)
       return
     }
 
     if (data.user && data.session) {
-      // Simple email-based tenant mapping for login redirect
-      const emailToTenant: Record<string, string> = {
-        'admin@bluebell.in': 'bluebell',
-        'admin@senlysh.in': 'senlysh',
+      const resp = await fetch('/api/auth/admin-tenant', { cache: 'no-store' })
+      if (resp.ok) {
+        const json = await resp.json()
+        if (json?.tenantKey) {
+          router.replace(`/${json.tenantKey}/admin`)
+          return
+        }
       }
-      
-      const tenantKey = emailToTenant[data.user.email || '']
-      if (tenantKey) {
-        router.replace(`/${tenantKey}/admin`)
-      } else {
-        setError('No tenant access found for this email')
-      }
+      await supabase.auth.signOut()
+      setError('Admin access only. Please use your tenant login page.')
     }
   }
 
   return (
-    <main className="mx-auto max-w-sm p-6">
-      <h1 className="mb-4 text-xl font-semibold">Sign in</h1>
-      <form onSubmit={onSubmit} className="space-y-4">
-        <div>
-          <label className="mb-1 block text-sm">Email</label>
-          <input 
-            className="w-full rounded border p-2" 
-            type="email" 
-            autoComplete="email"
-            value={email} 
-            onChange={(e) => setEmail(e.target.value)} 
-            required 
-          />
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
+        <div className="text-center mb-8">
+          <div className="w-12 h-12 mx-auto mb-6 bg-gray-900 rounded-full flex items-center justify-center">
+            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Admin Sign In</h1>
+          <p className="text-gray-600">Enter your admin credentials to continue</p>
         </div>
-        <div>
-          <label className="mb-1 block text-sm">Password</label>
-          <input 
-            className="w-full rounded border p-2" 
-            type="password" 
-            autoComplete="current-password"
-            value={password} 
-            onChange={(e) => setPassword(e.target.value)} 
-            required 
-          />
-        </div>
-        {error ? <p className="text-sm text-red-600">{error}</p> : null}
-        <button 
-          type="submit"
-          disabled={loading} 
-          className="w-full rounded bg-black px-4 py-2 text-white disabled:opacity-60 hover:bg-gray-800"
-        >
-          {loading ? 'Signing in…' : 'Sign in'}
-        </button>
-      </form>
-      
-      <div className="mt-4 text-center text-sm text-gray-600">
-        <p>Contact your super admin for account access</p>
+
+        <form onSubmit={onSubmit} className="space-y-6">
+          <div>
+            <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
+            <input
+              id="email"
+              className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-gray-900 focus:ring-2 focus:ring-gray-200 transition-all duration-200"
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              placeholder="admin@example.com"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">Password</label>
+            <PasswordInput
+              id="password"
+              name="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Your password"
+              required
+              autoComplete="current-password"
+              className="border-2 border-gray-200 rounded-xl focus:border-gray-900 focus:ring-2 focus:ring-gray-200 transition-all duration-200"
+            />
+          </div>
+
+          {error ? (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          ) : null}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-gray-900 text-white font-semibold py-3 px-6 rounded-xl hover:bg-black disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-300"
+          >
+            {loading ? 'Signing in...' : 'Sign In'}
+          </button>
+        </form>
       </div>
-    </main>
+    </div>
   )
 }
-
-

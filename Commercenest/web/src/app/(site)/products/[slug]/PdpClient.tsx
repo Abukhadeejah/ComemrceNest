@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Playfair_Display, Inter } from 'next/font/google'
 import { useCart } from '@/lib/cart'
+import { WHATSAPP_NUMBER } from '@/tenants/bluebell/config'
 
 const playfair = Playfair_Display({ subsets: ['latin'], weight: ['700','800','900'] })
 const inter = Inter({ subsets: ['latin'], weight: ['300','400','500','600','700'] })
@@ -26,10 +27,7 @@ export default function PdpClient({ productId, name, description, hero_image_url
   const router = useRouter()
   const [isAddingToCart, setIsAddingToCart] = useState(false)
 
-  // Safe URL normalizer:
-  // 1. trim & fix single-slash protocol
-  // 2. if quotes/brackets present, extract first http(s) substring
-  // 3. strip trailing slashes
+  // Safe URL normalizer
   const safeUrl = (url?: string | null): string => {
     if (!url) return ''
     let str = url.trim().replace(/^(https?:)\/(?!\/)/, '$1//')
@@ -66,11 +64,13 @@ export default function PdpClient({ productId, name, description, hero_image_url
       return true
     })
   }, [hero_image_url, images, name, productId])
+  
   const [index, setIndex] = useState(0)
   const [zoom, setZoom] = useState(false)
   const [origin, setOrigin] = useState<{x:number;y:number}>({ x: 50, y: 50 })
   const [qty, setQty] = useState(1)
 
+  // Keep price for cart functionality but don't display it
   const price = useMemo(() => {
     return (price_cents / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })
   }, [price_cents])
@@ -89,10 +89,6 @@ export default function PdpClient({ productId, name, description, hero_image_url
         imageUrl: hero_image_url || images[0]?.url,
         quantity: qty
       })
-
-      // Show success feedback
-      // You could add a toast notification here
-      // Redirect to cart for clear confirmation and to proceed to checkout
       router.push('/cart')
     } catch (error) {
       console.error('Failed to add to cart:', error)
@@ -101,9 +97,13 @@ export default function PdpClient({ productId, name, description, hero_image_url
     }
   }
 
+  // WhatsApp integration
+  const whatsappMessage = `Hi, I'm interested in ${name}. Can you provide more details?`
+  const whatsappLink = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(whatsappMessage)}`
+
   return (
     <>
-      {/* Breadcrumb (flush under navbar, no extra top spacing) */}
+      {/* Breadcrumb */}
       <div className="bg-gray-50 border-b border-gray-100">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4">
           <nav className="flex items-center gap-2 text-sm">
@@ -127,7 +127,7 @@ export default function PdpClient({ productId, name, description, hero_image_url
         {/* Gallery */}
         <div className="lg:sticky lg:top-28 self-start">
           <div
-            className="group relative w-full overflow-hidden rounded-2xl border border-gray-2 00 shadow-sm aspect-[4/3] bg-white cursor-zoom-in"
+            className="group relative w-full overflow-hidden rounded-2xl border border-gray-200 shadow-sm aspect-[4/3] bg-white cursor-zoom-in"
             onMouseEnter={() => setZoom(true)}
             onMouseLeave={() => setZoom(false)}
             onMouseMove={(e) => {
@@ -207,10 +207,24 @@ export default function PdpClient({ productId, name, description, hero_image_url
           </div>
           <p className={`${inter.className} text-[color:var(--color-brown)] text-lg leading-relaxed mb-6`}>{description || 'Premium fabric with refined texture and exceptional durability.'}</p>
 
-          <div className="flex items-end gap-4 mb-8">
-            <div className="text-3xl md:text-4xl font-extrabold text-[color:var(--color-crimson)]">{price}</div>
-            <div className={`${inter.className} text-[color:var(--color-brown)]`}>per metre</div>
-          </div>
+          {/* PRICE SECTION REMOVED - WhatsApp Button Added */}
+          {/* WhatsApp Button - ONLY FOR BLUEBELL */}
+{tenantKey === 'bluebell' && (
+  <div className="mb-6">
+    <a
+      href={whatsappLink}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="w-full flex items-center justify-center gap-2 rounded-lg bg-[#25D366] px-6 py-4 text-center text-base font-semibold text-white shadow-md transition-all duration-300 hover:bg-[#20BA5A] active:scale-[0.98]"
+    >
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="flex-shrink-0">
+        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+      </svg>
+      Message on WhatsApp
+    </a>
+  </div>
+)}
+
 
           {/* Quantity selector */}
           <div className="flex items-center gap-3 mb-6">
@@ -275,5 +289,3 @@ export default function PdpClient({ productId, name, description, hero_image_url
     </>
   )
 }
-
-

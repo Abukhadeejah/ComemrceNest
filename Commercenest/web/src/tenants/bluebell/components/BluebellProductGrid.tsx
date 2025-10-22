@@ -1,10 +1,10 @@
-'use client'
+"use client"
 
-import React from 'react'
+import React, { useMemo, useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { useMemo } from 'react'
 import { ProductListItem } from '@/server/modules/products/service'
+import { WHATSAPP_NUMBER } from '@/tenants/bluebell/config'
 
 interface BluebellProductGridProps {
   products: ProductListItem[]
@@ -33,6 +33,7 @@ export default function BluebellProductGrid({ products }: BluebellProductGridPro
 }
 
 function ProductCard({ product }: { product: ProductListItem }) {
+  // Keep price calculation for cart functionality, but don't display it
   const pricePerYard = (product.price_cents || 0) / 100
   
   // Generate a badge type based on product name or category
@@ -61,20 +62,18 @@ function ProductCard({ product }: { product: ProductListItem }) {
   
   const badge = getBadgeType()
   
-  const productUrl = useMemo(() => {
-  if (typeof window !== "undefined") {
-    return `${window.location.origin}/bluebell/products/${product.slug}`;
-  }
-  return "";
-}, [product.slug]);
+  // Compute QR URL after mount to avoid SSR/CSR mismatch
+  const [qrDataUrl, setQrDataUrl] = useState<string>('')
+  useEffect(() => {
+    const url = `${window.location.origin}/bluebell/products/${product.slug}`
+    const base = 'https://api.qrserver.com/v1/create-qr-code/'
+    const size = '128x128'
+    setQrDataUrl(`${base}?size=${size}&data=${encodeURIComponent(url)}`)
+  }, [product.slug])
 
-// Use external QR generator to avoid extra dependency
-const qrDataUrl = useMemo(() => {
-  if (!productUrl) return "";
-  const base = "https://api.qrserver.com/v1/create-qr-code/";
-  const size = "128x128";
-  return `${base}?size=${size}&data=${encodeURIComponent(productUrl)}`;
-}, [productUrl]);
+  // WhatsApp integration
+  const whatsappMessage = `Hi, I'm interested in ${product.name}. Can you provide more details?`
+  const whatsappLink = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(whatsappMessage)}`
 
   return (
     <div className="product-card bg-white rounded-2xl overflow-hidden shadow-lg group flex flex-col">
@@ -130,8 +129,6 @@ const qrDataUrl = useMemo(() => {
               )}
             </div>
           </div>
-          {/* Fabric texture simulation */}
-          {/* Removed View Details overlay to encourage QR scan */}
         </div>
         
         <div className="p-6 flex-1 flex flex-col">
@@ -139,10 +136,22 @@ const qrDataUrl = useMemo(() => {
           <p className="text-bluebell-brown text-sm mb-4 line-clamp-2 min-h-[2.5rem]">
             {product.description || 'Premium fabric for exceptional interior design'}
           </p>
-          <div className="flex items-baseline justify-start mb-4 gap-2">
-            <span className="text-2xl leading-none font-serif font-bold text-bluebell-crimson whitespace-nowrap">₹{Number(pricePerYard).toLocaleString('en-IN')}</span>
-            <span className="text-bluebell-brown text-sm leading-none whitespace-nowrap">per metre</span>
+          
+          {/* PRICE SECTION REMOVED - WhatsApp Button Added */}
+          <div className="mb-4">
+            <a
+              href={whatsappLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full flex items-center justify-center gap-2 rounded-lg bg-[#25D366] px-4 py-3 text-center text-sm font-semibold text-white shadow-md transition-all duration-300 hover:bg-[#20BA5A] active:scale-[0.98]"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="flex-shrink-0">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+              </svg>
+              Message on WhatsApp
+            </a>
           </div>
+
           <div className="mt-auto">
             <Link
               href={`/bluebell/products/${product.slug}`}
@@ -156,5 +165,3 @@ const qrDataUrl = useMemo(() => {
     </div>
   )
 }
-
-
