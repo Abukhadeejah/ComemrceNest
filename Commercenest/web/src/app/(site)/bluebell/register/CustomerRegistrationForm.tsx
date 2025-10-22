@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { PasswordInput } from '@/components/PasswordInput'
 import type { CustomerRegistrationRequest } from '@/types/customer'
 
 interface CustomerRegistrationFormProps {
@@ -11,7 +12,6 @@ interface CustomerRegistrationFormProps {
 
 export default function CustomerRegistrationForm({ tenantKey }: CustomerRegistrationFormProps) {
   const router = useRouter()
-  // const _supabase = supabaseClient
   const [formData, setFormData] = useState<CustomerRegistrationRequest>({
     email: '',
     password: '',
@@ -197,16 +197,15 @@ export default function CustomerRegistrationForm({ tenantKey }: CustomerRegistra
             <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">
               Password *
             </label>
-            <input
+            <PasswordInput
               id="password"
               name="password"
-              type="password"
-              required
               value={formData.password}
               onChange={handleInputChange}
-              className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
               placeholder="At least 6 characters"
-              minLength={6}
+              required
+              autoComplete="new-password"
+              className="border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
             />
           </div>
 

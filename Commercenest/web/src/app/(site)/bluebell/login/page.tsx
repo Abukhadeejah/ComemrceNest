@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { supabaseClient } from '@/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { PasswordInput } from '@/components/PasswordInput'
 
 export default function BluebellLoginPage() {
   const supabase = supabaseClient
@@ -81,15 +82,15 @@ export default function BluebellLoginPage() {
             <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">
               Password
             </label>
-            <input 
+            <PasswordInput
               id="password"
-              className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200" 
-              type="password" 
-              autoComplete="current-password"
-              value={password} 
-              onChange={(e) => setPassword(e.target.value)} 
-              required 
+              name="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               placeholder="Your password"
+              required
+              autoComplete="current-password"
+              className="border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
             />
           </div>
           
@@ -115,8 +116,6 @@ export default function BluebellLoginPage() {
               Create one
             </Link>
           </p>
-          
-          {/* Removed admin access hint for end-user login */}
         </div>
       </div>
     </div>

@@ -62,13 +62,23 @@ export function AdminSidebar({ open = false, setOpen }: AdminSidebarProps) {
   const navigation = buildNavigation(tenantKey, enabledModules)
 
   const handleClose = () => {
-    console.log('Closing sidebar') // Debug log
+    console.log('Closing sidebar')
     setOpen?.(false)
   }
 
+  // Determine logo path - force correct path based on tenant
+  const getLogoPath = () => {
+    if (brandingConfig?.brandLogo) return brandingConfig.brandLogo
+    if (tenantKey === 'bluebell') return '/images/bluebell/logo.png'
+    return '/images/senlysh/logo.png'
+  }
+  
+  const logoPath = getLogoPath()
+  const brandName = brandingConfig?.brandName || (tenantKey === 'bluebell' ? 'Bluebell' : 'Senlysh')
+
   return (
     <>
-      {/* Mobile sidebar backdrop - MUST BE SEPARATE */}
+      {/* Mobile sidebar backdrop */}
       {open && (
         <div 
           className="fixed inset-0 z-40 bg-gray-900/50 backdrop-blur-sm lg:hidden"
@@ -79,18 +89,23 @@ export function AdminSidebar({ open = false, setOpen }: AdminSidebarProps) {
 
       {/* Mobile sidebar */}
       <div 
-        className={`fixed inset-y-0 left-0 z-50 w-72 transform transition-transform duration-300 ease-in-out lg:hidden ${
+        className={`fixed inset-0 left-0 z-50 w-72 transform transition-transform duration-300 ease-in-out lg:hidden ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className={`h-full flex flex-col ${brandingConfig?.sidebarBg || 'bg-white'} shadow-2xl`}>
-          {/* Mobile header */}
-          <div className="flex h-16 items-center justify-between px-6 border-b border-gray-200">
+          {/* Mobile header - HUGE LOGO */}
+          <div className="flex h-24 items-center justify-between px-6 border-b border-gray-200">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              className="h-8 w-auto"
-              src={brandingConfig?.brandLogo || "/images/senlysh/logo.png"}
-              alt={brandingConfig?.brandName || "Logo"}
+              src={logoPath}
+              alt={brandName}
+              className="h-20 w-auto"
+              style={{ maxWidth: '240px', minHeight: '80px' }}
+              onError={(e) => {
+                console.error('Logo failed to load:', logoPath)
+                e.currentTarget.style.display = 'none'
+              }}
             />
             <button
               type="button"
@@ -133,12 +148,18 @@ export function AdminSidebar({ open = false, setOpen }: AdminSidebarProps) {
       {/* Desktop sidebar */}
       <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col z-40">
         <div className={`flex flex-col flex-grow border-r border-gray-200 ${brandingConfig?.sidebarBg || 'bg-white'} overflow-y-auto`}>
-          <div className="flex h-16 items-center px-6 border-b border-gray-200">
+          {/* Desktop header - HUGE LOGO */}
+          <div className="flex h-28 items-center px-6 border-b border-gray-200">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              className="h-8 w-auto"
-              src={brandingConfig?.brandLogo || "/images/senlysh/logo.png"}
-              alt={brandingConfig?.brandName || "Logo"}
+              src={logoPath}
+              alt={brandName}
+              className="h-24 w-auto"
+              style={{ maxWidth: '240px', minHeight: '96px' }}
+              onError={(e) => {
+                console.error('Logo failed to load:', logoPath)
+                e.currentTarget.outerHTML = `<span class="text-xl font-bold text-gray-900">${brandName}</span>`
+              }}
             />
           </div>
           <nav className="flex-1 px-4 py-4 space-y-1">

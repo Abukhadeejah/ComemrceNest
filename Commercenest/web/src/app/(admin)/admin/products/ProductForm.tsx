@@ -224,111 +224,128 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
   }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
+  e.preventDefault()
+  
+  const form = new FormData(e.currentTarget)
+  
+  // Add all form data (excluding variant data which is handled separately)
+  Object.entries(formData).forEach(([key, value]) => {
+    // Skip variant data - handled by updateProductVariants action
+    if (key === 'variantOptions' || key === 'variantCombinations') {
+      return
+    }
     
-    const form = new FormData(e.currentTarget)
+    // Special handling for category_ids array
+    if (key === 'category_ids') {
+      if (Array.isArray(value) && value.length > 0) {
+        // Send each category_id individually
+        value.forEach((catId) => {
+          form.append('category_ids[]', catId)
+        })
+      }
+      return
+    }
     
-    // Add all form data (excluding variant data which is handled separately)
-    Object.entries(formData).forEach(([key, value]) => {
-      // Skip variant data - handled by updateProductVariants action
-      if (key === 'variantOptions' || key === 'variantCombinations') {
-        return
+    if (Array.isArray(value)) {
+      // Only append arrays if they have content
+      if (value.length > 0) {
+        form.append(key, JSON.stringify(value))
+      }
+    } else if (value !== null && value !== undefined) {
+      // Include all values, including empty strings
+      form.append(key, String(value))
+    }
+  })
+
+  // Ensure category_id is set to the first selected category for backward compatibility
+  if (formData.category_ids && formData.category_ids.length > 0) {
+    form.set('category_id', formData.category_ids[0])
+  }
+
+  // Variant data is handled separately via updateProductVariants action
+  // Do not include variant data in main product update
+
+  startTransition(async () => {
+    try {
+      let createdProductId: string | undefined
+      
+      if (mode === 'edit' && data?.id) {
+        await updateProduct(data.id as string, form)
+        
+        // Handle new image uploads for edit mode
+        const fileImages = imageFiles.filter(img => img instanceof File) as File[]
+        if (fileImages.length > 0) {
+          try {
+            console.log(`Uploading ${fileImages.length} new images for product ${data.id}`)
+            for (let i = 0; i < fileImages.length; i++) {
+              const file = fileImages[i]
+              await uploadProductImage(file, data.id)
+              console.log(`Uploaded image ${i + 1}/${fileImages.length}`)
+            }
+          } catch (uploadError) {
+            console.error('Error uploading images:', uploadError)
+            // Don't fail the product update if image upload fails
+          }
+        }
+      } else {
+        const result = await createProduct(form)
+        if ('id' in result) {
+          createdProductId = result.id
+        } else {
+          throw new Error(result.error || 'Failed to create product')
+        }
+        
+        // After product creation, upload images if any
+        if (imageFiles.length > 0 && createdProductId) {
+          try {
+            const fileImages = imageFiles.filter(img => img instanceof File) as File[]
+            console.log(`Uploading ${fileImages.length} images for product ${createdProductId}`)
+            for (let i = 0; i < fileImages.length; i++) {
+              const file = fileImages[i]
+              await uploadProductImage(file, createdProductId)
+              console.log(`Uploaded image ${i + 1}/${fileImages.length}`)
+            }
+          } catch (uploadError) {
+            console.error('Error uploading images:', uploadError)
+            // Don't fail the product creation if image upload fails
+          }
+        }
       }
       
-      if (Array.isArray(value)) {
-        // Only append arrays if they have content
-        if (value.length > 0) {
-          form.append(key, JSON.stringify(value))
-        }
-      } else if (value !== null && value !== undefined) {
-        // Include all values, including empty strings
-        form.append(key, String(value))
+      // Draft persistence removed - no need to clear
+      
+      // Small delay to ensure cache invalidation completes
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      router.push(ADMIN_URLS.products(tenantKey))
+      router.refresh()
+    } catch (error) {
+      console.error('Failed to save product:', error)
+      
+      // Handle specific error types
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred'
+      
+      if (errorMessage.includes('duplicate key value violates unique constraint "products_tenant_id_slug_key"')) {
+        setErrors(prev => ({
+          ...prev,
+          slug: 'A product with this slug already exists. Please choose a different slug.'
+        }))
+      } else if (errorMessage.includes('slug')) {
+        setErrors(prev => ({
+          ...prev,
+          slug: 'Invalid slug format. Use only lowercase letters, numbers, and hyphens.'
+        }))
+      } else {
+        // Set a general error
+        setErrors(prev => ({
+          ...prev,
+          general: 'An unexpected error occurred. Please try again or contact support.'
+        }))
       }
-    })
+    }
+  })
+}
 
-    // Variant data is handled separately via updateProductVariants action
-    // Do not include variant data in main product update
-
-    startTransition(async () => {
-      try {
-        let createdProductId: string | undefined
-        
-        if (mode === 'edit' && data?.id) {
-          await updateProduct(data.id as string, form)
-          
-          // Handle new image uploads for edit mode
-          const fileImages = imageFiles.filter(img => img instanceof File) as File[]
-          if (fileImages.length > 0) {
-            try {
-              console.log(`Uploading ${fileImages.length} new images for product ${data.id}`)
-              for (let i = 0; i < fileImages.length; i++) {
-                const file = fileImages[i]
-                await uploadProductImage(file, data.id)
-                console.log(`Uploaded image ${i + 1}/${fileImages.length}`)
-              }
-            } catch (uploadError) {
-              console.error('Error uploading images:', uploadError)
-              // Don't fail the product update if image upload fails
-            }
-          }
-        } else {
-          const result = await createProduct(form)
-          if ('id' in result) {
-            createdProductId = result.id
-          } else {
-            throw new Error(result.error || 'Failed to create product')
-          }
-          
-          // After product creation, upload images if any
-          if (imageFiles.length > 0 && createdProductId) {
-            try {
-              const fileImages = imageFiles.filter(img => img instanceof File) as File[]
-              console.log(`Uploading ${fileImages.length} images for product ${createdProductId}`)
-              for (let i = 0; i < fileImages.length; i++) {
-                const file = fileImages[i]
-                await uploadProductImage(file, createdProductId)
-                console.log(`Uploaded image ${i + 1}/${fileImages.length}`)
-              }
-            } catch (uploadError) {
-              console.error('Error uploading images:', uploadError)
-              // Don't fail the product creation if image upload fails
-            }
-          }
-        }
-        
-        // Draft persistence removed - no need to clear
-        
-        // Small delay to ensure cache invalidation completes
-        await new Promise(resolve => setTimeout(resolve, 100))
-        
-        router.push(ADMIN_URLS.products(tenantKey))
-        router.refresh()
-      } catch (error) {
-        console.error('Failed to save product:', error)
-        
-        // Handle specific error types
-        const errorMessage = error instanceof Error ? error.message : 'An error occurred'
-        
-        if (errorMessage.includes('duplicate key value violates unique constraint "products_tenant_id_slug_key"')) {
-          setErrors(prev => ({
-            ...prev,
-            slug: 'A product with this slug already exists. Please choose a different slug.'
-          }))
-        } else if (errorMessage.includes('slug')) {
-          setErrors(prev => ({
-            ...prev,
-            slug: 'Invalid slug format. Use only lowercase letters, numbers, and hyphens.'
-          }))
-        } else {
-          // Set a general error
-          setErrors(prev => ({
-            ...prev,
-            general: errorMessage
-          }))
-        }
-      }
-    })
-  }
 
   return (
     <div className="max-w-4xl mx-auto p-6">
