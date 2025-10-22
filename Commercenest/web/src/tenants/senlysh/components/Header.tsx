@@ -14,15 +14,24 @@ interface Category {
   parent_id?: string;
 }
 
+interface CategoryTree {
+  id: string;
+  name: string;
+  slug: string;
+  children?: CategoryTree[];
+}
+
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [categoryTree, setCategoryTree] = useState<CategoryTree[]>([]);
   const [loading, setLoading] = useState(true);
   const { state } = useCart();
   const { isCustomer } = useCustomerAuth();
   const pathname = usePathname();
   const cartCount = state.itemCount;
   const wishlistCount = 0; // TODO: Implement wishlist functionality later
+  
   // Feature flags (superadmin-controlled in future)
   const showNewArrivals = false
   const showSale = false
@@ -42,13 +51,58 @@ export default function Header() {
       : `${baseClasses} pb-1`;
   };
 
+  // 🔧 Filter out test categories
+  const filterTestCategories = (categories: Category[]): Category[] => {
+    return categories.filter(cat => 
+      !cat.name.toLowerCase().includes('test') &&
+      cat.name !== 'Test' &&
+      cat.name !== 'Test Category - Regression Testing'
+    );
+  };
+
+  // Build category tree from flat categories
+  const buildCategoryTree = (categories: Category[]): CategoryTree[] => {
+    const categoryMap = new Map<string, CategoryTree>();
+    const rootCategories: CategoryTree[] = [];
+
+    // First pass: Create all category nodes
+    categories.forEach(cat => {
+      categoryMap.set(cat.id, {
+        id: cat.id,
+        name: cat.name,
+        slug: cat.slug,
+        children: []
+      });
+    });
+
+    // Second pass: Build the tree structure
+    categories.forEach(cat => {
+      const node = categoryMap.get(cat.id);
+      if (!node) return;
+
+      if (cat.parent_id) {
+        const parent = categoryMap.get(cat.parent_id);
+        if (parent && parent.children) {
+          parent.children.push(node);
+        }
+      } else {
+        rootCategories.push(node);
+      }
+    });
+
+    return rootCategories;
+  };
+
   useEffect(() => {
     const fetchCategories = async () => {
       try {
         const response = await fetch('/api/site/categories');
         if (response.ok) {
           const data = await response.json();
-          setCategories(data.categories || []);
+          // 🔧 FIX: Filter out test categories before processing
+          const cats = filterTestCategories(data.categories || []);
+          setCategories(cats);
+          setCategoryTree(buildCategoryTree(cats));
         }
       } catch (error) {
         console.error('Failed to fetch categories:', error);
@@ -98,6 +152,8 @@ export default function Header() {
               <Link href="/senlysh" className={getActiveClasses('/senlysh', 'text-gray-800 hover:text-gray-600 font-semibold text-sm uppercase tracking-wide transition-colors')}>
                 HOME
               </Link>
+              
+              {/* Multi-level SHOP Dropdown */}
               <div className="relative group">
                 <Link href="/senlysh/products" className={getActiveClasses('/senlysh/products', 'text-gray-800 hover:text-gray-600 font-semibold text-sm uppercase tracking-wide transition-colors flex items-center gap-1')}>
                   SHOP
@@ -105,25 +161,69 @@ export default function Header() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </Link>
-                {/* Dropdown Menu */}
-                <div className="absolute top-full left-0 bg-white shadow-lg border border-gray-200 rounded-md py-2 min-w-[200px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300">
+                
+                {/* Level 1: Root Categories Dropdown */}
+                <div className="absolute top-full left-0 bg-white shadow-lg border border-gray-200 rounded-md py-2 min-w-[220px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
                   {loading ? (
                     <div className="px-4 py-2 text-sm text-gray-500">Loading...</div>
-                  ) : categories.length > 0 ? (
-                    categories.slice(0, 8).map((category) => (
-                      <Link 
-                        key={category.id}
-                        href={`/senlysh/products?category=${category.slug}`} 
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-                      >
-                        {category.name}
-                      </Link>
+                  ) : categoryTree.length > 0 ? (
+                    categoryTree.map((rootCategory) => (
+                      <div key={rootCategory.id} className="relative group/sub">
+                        <Link 
+                          href={`/senlysh/products?category=${rootCategory.slug}`} 
+                          className="flex items-center justify-between px-4 py-2.5 text-sm font-semibold text-gray-800 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                        >
+                          <span>{rootCategory.name}</span>
+                          {rootCategory.children && rootCategory.children.length > 0 && (
+                            <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          )}
+                        </Link>
+                        
+                        {/* Level 2: Parent Categories or Direct Sub-categories */}
+                        {rootCategory.children && rootCategory.children.length > 0 && (
+                          <div className="absolute left-full top-0 bg-white shadow-lg border border-gray-200 rounded-md py-2 min-w-[200px] opacity-0 invisible group-hover/sub:opacity-100 group-hover/sub:visible transition-all duration-300 z-50 ml-1">
+                            {rootCategory.children.map((parentCategory) => (
+                              <div key={parentCategory.id} className="relative group/subsub">
+                                <Link 
+                                  href={`/senlysh/products?category=${parentCategory.slug}`} 
+                                  className="flex items-center justify-between px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                                >
+                                  <span>{parentCategory.name}</span>
+                                  {parentCategory.children && parentCategory.children.length > 0 && (
+                                    <svg className="w-3 h-3 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                    </svg>
+                                  )}
+                                </Link>
+                                
+                                {/* Level 3: Sub-categories */}
+                                {parentCategory.children && parentCategory.children.length > 0 && (
+                                  <div className="absolute left-full top-0 bg-white shadow-lg border border-gray-200 rounded-md py-2 min-w-[180px] opacity-0 invisible group-hover/subsub:opacity-100 group-hover/subsub:visible transition-all duration-300 z-50 ml-1">
+                                    {parentCategory.children.map((subCategory) => (
+                                      <Link 
+                                        key={subCategory.id}
+                                        href={`/senlysh/products?category=${subCategory.slug}`} 
+                                        className="block px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                                      >
+                                        {subCategory.name}
+                                      </Link>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     ))
                   ) : (
                     <div className="px-4 py-2 text-sm text-gray-500">No categories available</div>
                   )}
                 </div>
               </div>
+
               {showNewArrivals ? (
                 <Link href="/senlysh/new-arrivals" className={getActiveClasses('/senlysh/new-arrivals', 'text-gray-800 hover:text-gray-600 font-semibold text-sm uppercase tracking-wide transition-colors')}>
                   NEW ARRIVALS
@@ -251,9 +351,9 @@ export default function Header() {
           </div>
         </div>
 
-        {/* Mobile Menu Dropdown */}
+        {/* Mobile Menu with Nested Categories */}
         {isMenuOpen && (
-          <div className="lg:hidden bg-white border-b border-gray-200 shadow-lg">
+          <div className="lg:hidden bg-white border-b border-gray-200 shadow-lg max-h-[70vh] overflow-y-auto">
             <nav className="container mx-auto px-4 py-4">
               <div className="flex flex-col space-y-4">
                 <Link 
@@ -263,6 +363,7 @@ export default function Header() {
                 >
                   HOME
                 </Link>
+                
                 <div className="space-y-2">
                   <Link 
                     href="/senlysh/products" 
@@ -271,25 +372,60 @@ export default function Header() {
                   >
                     SHOP
                   </Link>
-                  <div className="ml-4 space-y-1">
+                  
+                  {/* Mobile Category Tree */}
+                  <div className="ml-4 space-y-3">
                     {loading ? (
                       <div className="text-sm text-gray-500">Loading...</div>
-                    ) : categories.length > 0 ? (
-                      categories.slice(0, 6).map((category) => (
-                        <Link 
-                          key={category.id}
-                          href={`/senlysh/products?category=${category.slug}`} 
-                          className="block text-sm text-gray-600 hover:text-gray-800"
-                          onClick={() => setIsMenuOpen(false)}
-                        >
-                          {category.name}
-                        </Link>
+                    ) : categoryTree.length > 0 ? (
+                      categoryTree.map((rootCategory) => (
+                        <div key={rootCategory.id} className="space-y-1">
+                          <Link 
+                            href={`/senlysh/products?category=${rootCategory.slug}`} 
+                            className="block text-sm font-semibold text-gray-800 hover:text-gray-900"
+                            onClick={() => setIsMenuOpen(false)}
+                          >
+                            {rootCategory.name}
+                          </Link>
+                          
+                          {rootCategory.children && rootCategory.children.length > 0 && (
+                            <div className="ml-3 space-y-1">
+                              {rootCategory.children.map((parentCategory) => (
+                                <div key={parentCategory.id} className="space-y-1">
+                                  <Link 
+                                    href={`/senlysh/products?category=${parentCategory.slug}`} 
+                                    className="block text-sm text-gray-700 hover:text-gray-900"
+                                    onClick={() => setIsMenuOpen(false)}
+                                  >
+                                    {parentCategory.name}
+                                  </Link>
+                                  
+                                  {parentCategory.children && parentCategory.children.length > 0 && (
+                                    <div className="ml-3 space-y-1">
+                                      {parentCategory.children.map((subCategory) => (
+                                        <Link 
+                                          key={subCategory.id}
+                                          href={`/senlysh/products?category=${subCategory.slug}`} 
+                                          className="block text-xs text-gray-600 hover:text-gray-800"
+                                          onClick={() => setIsMenuOpen(false)}
+                                        >
+                                          • {subCategory.name}
+                                        </Link>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       ))
                     ) : (
                       <div className="text-sm text-gray-500">No categories available</div>
                     )}
                   </div>
                 </div>
+                
                 {showNewArrivals ? (
                   <Link 
                     href="/senlysh/new-arrivals" 
@@ -330,4 +466,3 @@ export default function Header() {
     </>
   );
 }
-

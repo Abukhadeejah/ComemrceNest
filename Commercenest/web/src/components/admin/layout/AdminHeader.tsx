@@ -14,8 +14,8 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
   const brandingConfig = useAdminBranding()
   
   return (
-    <header className={`sticky top-0 z-30 flex h-16 shrink-0 items-center gap-x-4 border-b px-4 shadow-sm sm:px-6 lg:px-8 ${
-      brandingConfig?.headerBg || 'border-gray-200 bg-white'
+    <header className={`sticky top-0 z-30 flex h-16 shrink-0 items-center gap-x-4 border-b px-4 shadow-sm sm:px-6 lg:px-8 backdrop-blur-md bg-white/95 ${
+      brandingConfig?.headerBg ? 'border-gray-200' : 'border-gray-200'
     }`}>
       {/* Mobile menu button - ALWAYS VISIBLE ON MOBILE */}
       <button
