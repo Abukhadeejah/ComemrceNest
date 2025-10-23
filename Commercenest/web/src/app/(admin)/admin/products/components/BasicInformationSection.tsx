@@ -69,7 +69,8 @@ export function BasicInformationSection({ formData, errors, onInputChange }: Bas
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Slug
           </label>
-          <div className="flex gap-2">
+          {/* FIXED: Button now stacks below input on mobile */}
+          <div className="flex flex-col sm:flex-row gap-2">
             <input
               type="text"
               value={String(formData.slug || '')}
@@ -81,7 +82,7 @@ export function BasicInformationSection({ formData, errors, onInputChange }: Bas
               type="button"
               onClick={handleGenerateSlug}
               disabled={isGeneratingSlug || !formData.name?.trim()}
-              className="px-3 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+              className="px-3 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap w-full sm:w-auto"
             >
               {isGeneratingSlug ? 'Generating...' : 'Generate Slug'}
             </button>
@@ -94,7 +95,8 @@ export function BasicInformationSection({ formData, errors, onInputChange }: Bas
           </p>
         </div>
 
-        <div className="col-span-2">
+        {/* FIXED: Description field now responsive */}
+        <div className="col-span-1 md:col-span-2">
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Description
           </label>
