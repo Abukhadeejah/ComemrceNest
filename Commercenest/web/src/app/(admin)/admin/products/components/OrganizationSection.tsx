@@ -12,7 +12,6 @@ interface OrganizationSectionProps {
   categories: Category[]
 }
 
-// Define the hierarchy structure type
 type CategoryChildren = {
   [key: string]: string[]
 }
@@ -24,7 +23,6 @@ type GenderHierarchy = {
 }
 
 export function OrganizationSection({ formData, errors, categories, onInputChange }: OrganizationSectionProps) {
-  // Manual hierarchy based on your screenshot since parent_id is NULL in database
   const categoryHierarchy = useMemo(() => {
     const menId = categories.find(c => c.name.trim().toLowerCase() === 'men')?.id
     const womenId = categories.find(c => c.name.trim().toLowerCase() === 'women')?.id
@@ -58,40 +56,78 @@ export function OrganizationSection({ formData, errors, categories, onInputChang
     return hierarchy
   }, [categories])
 
-  // State for 3-level selection
-  const [selectedGender, setSelectedGender] = useState<'men' | 'women' | 'accessories' | ''>('')
-  const [selectedParentName, setSelectedParentName] = useState<string>('')
+  const [selectedGenders, setSelectedGenders] = useState<string[]>([])
+  const [selectedParents, setSelectedParents] = useState<string[]>([])
 
-  // Get parent categories based on selected gender
-  const parentCategories = useMemo(() => {
-    if (!selectedGender) return []
-    const hierarchy = categoryHierarchy[selectedGender as 'men' | 'women' | 'accessories']
-    return Object.keys(hierarchy.children).map(name => {
-      const cat = categories.find(c => c.name === name)
-      return { id: cat?.id || name, name }
-    }).filter(p => p.id)
-  }, [selectedGender, categoryHierarchy, categories])
-
-  // Get subcategories based on selected parent
-  const subCategories = useMemo(() => {
-    if (!selectedGender || !selectedParentName) return []
-    const hierarchy = categoryHierarchy[selectedGender as 'men' | 'women' | 'accessories']
-    const subNames = hierarchy.children[selectedParentName] || []
+  // Get parent categories based on selected genders
+  const availableParents = useMemo(() => {
+    if (selectedGenders.length === 0) return []
     
-    return subNames.map(name => {
-      const cat = categories.find(c => c.name.trim() === name.trim())
-      return cat
-    }).filter((cat): cat is Category => cat !== undefined)
-  }, [selectedGender, selectedParentName, categoryHierarchy, categories])
+    const parents: { name: string; gender: string }[] = []
+    selectedGenders.forEach(gender => {
+      const hierarchy = categoryHierarchy[gender as 'men' | 'women' | 'accessories']
+      Object.keys(hierarchy.children).forEach(parentName => {
+        parents.push({ name: parentName, gender })
+      })
+    })
+    return parents
+  }, [selectedGenders, categoryHierarchy])
 
-  // Get selected category IDs
+  // Get subcategories based on selected parents
+  const availableSubCategories = useMemo(() => {
+    if (selectedParents.length === 0) return []
+    
+    const subs: Category[] = []
+    selectedParents.forEach(parentName => {
+      selectedGenders.forEach(gender => {
+        const hierarchy = categoryHierarchy[gender as 'men' | 'women' | 'accessories']
+        const subNames = hierarchy.children[parentName] || []
+        
+        subNames.forEach(name => {
+          const cat = categories.find(c => c.name.trim() === name.trim())
+          if (cat && !subs.find(s => s.id === cat.id)) {
+            subs.push(cat)
+          }
+        })
+      })
+    })
+    return subs
+  }, [selectedGenders, selectedParents, categoryHierarchy, categories])
+
   const selectedCategoryIds = Array.isArray(formData.category_ids) 
     ? formData.category_ids 
     : formData.category_id 
     ? [formData.category_id] 
     : []
 
-  // Handle checkbox toggle
+  // Handle gender checkbox toggle
+  const handleGenderToggle = (gender: string) => {
+    const newGenders = selectedGenders.includes(gender)
+      ? selectedGenders.filter(g => g !== gender)
+      : [...selectedGenders, gender]
+    
+    setSelectedGenders(newGenders)
+    
+    // Clear parent and subcategory selections
+    setSelectedParents([])
+    onInputChange('category_id', '')
+    onInputChange('category_ids', [])
+  }
+
+  // Handle parent checkbox toggle
+  const handleParentToggle = (parentName: string) => {
+    const newParents = selectedParents.includes(parentName)
+      ? selectedParents.filter(p => p !== parentName)
+      : [...selectedParents, parentName]
+    
+    setSelectedParents(newParents)
+    
+    // Clear subcategory selections
+    onInputChange('category_id', '')
+    onInputChange('category_ids', [])
+  }
+
+  // Handle subcategory checkbox toggle
   const handleCategoryToggle = (categoryId: string) => {
     const currentSelections = [...selectedCategoryIds]
     const index = currentSelections.indexOf(categoryId)
@@ -106,71 +142,53 @@ export function OrganizationSection({ formData, errors, categories, onInputChang
     onInputChange('category_id', currentSelections[0] || '')
   }
 
-  // Handle gender change
-  const handleGenderChange = (gender: string) => {
-    setSelectedGender(gender as 'men' | 'women' | 'accessories' | '')
-    setSelectedParentName('')
-    onInputChange('category_id', '')
-    onInputChange('category_ids', [])
-  }
-
-  // Handle parent category change
-  const handleParentChange = (parentName: string) => {
-    setSelectedParentName(parentName)
-    onInputChange('category_id', '')
-    onInputChange('category_ids', [])
-  }
-
   return (
     <div>
       <h3 className="text-lg font-medium text-gray-900 mb-4">Organization</h3>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        {/* Level 1: Main Category (Men/Women/Accessories) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        {/* Level 1: Main Category with CHECKBOXES */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Category <span className="text-red-500">*</span>
+            {selectedGenders.length > 0 && (
+              <span className="text-xs font-normal text-indigo-600 ml-2">
+                ({selectedGenders.length} selected)
+              </span>
+            )}
           </label>
-          <select
-            value={selectedGender}
-            onChange={(e) => handleGenderChange(e.target.value)}
-            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-          >
-            <option value="">Select Category</option>
-            <option value="men">Men</option>
-            <option value="women">Women</option>
-            <option value="accessories">Fashion Accessories</option>
-          </select>
-          <p className="mt-1 text-xs text-gray-500">Step 1: Choose main category</p>
-        </div>
-
-        {/* Level 2: Parent Category (Bottom Wear, Top Wear, etc.) */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Parent Category <span className="text-red-500">*</span>
-          </label>
-          <select
-            value={selectedParentName}
-            onChange={(e) => handleParentChange(e.target.value)}
-            disabled={!selectedGender}
-            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm disabled:bg-gray-50 disabled:text-gray-400"
-          >
-            <option value="">
-              {!selectedGender 
-                ? 'Select category first'
-                : parentCategories.length === 0 
-                ? 'No parent categories available'
-                : 'Select Parent Category'}
-            </option>
-            {parentCategories.map((parent) => (
-              <option key={parent.id} value={parent.name}>
-                {parent.name}
-              </option>
-            ))}
-          </select>
-          <p className="mt-1 text-xs text-gray-500">
-            Step 2: {parentCategories.length > 0 ? `${parentCategories.length} options available` : 'Choose type'}
-          </p>
+          <div className="rounded-md border border-gray-300 bg-white">
+            <div className="divide-y divide-gray-200">
+              {['men', 'women', 'accessories'].map((gender) => {
+                const isChecked = selectedGenders.includes(gender)
+                const displayName = gender === 'men' ? 'Men' : gender === 'women' ? 'Women' : 'Fashion Accessories'
+                return (
+                  <label
+                    key={gender}
+                    className={`flex items-center px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors ${
+                      isChecked ? 'bg-indigo-50' : ''
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => handleGenderToggle(gender)}
+                      className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer"
+                    />
+                    <span className={`ml-3 text-sm ${isChecked ? 'font-medium text-indigo-900' : 'text-gray-700'}`}>
+                      {displayName}
+                    </span>
+                    {isChecked && (
+                      <svg className="ml-auto h-5 w-5 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                  </label>
+                )
+              })}
+            </div>
+          </div>
+          <p className="mt-1 text-xs text-gray-500">Step 1: Select category/categories</p>
         </div>
 
         {/* Status */}
@@ -192,7 +210,64 @@ export function OrganizationSection({ formData, errors, categories, onInputChang
         </div>
       </div>
 
-      {/* Level 3: Subcategories with Checkboxes */}
+      {/* Level 2: Parent Category with CHECKBOXES */}
+      <div className="mb-6">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Parent Category <span className="text-red-500">*</span>
+          {selectedParents.length > 0 && (
+            <span className="text-xs font-normal text-indigo-600 ml-2">
+              ({selectedParents.length} selected)
+            </span>
+          )}
+        </label>
+        
+        {selectedGenders.length === 0 ? (
+          <div className="rounded-md border border-gray-300 bg-gray-50 p-4 text-center text-sm text-gray-500">
+            Please select a category first
+          </div>
+        ) : availableParents.length === 0 ? (
+          <div className="rounded-md border border-gray-300 bg-yellow-50 p-4 text-center text-sm text-yellow-800">
+            ⚠️ No parent categories available
+          </div>
+        ) : (
+          <div className="rounded-md border border-gray-300 bg-white max-h-[200px] overflow-y-auto">
+            <div className="divide-y divide-gray-200">
+              {availableParents.map((parent) => {
+                const isChecked = selectedParents.includes(parent.name)
+                return (
+                  <label
+                    key={`${parent.gender}-${parent.name}`}
+                    className={`flex items-center px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors ${
+                      isChecked ? 'bg-indigo-50' : ''
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => handleParentToggle(parent.name)}
+                      className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer"
+                    />
+                    <span className={`ml-3 text-sm ${isChecked ? 'font-medium text-indigo-900' : 'text-gray-700'}`}>
+                      {parent.name}
+                    </span>
+                    {isChecked && (
+                      <svg className="ml-auto h-5 w-5 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                  </label>
+                )
+              })}
+            </div>
+          </div>
+        )}
+        
+        <p className="mt-1 text-xs text-gray-500">
+          Step 2: {availableParents.length > 0 ? `${availableParents.length} options available` : 'Select parent categories'}
+        </p>
+      </div>
+
+      {/* Level 3: Subcategories with Checkboxes (EXISTING) */}
       <div className="mb-6">
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Sub Categories <span className="text-red-500">*</span>
@@ -203,22 +278,22 @@ export function OrganizationSection({ formData, errors, categories, onInputChang
           )}
         </label>
         
-        {!selectedGender ? (
+        {selectedGenders.length === 0 ? (
           <div className="rounded-md border border-gray-300 bg-gray-50 p-4 text-center text-sm text-gray-500">
             Please select a category first
           </div>
-        ) : !selectedParentName ? (
+        ) : selectedParents.length === 0 ? (
           <div className="rounded-md border border-gray-300 bg-gray-50 p-4 text-center text-sm text-gray-500">
             Please select a parent category first
           </div>
-        ) : subCategories.length === 0 ? (
+        ) : availableSubCategories.length === 0 ? (
           <div className="rounded-md border border-gray-300 bg-yellow-50 p-4 text-center text-sm text-yellow-800">
-            ⚠️ No subcategories available for this parent category.
+            ⚠️ No subcategories available
           </div>
         ) : (
           <div className="rounded-md border border-gray-300 bg-white max-h-[300px] overflow-y-auto">
             <div className="divide-y divide-gray-200">
-              {subCategories.map((subCat) => {
+              {availableSubCategories.map((subCat) => {
                 const isChecked = selectedCategoryIds.includes(subCat.id)
                 return (
                   <label
@@ -252,23 +327,20 @@ export function OrganizationSection({ formData, errors, categories, onInputChang
           <p className="mt-1 text-sm text-red-600">{errors.category_id}</p>
         )}
         <p className="mt-1 text-xs text-gray-500">
-          {subCategories.length > 0 
-            ? `Step 3: Select subcategories. You can select multiple.`
-            : 'Step 3: Subcategories will appear after selecting parent category'}
+          Step 3: Select subcategories. You can select multiple.
         </p>
       </div>
 
       {/* Display Selected Path */}
-      {selectedGender && selectedParentName && selectedCategoryIds.length > 0 && (
+      {selectedGenders.length > 0 && selectedCategoryIds.length > 0 && (
         <div className="mb-6 p-3 bg-green-50 border border-green-200 rounded-md">
           <p className="text-sm font-medium text-green-800 mb-1">Selected Categories:</p>
           <div className="flex flex-wrap gap-2">
             {selectedCategoryIds.map((catId) => {
               const category = categories.find(c => c.id === catId)
-              const categoryName = selectedGender === 'men' ? 'Men' : selectedGender === 'women' ? 'Women' : 'Fashion Accessories'
               return (
                 <span key={catId} className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-green-100 text-green-800">
-                  {categoryName} → {selectedParentName} → {category?.name}
+                  {category?.name}
                 </span>
               )
             })}
@@ -297,11 +369,11 @@ export function OrganizationSection({ formData, errors, categories, onInputChang
           />
           <div className="space-y-2">
             <p className="text-xs text-gray-500">
-              Tags help customers find products through filters and collections. Use descriptive words like &quot;rain&quot;, &quot;summer&quot;, &quot;waterproof&quot;, etc.
+              Tags help customers find products through filters and collections.
             </p>
             <div className="bg-blue-50 border border-blue-200 rounded-md p-2">
               <p className="text-xs text-blue-800">
-                <strong>💡 Pro Tip:</strong> Tags can be used in Hero Carousel CTAs to create dynamic collections! 
+                <strong>💡 Pro Tip:</strong> Tags can be used in Hero Carousel CTAs! 
                 <Link href="/senlysh/admin/tutorial" className="text-blue-600 hover:text-blue-800 underline ml-1">
                   Learn more
                 </Link>

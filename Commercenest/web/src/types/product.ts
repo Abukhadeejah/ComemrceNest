@@ -125,6 +125,11 @@ export interface ProductFormData {
   model_weight_kg: string | number
   model_wearing_size: string
   
+  // 🆕 ADD THESE THREE LINES - Gender Selection
+  for_men?: boolean
+  for_women?: boolean
+  unisex?: boolean
+  
   // Gift card fields
   is_gift_card: boolean
   gift_card_amount_cents: string | number
