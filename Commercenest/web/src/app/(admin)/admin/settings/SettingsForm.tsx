@@ -1,50 +1,40 @@
 'use client'
 
-import { useTransition } from 'react'
 
 interface Settings {
   name: string
-  logo_url: string
-  address: string
-  phone: string
-  email: string
-  gstin: string
-  brand_accent_hex: string
+  logo_url: string | null
+  address: string | null
+  phone: string | null
+  email: string | null
+  gstin: string | null
+  brand_accent_hex: string | null
   gst_rate_percent?: number | string
+}
+
+interface PaymentSettings {
+  mode: 'test' | 'live'
+  hasTest: boolean
+  hasLive: boolean
+  testKeyId: string
+  testKeySecret: string
+  testWebhookSecret: string
+  liveKeyId: string
+  liveKeySecret: string
+  liveWebhookSecret: string
 }
 
 interface SettingsFormProps {
   settings: Settings
+  paymentSettings: PaymentSettings
 }
 
-export function SettingsForm({ settings }: SettingsFormProps) {
-  const [, startTransition] = useTransition()
-
-  const handleSubmit = async (formData: FormData) => {
-    startTransition(async () => {
-      try {
-        const response = await fetch('/api/admin/settings', {
-          method: 'POST',
-          body: formData
-        })
-        
-        if (response.ok) {
-          // Show success message
-          alert('Settings updated successfully!')
-        } else {
-          // Show error message
-          alert('Failed to update settings')
-        }
-      } catch (error) {
-        console.error('Error updating settings:', error)
-        alert('Failed to update settings')
-      }
-    })
-  }
+export function SettingsForm({ settings, paymentSettings }: SettingsFormProps) {
+  // Note: Form submission is handled via server actions, no client-side handler needed
 
   return (
     <div className="space-y-10">
-      <form action={handleSubmit} className="space-y-6">
+      <form action="/api/admin/settings" method="post" className="space-y-6">
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <div>
           <label htmlFor="name" className="block text-sm font-medium text-gray-700">
@@ -68,7 +58,7 @@ export function SettingsForm({ settings }: SettingsFormProps) {
             type="email"
             name="email"
             id="email"
-            defaultValue={settings.email}
+            defaultValue={settings.email || ''}
             className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
             placeholder="store@example.com"
           />
@@ -82,7 +72,7 @@ export function SettingsForm({ settings }: SettingsFormProps) {
             type="tel"
             name="phone"
             id="phone"
-            defaultValue={settings.phone}
+            defaultValue={settings.phone || ''}
             className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
             placeholder="+91 98765 43210"
           />
@@ -96,7 +86,7 @@ export function SettingsForm({ settings }: SettingsFormProps) {
             type="text"
             name="gstin"
             id="gstin"
-            defaultValue={settings.gstin}
+            defaultValue={settings.gstin || ''}
             className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
             placeholder="22AAAAA0000A1Z5"
           />
@@ -110,7 +100,7 @@ export function SettingsForm({ settings }: SettingsFormProps) {
             type="url"
             name="logo_url"
             id="logo_url"
-            defaultValue={settings.logo_url}
+            defaultValue={settings.logo_url || ''}
             className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
             placeholder="https://example.com/logo.png"
           />
@@ -124,7 +114,7 @@ export function SettingsForm({ settings }: SettingsFormProps) {
             name="address"
             id="address"
             rows={3}
-            defaultValue={settings.address}
+            defaultValue={settings.address || ''}
             className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
             placeholder="Enter store address"
           />
@@ -156,12 +146,12 @@ export function SettingsForm({ settings }: SettingsFormProps) {
               type="color"
               name="brand_accent_hex"
               id="brand_accent_hex"
-              defaultValue={settings.brand_accent_hex}
+              defaultValue={settings.brand_accent_hex || ''}
               className="h-10 w-20 border border-gray-300 rounded-md"
             />
             <input
               type="text"
-              defaultValue={settings.brand_accent_hex}
+              defaultValue={settings.brand_accent_hex || ''}
               className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
               placeholder="#C9A227"
             />
@@ -179,12 +169,12 @@ export function SettingsForm({ settings }: SettingsFormProps) {
         </div>
       </form>
 
-      <PaymentSettingsClient />
+      <PaymentSettingsClient paymentSettings={paymentSettings} />
     </div>
   )
 }
 
-function PaymentSettingsClient() {
+function PaymentSettingsClient({ paymentSettings }: { paymentSettings: PaymentSettings }) {
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
   const webhookUrl = origin ? `${origin}/api/webhooks/razorpay` : '/api/webhooks/razorpay'
 
@@ -217,7 +207,7 @@ function PaymentSettingsClient() {
       <form method="post" action="/api/admin/settings/payments" className="space-y-6">
         <div>
           <label className="block text-sm font-medium text-gray-700">Mode</label>
-          <select name="mode" className="mt-1 block w-full border rounded px-3 py-2">
+          <select name="mode" defaultValue={paymentSettings.mode} className="mt-1 block w-full border rounded px-3 py-2">
             <option value="test">Test</option>
             <option value="live">Live</option>
           </select>
@@ -225,29 +215,29 @@ function PaymentSettingsClient() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700">Test Key ID</label>
-            <input name="test_key_id" className="mt-1 block w-full border rounded px-3 py-2" />
+            <input name="test_key_id" defaultValue={paymentSettings.testKeyId} className="mt-1 block w-full border rounded px-3 py-2" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">Test Key Secret</label>
-            <input name="test_key_secret" type="password" className="mt-1 block w-full border rounded px-3 py-2" />
+            <input name="test_key_secret" type="password" defaultValue={paymentSettings.testKeySecret} className="mt-1 block w-full border rounded px-3 py-2" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">Test Webhook Secret</label>
-            <input name="test_webhook_secret" type="password" className="mt-1 block w-full border rounded px-3 py-2" />
+            <input name="test_webhook_secret" type="password" defaultValue={paymentSettings.testWebhookSecret} className="mt-1 block w-full border rounded px-3 py-2" />
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700">Live Key ID</label>
-            <input name="live_key_id" className="mt-1 block w-full border rounded px-3 py-2" />
+            <input name="live_key_id" defaultValue={paymentSettings.liveKeyId} className="mt-1 block w-full border rounded px-3 py-2" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">Live Key Secret</label>
-            <input name="live_key_secret" type="password" className="mt-1 block w-full border rounded px-3 py-2" />
+            <input name="live_key_secret" type="password" defaultValue={paymentSettings.liveKeySecret} className="mt-1 block w-full border rounded px-3 py-2" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">Live Webhook Secret</label>
-            <input name="live_webhook_secret" type="password" className="mt-1 block w-full border rounded px-3 py-2" />
+            <input name="live_webhook_secret" type="password" defaultValue={paymentSettings.liveWebhookSecret} className="mt-1 block w-full border rounded px-3 py-2" />
           </div>
         </div>
         <div className="flex items-center justify-between">

@@ -58,7 +58,7 @@ export const TENANT_REGISTRY: Readonly<Record<TenantKey, RegistryEntry>> = {
 		header: () => import('@/tenants/senlysh/components/Header').catch(() => DEFAULT_ENTRY.header()) as Promise<{ default: ComponentType<Record<string, unknown>> }>,
 		footer: () => import('@/tenants/senlysh/components/Footer').catch(() => DEFAULT_ENTRY.footer()) as Promise<{ default: ComponentType<Record<string, unknown>> }>,
 		layout: () => import('@/tenants/senlysh/components/Layout').catch(() => DEFAULT_ENTRY.layout()) as Promise<{ default: ComponentType<Record<string, unknown>> }>,
-		home: () => import('@/tenants/senlysh/components/Home').catch(() => DEFAULT_ENTRY.home()) as Promise<{ default: ComponentType<Record<string, unknown>> }>,
+		home: () => import('@/tenants/senlysh/components/HomeServer').catch(() => DEFAULT_ENTRY.home()) as Promise<{ default: ComponentType<Record<string, unknown>> }>,
 		metadata: async () => {
 			try {
 				const mod = await import('@/tenants/senlysh/components/Metadata')

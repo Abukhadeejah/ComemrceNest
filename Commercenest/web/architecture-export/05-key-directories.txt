@@ -1,0 +1,17 @@
+﻿Key Directories Analysis
+=====================================
+
+[-] /app - Not found
+[-] /pages - Not found
+[-] /components - Not found
+[-] /lib - Not found
+[-] /utils - Not found
+[-] /api - Not found
+[+] /public - 24 files
+[+] /src - 317 files
+[-] /styles - Not found
+[-] /hooks - Not found
+[-] /context - Not found
+[-] /types - Not found
+[-] /supabase - Not found
+

@@ -22,8 +22,8 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={playfair.variable}>
-      <body className={`${inter.className} ${playfair.className}`}>
+    <html lang="en" className={playfair.variable} suppressHydrationWarning>
+      <body className={`${inter.className} ${playfair.className}`} suppressHydrationWarning>
         <AdminWrapper>
           {children}
         </AdminWrapper>

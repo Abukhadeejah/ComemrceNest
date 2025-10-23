@@ -1,19 +1,86 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
+import type { HeroSlide as SharedHeroSlide, HeroSettings as SharedHeroSettings } from '@/types/hero'
 
 // Import modular components
 import HeroSection from './HeroSection';
 import CategoriesSection from './CategoriesSection';
 import LatestProducts from './LatestProducts';
 import FeatureIcons from './FeatureIcons';
-import PromotionalBanners from './PromotionalBanners';
 import BestSellers from './BestSellers';
 import BrandCarousel from './BrandCarousel';
 import FeaturedProducts from './FeaturedProducts';
 import CustomerReviews from './CustomerReviews';
 
-export default function Home() {
+// DB-shaped product used by HomeServer
+interface ApiProduct {
+  id: string
+  name: string
+  slug: string
+  description?: string
+  price_cents: number
+  compare_at_price_cents?: number
+  currency: string
+  hero_image_url?: string
+  images?: string[]
+  stock: number
+  status: string
+  is_featured?: boolean
+  is_bestseller?: boolean
+  is_on_sale?: boolean
+  is_new_arrival?: boolean
+  // Variant support
+  product_variant_options?: Array<{
+    variant_options: {
+      id: string
+      name: string
+      display_name: string
+      type: string
+      variant_option_values: Array<{
+        id: string
+        value: string
+        display_value: string
+        color_hex: string | null
+        image_url: string | null
+        price_adjustment_cents: number | null
+        cost_adjustment_cents: number | null
+        sort_order: number | null
+      }>
+    }
+  }>
+}
+
+interface Category {
+  id: string
+  name: string
+  slug: string
+  parent_id?: string
+  image_url?: string
+  image_alt?: string
+}
+
+type HeroSlide = SharedHeroSlide
+
+type HeroSettings = SharedHeroSettings | null
+
+interface HomeProps {
+  products: ApiProduct[]
+  categories: Category[]
+  heroSlides: HeroSlide[]
+  heroSettings: HeroSettings
+  variantCombinations: Array<{
+    product_id: string
+    id: string
+    name: string
+    price_cents: number
+    stock: number
+    sku: string
+    attributes: Record<string, string>
+  }>
+}
+
+export default function Home({ products, categories, heroSlides, heroSettings, variantCombinations }: HomeProps) {
   const [countdown, setCountdown] = useState({
     days: 129,
     hours: 6,
@@ -41,31 +108,40 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="bg-white overflow-x-auto">
-      <div className="min-w-[1200px] w-full">
+    <div className="bg-white">
+      <div className="w-full max-w-screen-xl mx-auto px-2 sm:px-4 lg:px-6">
         {/* Hero Section */}
-        <HeroSection autoPlay={true} autoPlayInterval={8000} />
+        <HeroSection 
+          heroSlides={heroSlides}
+          heroSettings={heroSettings}
+          autoPlay={heroSettings?.auto_play ?? true} 
+          autoPlayInterval={heroSettings?.auto_play_interval_ms ?? 8000} 
+        />
 
         {/* Categories Section */}
-        <CategoriesSection />
+        <CategoriesSection categories={categories} />
 
         {/* Latest Products Section */}
-        <LatestProducts />
+        <LatestProducts apiProducts={products} variantCombinations={variantCombinations} />
 
         {/* Feature Icons Section */}
         <FeatureIcons />
 
-        {/* Promotional Banners Section */}
-        <PromotionalBanners />
 
         {/* Best Sellers Section */}
-        <BestSellers countdown={countdown} />
+        <BestSellers 
+          products={products.filter(p => p.is_bestseller)} 
+          countdown={countdown} 
+        />
 
         {/* Brand Carousel Section */}
         <BrandCarousel />
 
         {/* Featured Products Section */}
-        <FeaturedProducts countdown={countdown} />
+        <FeaturedProducts 
+          products={products.filter(p => p.is_featured)} 
+          countdown={countdown} 
+        />
 
         {/* Customer Reviews Section */}
         <CustomerReviews />

@@ -40,7 +40,7 @@ export function useAdminBranding(tenantKey?: TenantKey): AdminBrandingConfig | n
       accentColor: '#FDCE59', // Bluebell mustard
       brandName: 'Bluebell Interiors',
       brandTagline: 'Timeless Interiors, Beautiful Fabrics',
-      brandLogo: '/bluebell-logo.svg',
+      brandLogo: '/images/bluebell/logo.png',
       sidebarBg: '#01589D',
       headerBg: '#4E302E',
       primaryButtonClass: 'bg-[#01589D] hover:bg-[#014a7a]',
@@ -52,7 +52,7 @@ export function useAdminBranding(tenantKey?: TenantKey): AdminBrandingConfig | n
       accentColor: '#F59E0B', // Senlysh gold
       brandName: 'Senlysh',
       brandTagline: 'Premium Fashion & Lifestyle',
-      brandLogo: '/senlysh-logo.svg',
+      brandLogo: '/images/senlysh/logo.png',
       sidebarBg: '#8B5CF6',
       headerBg: '#1F2937',
       primaryButtonClass: 'bg-[#8B5CF6] hover:bg-[#7C3AED]',

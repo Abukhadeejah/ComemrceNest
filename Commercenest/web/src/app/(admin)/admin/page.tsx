@@ -2,37 +2,77 @@ import Link from 'next/link'
 import { CubeIcon, ShoppingCartIcon, CurrencyRupeeIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
+import { headers, cookies } from 'next/headers'
 // Auth is gated client-side; server security enforced in actions only
-import { AdminLayout } from '@/components/admin/layout/AdminLayout'
 
 export default async function AdminHome() {
   const tenantId = await resolveTenantIdFromRequest()
-  
+
+  // DEBUG: Add fallback tenant resolution for localhost development
+  let resolvedTenantId = tenantId
+
+  if (!resolvedTenantId) {
+    // Try to get tenant from pathname for localhost development
+    const hdrs = await headers()
+    const pathname = hdrs.get('x-pathname') || ''
+    const pathSegments = pathname.split('/').filter(Boolean)
+
+    if (pathSegments.length > 0) {
+      const firstSegment = pathSegments[0].toLowerCase()
+      if (firstSegment === 'bluebell') {
+        resolvedTenantId = '11111111-1111-4111-8111-11111111bb01' // Bluebell Interiors
+      } else if (firstSegment === 'senlysh') {
+        resolvedTenantId = '1e4c9aa7-e7af-4fe7-999b-c9c46219fa3c' // Senlysh Fashion
+      }
+    }
+
+    // Fallback to cookie if still no tenant
+    if (!resolvedTenantId) {
+      try {
+        const cookieStore = await cookies()
+        const ck = cookieStore.get('tenant')?.value?.toLowerCase()
+        if (ck === 'bluebell') {
+          resolvedTenantId = '11111111-1111-4111-8111-11111111bb01'
+        } else if (ck === 'senlysh') {
+          resolvedTenantId = '1e4c9aa7-e7af-4fe7-999b-c9c46219fa3c'
+        }
+      } catch {}
+    }
+  }
+
   // 🔒 SECURITY: Add authentication check
-  if (!tenantId) {
+  if (!resolvedTenantId) {
     throw new Error('Tenant not found')
   }
   
   // Fetch dashboard stats
   const { data: products } = await supabaseAdmin
     .from('products')
-    .select('id, status')
-    .eq('tenant_id', tenantId)
+    .select('id, status, stock, low_stock_threshold, track_inventory')
+    .eq('tenant_id', resolvedTenantId)
 
   const { data: orders } = await supabaseAdmin
     .from('orders')
     .select('id, status, total_cents')
-    .eq('tenant_id', tenantId)
+    .eq('tenant_id', resolvedTenantId)
 
   const totalProducts = products?.length || 0
   const publishedProducts = products?.filter(p => p.status === 'published').length || 0
   const pendingOrders = orders?.filter(o => o.status === 'pending').length || 0
   const totalRevenue = orders?.reduce((sum, order) => sum + (order.total_cents || 0), 0) || 0
-  const lowStockProducts = products?.filter(p => p.status === 'published').length || 0 // TODO: Add stock field
+  
+  // Calculate low stock products
+  const lowStockProducts = products?.filter(p => {
+    if (!p.track_inventory || p.status !== 'published') return false
+    const stock = p.stock || 0
+    const threshold = p.low_stock_threshold || 0
+    return stock <= threshold
+  }).length || 0
 
   const stats = [
     { name: 'Total Products', value: totalProducts, icon: CubeIcon, change: '+12%', changeType: 'positive' },
     { name: 'Published Products', value: publishedProducts, icon: CubeIcon, change: '+8%', changeType: 'positive' },
+    { name: 'Low Stock Products', value: lowStockProducts, icon: ExclamationTriangleIcon, change: lowStockProducts > 0 ? 'Needs attention' : 'All good', changeType: lowStockProducts > 0 ? 'negative' : 'positive' },
     { name: 'Pending Orders', value: pendingOrders, icon: ShoppingCartIcon, change: '+2', changeType: 'neutral' },
     { name: 'Total Revenue', value: `₹${(totalRevenue / 100).toLocaleString()}`, icon: CurrencyRupeeIcon, change: '+23%', changeType: 'positive' },
   ]
@@ -44,7 +84,12 @@ export default async function AdminHome() {
   ]
 
   return (
-    <AdminLayout title="Dashboard">
+    <div>
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+        <p className="mt-1 text-sm text-gray-600">Overview of your admin panel</p>
+      </div>
+
       {/* Stats */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((item) => (
@@ -190,7 +235,7 @@ export default async function AdminHome() {
           </Link>
         </div>
       </div>
-    </AdminLayout>
+    </div>
   )
 }
 

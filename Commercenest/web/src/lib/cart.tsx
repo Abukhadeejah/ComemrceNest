@@ -54,16 +54,22 @@ function cartReducer(state: CartState, action: CartAction): CartState {
             : item
         )
       } else {
-        // Add new item
+        // Add new item with safe price conversion
         const newItem: CartItem = {
           ...action.payload,
+          price: Number(action.payload.price) || 0, // 🔧 FIX: Ensure price is a valid number
           id: `cart_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
         }
         newItems = [...state.items, newItem]
       }
 
-      const total = newItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)
-      const itemCount = newItems.reduce((sum, item) => sum + item.quantity, 0)
+      // 🔧 FIX: Safe calculation with Number() conversion
+      const total = newItems.reduce((sum, item) => {
+        const price = Number(item.price) || 0
+        const quantity = Number(item.quantity) || 0
+        return sum + (price * quantity)
+      }, 0)
+      const itemCount = newItems.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0)
 
       return {
         items: newItems,
@@ -74,8 +80,13 @@ function cartReducer(state: CartState, action: CartAction): CartState {
 
     case 'REMOVE_ITEM': {
       const newItems = state.items.filter(item => item.id !== action.payload)
-      const total = newItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)
-      const itemCount = newItems.reduce((sum, item) => sum + item.quantity, 0)
+      // 🔧 FIX: Safe calculation with Number() conversion
+      const total = newItems.reduce((sum, item) => {
+        const price = Number(item.price) || 0
+        const quantity = Number(item.quantity) || 0
+        return sum + (price * quantity)
+      }, 0)
+      const itemCount = newItems.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0)
 
       return {
         items: newItems,
@@ -91,8 +102,13 @@ function cartReducer(state: CartState, action: CartAction): CartState {
           : item
       ).filter(item => item.quantity > 0)
 
-      const total = newItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)
-      const itemCount = newItems.reduce((sum, item) => sum + item.quantity, 0)
+      // 🔧 FIX: Safe calculation with Number() conversion
+      const total = newItems.reduce((sum, item) => {
+        const price = Number(item.price) || 0
+        const quantity = Number(item.quantity) || 0
+        return sum + (price * quantity)
+      }, 0)
+      const itemCount = newItems.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0)
 
       return {
         items: newItems,
@@ -105,11 +121,22 @@ function cartReducer(state: CartState, action: CartAction): CartState {
       return initialState
 
     case 'LOAD_CART':
-      const total = action.payload.reduce((sum, item) => sum + (item.price * item.quantity), 0)
-      const itemCount = action.payload.reduce((sum, item) => sum + item.quantity, 0)
+      // 🔧 FIX: Safe calculation with Number() conversion and normalize prices on load
+      const normalizedItems = action.payload.map(item => ({
+        ...item,
+        price: Number(item.price) || 0,
+        quantity: Number(item.quantity) || 0
+      }))
+      
+      const total = normalizedItems.reduce((sum, item) => {
+        const price = Number(item.price) || 0
+        const quantity = Number(item.quantity) || 0
+        return sum + (price * quantity)
+      }, 0)
+      const itemCount = normalizedItems.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0)
 
       return {
-        items: action.payload,
+        items: normalizedItems,
         total,
         itemCount
       }
@@ -197,16 +224,11 @@ export function useCart() {
 
 // Helper function to format price
 export function formatPrice(priceInCents: number): string {
-  return (priceInCents / 100).toLocaleString('en-IN', {
+  // 🔧 FIX: Ensure priceInCents is a valid number
+  const safePriceInCents = Number(priceInCents) || 0
+  return (safePriceInCents / 100).toLocaleString('en-IN', {
     style: 'currency',
     currency: 'INR',
     maximumFractionDigits: 0
   })
 }
-
-
-
-
-
-
-

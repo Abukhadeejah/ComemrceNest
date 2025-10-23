@@ -4,12 +4,12 @@ export const revalidate = 0
 
 import { Suspense } from 'react'
 import { ProductGrid } from '@/components/tenant/products/ProductGrid'
+import type { ProductListItem as UIProductListItem } from '@/types/product'
 import { ProductFilters } from '@/components/tenant/products/ProductFilters'
 import { ProductSearch } from '@/components/tenant/products/ProductSearch'
 import { getProducts } from '@/server/products'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
-import { getRegistryEntry } from '@/registry/tenantRegistry'
-import type { Metadata } from 'next'
+import { fetchVariantsForProducts } from '@/server/modules/products/service'
 
 interface ProductsPageProps {
   searchParams: Promise<{
@@ -18,13 +18,19 @@ interface ProductsPageProps {
     status?: string
     sort?: string
     page?: string
+    tag?: string
+    tags?: string
+    color?: string
+    size?: string
+    price?: string
+    fabric?: string
+    is_new_arrival?: string
+    is_featured?: string
+    is_bestseller?: string
+    is_on_sale?: string
+    is_limited_edition?: string
+    is_sold_out?: string
   }>
-}
-
-export async function generateMetadata(): Promise<Metadata> {
-  const registryEntry = getRegistryEntry('senlysh')
-  const { getPageMetadata } = await registryEntry.metadata()
-  return getPageMetadata('Shop', 'Explore our latest fashion trends and styles')
 }
 
 export default async function SenlyshProductsPage({ searchParams }: ProductsPageProps) {
@@ -42,10 +48,33 @@ export default async function SenlyshProductsPage({ searchParams }: ProductsPage
     status: params.status,
     sort: params.sort,
     page: parseInt(params.page || '1'),
-    limit: 12
+    limit: 12,
+    tag: params.tag,
+    tags: params.tags ? params.tags.split(',') : undefined,
+    color: params.color,
+    size: params.size,
+    price: params.price,
+    fabric: params.fabric,
+    is_new_arrival: params.is_new_arrival === 'true' ? true : params.is_new_arrival === 'false' ? false : undefined,
+    is_featured: params.is_featured === 'true' ? true : params.is_featured === 'false' ? false : undefined,
+    is_bestseller: params.is_bestseller === 'true' ? true : params.is_bestseller === 'false' ? false : undefined,
+    is_on_sale: params.is_on_sale === 'true' ? true : params.is_on_sale === 'false' ? false : undefined,
+    is_limited_edition: params.is_limited_edition === 'true' ? true : params.is_limited_edition === 'false' ? false : undefined,
+    is_sold_out: params.is_sold_out === 'true' ? true : params.is_sold_out === 'false' ? false : undefined
   })
 
   console.log('[SENLYSH_PRODUCTS_PAGE] Fetched products for tenant:', tenantId, 'Count:', products.length)
+
+  // Bulk fetch variant combinations for all products (faster, ensures availability)
+  const variantCombinationsRaw = await fetchVariantsForProducts(
+    tenantId,
+    products.map(p => p.id)
+  )
+  const variantCombinations = variantCombinationsRaw.map(vc => ({
+    ...vc,
+    product_id: String(vc.product_id),
+    attributes: (vc.attributes ?? {}) as Record<string, string>
+  }))
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -66,7 +95,7 @@ export default async function SenlyshProductsPage({ searchParams }: ProductsPage
 
         {/* Products Grid */}
         <Suspense fallback={<ProductGridSkeleton />}>
-          <ProductGrid key={tenantId} products={products} />
+          <ProductGrid key={tenantId} products={products as unknown as UIProductListItem[]} variantCombinations={variantCombinations} />
         </Suspense>
       </div>
     </div>

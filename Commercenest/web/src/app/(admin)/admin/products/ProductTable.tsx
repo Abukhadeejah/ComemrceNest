@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { 
   EyeIcon, 
   PencilIcon, 
@@ -9,6 +10,7 @@ import {
 } from '@heroicons/react/24/outline'
 import { ADMIN_URLS } from '@/utils/admin-urls'
 import { useAdminTenantKey } from '@/components/admin/AdminBrandingWrapper'
+import { deleteProduct } from './actions'
 
 interface Product {
   id: string
@@ -27,7 +29,9 @@ interface ProductTableProps {
 
 export function ProductTable({ products }: ProductTableProps) {
   const [selectedProducts, setSelectedProducts] = useState<string[]>([])
+  const [deletingProductId, setDeletingProductId] = useState<string | null>(null)
   const tenantKey = useAdminTenantKey()
+  const router = useRouter()
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -42,6 +46,23 @@ export function ProductTable({ products }: ProductTableProps) {
       setSelectedProducts(prev => [...prev, productId])
     } else {
       setSelectedProducts(prev => prev.filter(id => id !== productId))
+    }
+  }
+
+  const handleDeleteProduct = async (productId: string, productName: string) => {
+    if (!confirm(`Are you sure you want to delete "${productName}"? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      setDeletingProductId(productId)
+      await deleteProduct(productId)
+      router.refresh()
+    } catch (error) {
+      console.error('Failed to delete product:', error)
+      alert(`Failed to delete product: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setDeletingProductId(null)
     }
   }
 
@@ -164,7 +185,12 @@ export function ProductTable({ products }: ProductTableProps) {
                   >
                     <PencilIcon className="h-4 w-4" />
                   </Link>
-                  <button className="text-red-600 hover:text-red-900">
+                  <button 
+                    onClick={() => handleDeleteProduct(product.id, product.name)}
+                    disabled={deletingProductId === product.id}
+                    className="text-red-600 hover:text-red-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Delete product"
+                  >
                     <TrashIcon className="h-4 w-4" />
                   </button>
                 </div>

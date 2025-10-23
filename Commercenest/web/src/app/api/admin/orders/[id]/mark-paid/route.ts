@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
 import { assertTenantAdmin } from '@/server/auth'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
+import { revalidateTag } from 'next/cache'
+import { tenantProductsTag } from '@/server/cacheTags'
 
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -16,6 +18,10 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     .eq('id', id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+  
+  // Invalidate cache after successful update
+  revalidateTag(tenantProductsTag(tenantId))
+  
   return NextResponse.json({ ok: true })
 }
 

@@ -41,6 +41,7 @@ export type TenantConfig = {
       address?: string
       phone?: string
       email?: string
+      whatsapp?: string  // ADDED - WhatsApp number for product inquiries
     }
   }
   // Feature flags
@@ -53,5 +54,3 @@ export type TenantConfig = {
     gstRatePercent?: number
   }
 }
-
-

@@ -1,6 +1,6 @@
 import { resolveTenantIdFromRequest } from '@/server/tenant'
 import { redirect } from 'next/navigation'
-import { AdminLayout } from '@/components/admin/layout/AdminLayout'
+//import { AdminLayout } from '@/components/admin/layout/AdminLayout'
 import { CubeIcon, ShoppingCartIcon, CurrencyRupeeIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
 // Server-side auth is enforced in mutations/actions; client gate handles UI redirects
@@ -62,10 +62,18 @@ export default async function TenantAdminPage({ params }: TenantAdminPageProps) 
   ]
 
   return (
-    <AdminBrandingWrapper tenantKey={tenant as TenantKey}>
-      <AdminLayout title={`${tenant.charAt(0).toUpperCase() + tenant.slice(1)} Admin Dashboard`}>
-        {/* Stats */}
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+  <AdminBrandingWrapper tenantKey={tenant as TenantKey}>
+    <div className="p-6">
+      {/* Page Header */}
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-gray-900">
+          {tenant.charAt(0).toUpperCase() + tenant.slice(1)} Admin Dashboard
+        </h1>
+        <p className="mt-1 text-sm text-gray-600">Overview of your admin panel</p>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((item) => (
           <div
             key={item.name}
@@ -157,9 +165,10 @@ export default async function TenantAdminPage({ params }: TenantAdminPageProps) 
           </ul>
         </div>
       </div>
-      </AdminLayout>
-    </AdminBrandingWrapper>
-  )
+    </div>
+  </AdminBrandingWrapper>
+)
+
 }
 
 async function getTenantKeyFromId(tenantId: string): Promise<string | null> {

@@ -3,6 +3,8 @@ import { supabaseAdmin } from '@/server/supabaseAdmin'
 import { assertTenantAdmin } from '@/server/auth'
 import { revalidateTag } from 'next/cache'
 import { tenantPortfolioTag } from '@/server/cacheTags'
+import { ModuleDisabled } from '@/components/admin/ModuleDisabled'
+import { BriefcaseIcon } from '@heroicons/react/24/outline'
 
 type AdminProject = {
   id: string
@@ -28,10 +30,11 @@ export default async function AdminPortfolio() {
   const allowed = tenantId ? await isModuleEnabled(tenantId, 'portfolio') : false
   if (!allowed) {
     return (
-      <main className="p-6">
-        <h1 className="text-lg font-semibold">Module unavailable</h1>
-        <p className="text-sm text-neutral-600">This module is not enabled for your plan. Contact support to upgrade.</p>
-      </main>
+      <ModuleDisabled
+        moduleName="Portfolio"
+        moduleDescription="Manage and showcase your portfolio projects with images, descriptions, and project details."
+        moduleIcon={BriefcaseIcon}
+      />
     )
   }
   const { data: projectsData } = tenantId

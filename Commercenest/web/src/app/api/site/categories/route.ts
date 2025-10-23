@@ -11,7 +11,7 @@ export async function GET() {
 
     const { data, error } = await supabaseAdmin
       .from('categories')
-      .select('id, name, slug, parent_id')
+      .select('id, name, slug, parent_id, image_url, image_alt')
       .eq('tenant_id', tenantId)
       .order('name', { ascending: true })
 
@@ -19,8 +19,9 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({ data: data ?? [] })
-  } catch (error) {
+    return NextResponse.json({ categories: data ?? [] })
+    } catch (error) {
+      console.error('[Categories API] Error:', error)
     return NextResponse.json({ error: 'Failed to fetch categories' }, { status: 500 })
   }
 }

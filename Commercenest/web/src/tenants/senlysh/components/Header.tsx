@@ -1,18 +1,118 @@
 'use client'
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useCart } from '@/lib/cart';
+import { usePathname } from 'next/navigation';
+import { useCustomerAuth } from '@/hooks/useCustomerAuth';
+
+interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  parent_id?: string;
+}
+
+interface CategoryTree {
+  id: string;
+  name: string;
+  slug: string;
+  children?: CategoryTree[];
+}
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoryTree, setCategoryTree] = useState<CategoryTree[]>([]);
+  const [loading, setLoading] = useState(true);
   const { state } = useCart();
+  const { isCustomer } = useCustomerAuth();
+  const pathname = usePathname();
   const cartCount = state.itemCount;
   const wishlistCount = 0; // TODO: Implement wishlist functionality later
+  
   // Feature flags (superadmin-controlled in future)
   const showNewArrivals = false
   const showSale = false
+
+  // Helper function to determine if a link is active
+  const isActive = (href: string) => {
+    if (href === '/senlysh') {
+      return pathname === '/senlysh' || pathname === '/senlysh/';
+    }
+    return pathname.startsWith(href);
+  };
+
+  // Helper function to get active link classes
+  const getActiveClasses = (href: string, baseClasses: string) => {
+    return isActive(href) 
+      ? `${baseClasses} border-b-2 border-gray-800 pb-1`
+      : `${baseClasses} pb-1`;
+  };
+
+  // 🔧 Filter out test categories
+  const filterTestCategories = (categories: Category[]): Category[] => {
+    return categories.filter(cat => 
+      !cat.name.toLowerCase().includes('test') &&
+      cat.name !== 'Test' &&
+      cat.name !== 'Test Category - Regression Testing'
+    );
+  };
+
+  // Build category tree from flat categories
+  const buildCategoryTree = (categories: Category[]): CategoryTree[] => {
+    const categoryMap = new Map<string, CategoryTree>();
+    const rootCategories: CategoryTree[] = [];
+
+    // First pass: Create all category nodes
+    categories.forEach(cat => {
+      categoryMap.set(cat.id, {
+        id: cat.id,
+        name: cat.name,
+        slug: cat.slug,
+        children: []
+      });
+    });
+
+    // Second pass: Build the tree structure
+    categories.forEach(cat => {
+      const node = categoryMap.get(cat.id);
+      if (!node) return;
+
+      if (cat.parent_id) {
+        const parent = categoryMap.get(cat.parent_id);
+        if (parent && parent.children) {
+          parent.children.push(node);
+        }
+      } else {
+        rootCategories.push(node);
+      }
+    });
+
+    return rootCategories;
+  };
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch('/api/site/categories');
+        if (response.ok) {
+          const data = await response.json();
+          // 🔧 FIX: Filter out test categories before processing
+          const cats = filterTestCategories(data.categories || []);
+          setCategories(cats);
+          setCategoryTree(buildCategoryTree(cats));
+        }
+      } catch (error) {
+        console.error('Failed to fetch categories:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
 
   return (
     <>
@@ -49,39 +149,95 @@ export default function Header() {
 
             {/* Navigation Menu - Desktop */}
             <nav className="hidden lg:flex space-x-8">
-              <Link href="/senlysh" className="text-gray-800 hover:text-gray-600 font-semibold text-sm uppercase tracking-wide transition-colors border-b-2 border-gray-800 pb-1">
+              <Link href="/senlysh" className={getActiveClasses('/senlysh', 'text-gray-800 hover:text-gray-600 font-semibold text-sm uppercase tracking-wide transition-colors')}>
                 HOME
               </Link>
+              
+              {/* Multi-level SHOP Dropdown */}
               <div className="relative group">
-                <Link href="/senlysh/products" className="text-gray-800 hover:text-gray-600 font-semibold text-sm uppercase tracking-wide transition-colors pb-1 flex items-center gap-1">
+                <Link href="/senlysh/products" className={getActiveClasses('/senlysh/products', 'text-gray-800 hover:text-gray-600 font-semibold text-sm uppercase tracking-wide transition-colors flex items-center gap-1')}>
                   SHOP
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </Link>
-                {/* Dropdown Menu */}
-                <div className="absolute top-full left-0 bg-white shadow-lg border border-gray-200 rounded-md py-2 min-w-[200px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300">
-                  <Link href="/senlysh/products?category=men" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900">Men&apos;s Fashion</Link>
-                  <Link href="/senlysh/products?category=women" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900">Women&apos;s Fashion</Link>
-                  <Link href="/senlysh/products?category=kids-baby" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900">Kids & Teens</Link>
-                  <Link href="/senlysh/products?category=accessories" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900">Accessories</Link>
-                  <Link href="/senlysh/products?category=shoes" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900">Footwear</Link>
+                
+                {/* Level 1: Root Categories Dropdown */}
+                <div className="absolute top-full left-0 bg-white shadow-lg border border-gray-200 rounded-md py-2 min-w-[220px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
+                  {loading ? (
+                    <div className="px-4 py-2 text-sm text-gray-500">Loading...</div>
+                  ) : categoryTree.length > 0 ? (
+                    categoryTree.map((rootCategory) => (
+                      <div key={rootCategory.id} className="relative group/sub">
+                        <Link 
+                          href={`/senlysh/products?category=${rootCategory.slug}`} 
+                          className="flex items-center justify-between px-4 py-2.5 text-sm font-semibold text-gray-800 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                        >
+                          <span>{rootCategory.name}</span>
+                          {rootCategory.children && rootCategory.children.length > 0 && (
+                            <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          )}
+                        </Link>
+                        
+                        {/* Level 2: Parent Categories or Direct Sub-categories */}
+                        {rootCategory.children && rootCategory.children.length > 0 && (
+                          <div className="absolute left-full top-0 bg-white shadow-lg border border-gray-200 rounded-md py-2 min-w-[200px] opacity-0 invisible group-hover/sub:opacity-100 group-hover/sub:visible transition-all duration-300 z-50 ml-1">
+                            {rootCategory.children.map((parentCategory) => (
+                              <div key={parentCategory.id} className="relative group/subsub">
+                                <Link 
+                                  href={`/senlysh/products?category=${parentCategory.slug}`} 
+                                  className="flex items-center justify-between px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                                >
+                                  <span>{parentCategory.name}</span>
+                                  {parentCategory.children && parentCategory.children.length > 0 && (
+                                    <svg className="w-3 h-3 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                    </svg>
+                                  )}
+                                </Link>
+                                
+                                {/* Level 3: Sub-categories */}
+                                {parentCategory.children && parentCategory.children.length > 0 && (
+                                  <div className="absolute left-full top-0 bg-white shadow-lg border border-gray-200 rounded-md py-2 min-w-[180px] opacity-0 invisible group-hover/subsub:opacity-100 group-hover/subsub:visible transition-all duration-300 z-50 ml-1">
+                                    {parentCategory.children.map((subCategory) => (
+                                      <Link 
+                                        key={subCategory.id}
+                                        href={`/senlysh/products?category=${subCategory.slug}`} 
+                                        className="block px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                                      >
+                                        {subCategory.name}
+                                      </Link>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="px-4 py-2 text-sm text-gray-500">No categories available</div>
+                  )}
                 </div>
               </div>
+
               {showNewArrivals ? (
-                <Link href="/senlysh/new-arrivals" className="text-gray-800 hover:text-gray-600 font-semibold text-sm uppercase tracking-wide transition-colors pb-1">
+                <Link href="/senlysh/new-arrivals" className={getActiveClasses('/senlysh/new-arrivals', 'text-gray-800 hover:text-gray-600 font-semibold text-sm uppercase tracking-wide transition-colors')}>
                   NEW ARRIVALS
                 </Link>
               ) : null}
               {showSale ? (
-                <Link href="/senlysh/sale" className="text-red-600 hover:text-red-700 font-semibold text-sm uppercase tracking-wide transition-colors pb-1">
+                <Link href="/senlysh/sale" className={getActiveClasses('/senlysh/sale', 'text-red-600 hover:text-red-700 font-semibold text-sm uppercase tracking-wide transition-colors')}>
                   SALE
                 </Link>
               ) : null}
-              <Link href="/senlysh/about" className="text-gray-800 hover:text-gray-600 font-semibold text-sm uppercase tracking-wide transition-colors pb-1">
+              <Link href="/senlysh/about" className={getActiveClasses('/senlysh/about', 'text-gray-800 hover:text-gray-600 font-semibold text-sm uppercase tracking-wide transition-colors')}>
                 ABOUT US
               </Link>
-              <Link href="/senlysh/contact" className="text-gray-800 hover:text-gray-600 font-semibold text-sm uppercase tracking-wide transition-colors pb-1">
+              <Link href="/senlysh/contact" className={getActiveClasses('/senlysh/contact', 'text-gray-800 hover:text-gray-600 font-semibold text-sm uppercase tracking-wide transition-colors')}>
                 CONTACT US
               </Link>
             </nav>
@@ -119,12 +275,54 @@ export default function Header() {
               </Link>
 
               {/* User Account */}
-              <Link href="/login" className="text-gray-700 hover:text-gray-900 transition-colors relative group">
-                <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-                <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs rounded-full w-3 h-3 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">●</span>
-              </Link>
+              {isCustomer ? (
+                <div className="relative group">
+                  <button className="text-gray-700 hover:text-gray-900 transition-colors relative">
+                    <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs rounded-full w-3 h-3 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">●</span>
+                  </button>
+                  {/* Dropdown Menu */}
+                  <div className="absolute right-0 top-full mt-2 bg-white shadow-lg border border-gray-200 rounded-md py-2 min-w-[160px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
+                    <Link 
+                      href="/senlysh/profile" 
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                    >
+                      <div className="flex items-center gap-2">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        My Profile
+                      </div>
+                    </Link>
+                    <form action="/api/auth/signout" method="post" className="block">
+                      <button 
+                        type="submit" 
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                      >
+                        <div className="flex items-center gap-2">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                          </svg>
+                          Sign Out
+                        </div>
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              ) : (
+                <Link 
+                  href="/senlysh/login" 
+                  className="text-gray-700 hover:text-gray-900 transition-colors relative group"
+                  title="Sign In"
+                >
+                  <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  <span className="absolute -top-2 -right-2 bg-gray-500 text-white text-xs rounded-full w-3 h-3 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">●</span>
+                </Link>
+              )}
 
               {/* Wishlist */}
               <Link href="/wishlist" className="text-gray-700 hover:text-gray-900 transition-colors relative">
@@ -153,33 +351,81 @@ export default function Header() {
           </div>
         </div>
 
-        {/* Mobile Menu Dropdown */}
+        {/* Mobile Menu with Nested Categories */}
         {isMenuOpen && (
-          <div className="lg:hidden bg-white border-b border-gray-200 shadow-lg">
+          <div className="lg:hidden bg-white border-b border-gray-200 shadow-lg max-h-[70vh] overflow-y-auto">
             <nav className="container mx-auto px-4 py-4">
               <div className="flex flex-col space-y-4">
                 <Link 
                   href="/senlysh" 
-                  className="text-gray-800 hover:text-gray-600 font-semibold text-base uppercase tracking-wide transition-colors border-b-2 border-gray-800 pb-2"
+                  className={getActiveClasses('/senlysh', 'text-gray-800 hover:text-gray-600 font-semibold text-base uppercase tracking-wide transition-colors pb-2')}
                   onClick={() => setIsMenuOpen(false)}
                 >
                   HOME
                 </Link>
+                
                 <div className="space-y-2">
                   <Link 
                     href="/senlysh/products" 
-                    className="text-gray-800 hover:text-gray-600 font-semibold text-base uppercase tracking-wide transition-colors pb-2 block"
+                    className={getActiveClasses('/senlysh/products', 'text-gray-800 hover:text-gray-600 font-semibold text-base uppercase tracking-wide transition-colors pb-2 block')}
                     onClick={() => setIsMenuOpen(false)}
                   >
                     SHOP
                   </Link>
-                  <div className="ml-4 space-y-1">
-                    <Link href="/senlysh/products?category=men" className="block text-sm text-gray-600 hover:text-gray-800">Men&apos;s Fashion</Link>
-                    <Link href="/senlysh/products?category=women" className="block text-sm text-gray-600 hover:text-gray-800">Women&apos;s Fashion</Link>
-                    <Link href="/senlysh/products?category=kids-baby" className="block text-sm text-gray-600 hover:text-gray-800">Kids & Teens</Link>
-                    <Link href="/senlysh/products?category=accessories" className="block text-sm text-gray-600 hover:text-gray-800">Accessories</Link>
+                  
+                  {/* Mobile Category Tree */}
+                  <div className="ml-4 space-y-3">
+                    {loading ? (
+                      <div className="text-sm text-gray-500">Loading...</div>
+                    ) : categoryTree.length > 0 ? (
+                      categoryTree.map((rootCategory) => (
+                        <div key={rootCategory.id} className="space-y-1">
+                          <Link 
+                            href={`/senlysh/products?category=${rootCategory.slug}`} 
+                            className="block text-sm font-semibold text-gray-800 hover:text-gray-900"
+                            onClick={() => setIsMenuOpen(false)}
+                          >
+                            {rootCategory.name}
+                          </Link>
+                          
+                          {rootCategory.children && rootCategory.children.length > 0 && (
+                            <div className="ml-3 space-y-1">
+                              {rootCategory.children.map((parentCategory) => (
+                                <div key={parentCategory.id} className="space-y-1">
+                                  <Link 
+                                    href={`/senlysh/products?category=${parentCategory.slug}`} 
+                                    className="block text-sm text-gray-700 hover:text-gray-900"
+                                    onClick={() => setIsMenuOpen(false)}
+                                  >
+                                    {parentCategory.name}
+                                  </Link>
+                                  
+                                  {parentCategory.children && parentCategory.children.length > 0 && (
+                                    <div className="ml-3 space-y-1">
+                                      {parentCategory.children.map((subCategory) => (
+                                        <Link 
+                                          key={subCategory.id}
+                                          href={`/senlysh/products?category=${subCategory.slug}`} 
+                                          className="block text-xs text-gray-600 hover:text-gray-800"
+                                          onClick={() => setIsMenuOpen(false)}
+                                        >
+                                          • {subCategory.name}
+                                        </Link>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-sm text-gray-500">No categories available</div>
+                    )}
                   </div>
                 </div>
+                
                 {showNewArrivals ? (
                   <Link 
                     href="/senlysh/new-arrivals" 
@@ -220,4 +466,3 @@ export default function Header() {
     </>
   );
 }
-
