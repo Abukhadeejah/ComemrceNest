@@ -142,7 +142,7 @@ export function TaxSection({ formData, errors, onInputChange }: TaxSectionProps)
                 {!selectedTaxClass && defaultTaxClass && (
                   <div className="bg-gray-50 border border-gray-200 rounded-md p-3">
                     <p className="text-sm text-gray-600">
-                      💡 <strong>Tip:</strong> Default tax class is "{defaultTaxClass.name}" ({defaultTaxClass.rate_percent}%). 
+                      💡 <strong>Tip:</strong> Default tax class is {defaultTaxClass.name} ({defaultTaxClass.rate_percent}%). 
                       <button
                         type="button"
                         onClick={() => handleTaxClassChange(defaultTaxClass.id)}

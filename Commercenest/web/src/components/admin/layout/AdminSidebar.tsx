@@ -66,7 +66,6 @@ export function AdminSidebar({ open = false, setOpen }: AdminSidebarProps) {
     setOpen?.(false)
   }
 
-  // Determine logo path - force correct path based on tenant
   const getLogoPath = () => {
     if (brandingConfig?.brandLogo) return brandingConfig.brandLogo
     if (tenantKey === 'bluebell') return '/images/bluebell/logo.png'
@@ -78,22 +77,22 @@ export function AdminSidebar({ open = false, setOpen }: AdminSidebarProps) {
 
   return (
     <>
-      {/* Mobile sidebar backdrop */}
+      {/* Mobile sidebar backdrop - FIXED: Changed to solid dark overlay */}
       {open && (
         <div 
-          className="fixed inset-0 z-40 bg-gray-900/50 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
           onClick={handleClose}
           aria-hidden="true"
         />
       )}
 
-      {/* Mobile sidebar */}
+      {/* Mobile sidebar - FIXED: Removed backdrop-blur, ensured solid white */}
       <div 
         className={`fixed inset-0 left-0 z-50 w-72 transform transition-transform duration-300 ease-in-out lg:hidden ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className={`h-full flex flex-col ${brandingConfig?.sidebarBg || 'bg-white'} shadow-2xl`}>
+        <div className={`h-full flex flex-col bg-white shadow-2xl`}>
           {/* Mobile header - HUGE LOGO */}
           <div className="flex h-24 items-center justify-between px-6 border-b border-gray-200">
             {/* eslint-disable-next-line @next/next/no-img-element */}
