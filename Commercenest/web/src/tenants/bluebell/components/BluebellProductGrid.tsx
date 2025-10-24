@@ -4,7 +4,8 @@ import React, { useMemo, useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { ProductListItem } from '@/server/modules/products/service'
-import { WHATSAPP_NUMBER } from '@/tenants/bluebell/config'
+// UPDATED IMPORT - Use helper functions
+import { WHATSAPP_NUMBER, getProductInquiryLink, shouldShowWishlist } from '@/tenants/bluebell/config'
 
 interface BluebellProductGridProps {
   products: ProductListItem[]
@@ -71,12 +72,11 @@ function ProductCard({ product }: { product: ProductListItem }) {
     setQrDataUrl(`${base}?size=${size}&data=${encodeURIComponent(url)}`)
   }, [product.slug])
 
-  // WhatsApp integration
-  const whatsappMessage = `Hi, I'm interested in ${product.name}. Can you provide more details?`
-  const whatsappLink = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(whatsappMessage)}`
+  // UPDATED - Use helper function from config
+  const whatsappLink = getProductInquiryLink(product.name)
 
   return (
-    <div className="product-card bg-white rounded-2xl overflow-hidden shadow-lg group flex flex-col">
+    <div className="product-card bg-white rounded-2xl overflow-hidden shadow-lg group flex flex-col h-full">
       <div className="product-border border-2 border-transparent rounded-2xl h-full flex flex-col">
         {/* Image/QR flip container */}
         <div className="fabric-texture h-56 bg-gradient-to-br from-bluebell-blue via-blue-600 to-bluebell-blue/70 relative overflow-hidden [perspective:1000px]">
@@ -108,15 +108,17 @@ function ProductCard({ product }: { product: ProductListItem }) {
               <div className="absolute top-4 left-4 bg-yellow-400 backdrop-blur-sm text-bluebell-brown px-3 py-1 rounded-full text-sm font-semibold">
                 {badge.text}
               </div>
-              {/* Wishlist Heart */}
-              <button
-                aria-label="Add to wishlist"
-                className="absolute top-4 right-4 bg-white/90 text-bluebell-brown rounded-full p-2 shadow-sm hover:shadow transition focus:outline-none"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                </svg>
-              </button>
+              {/* WISHLIST HEART - HIDE IF E-COMMERCE DISABLED */}
+              {shouldShowWishlist() && (
+                <button
+                  aria-label="Add to wishlist"
+                  className="absolute top-4 right-4 bg-white/90 text-bluebell-brown rounded-full p-2 shadow-sm hover:shadow transition focus:outline-none"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                  </svg>
+                </button>
+              )}
             </div>
 
             {/* Back: QR Code */}
@@ -131,14 +133,23 @@ function ProductCard({ product }: { product: ProductListItem }) {
           </div>
         </div>
         
+        {/* Content section - FIXED ALIGNMENT */}
         <div className="p-6 flex-1 flex flex-col">
-          <h3 className="text-xl font-serif font-bold text-[#01589D] mb-3 line-clamp-2 min-h-[3.5rem]">{product.name}</h3>
-          <p className="text-bluebell-brown text-sm mb-4 line-clamp-2 min-h-[2.5rem]">
+          {/* Title - Fixed height */}
+          <h3 className="text-xl font-serif font-bold text-[#01589D] mb-3 line-clamp-2 h-[3.5rem]">
+            {product.name}
+          </h3>
+          
+          {/* Description - Fixed height */}
+          <p className="text-bluebell-brown text-sm mb-4 line-clamp-3 h-[4.5rem]">
             {product.description || 'Premium fabric for exceptional interior design'}
           </p>
           
-          {/* PRICE SECTION REMOVED - WhatsApp Button Added */}
-          <div className="mb-4">
+          {/* Spacer to push buttons to bottom */}
+          <div className="flex-1"></div>
+          
+          {/* WhatsApp Contact Button - Fixed at bottom */}
+          <div className="mb-3">
             <a
               href={whatsappLink}
               target="_blank"
@@ -152,7 +163,8 @@ function ProductCard({ product }: { product: ProductListItem }) {
             </a>
           </div>
 
-          <div className="mt-auto">
+          {/* View Details Button - Fixed at bottom */}
+          <div>
             <Link
               href={`/bluebell/products/${product.slug}`}
               className="inline-flex items-center justify-center w-full bg-yellow-400 text-bluebell-brown font-semibold py-3 px-4 rounded-xl hover:shadow-md transition-colors"

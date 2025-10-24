@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { Playfair_Display } from 'next/font/google'
 
-const playfair = Playfair_Display({ subsets: ['latin'], weight: ['700','800','900'] })
+const playfair = Playfair_Display({ subsets: ['latin'], weight: ['700', '800', '900'] })
 
 export default function BluebellHome() {
   const [loaded, setLoaded] = useState(false)
@@ -68,7 +68,7 @@ export default function BluebellHome() {
           </p>
           <a href="#products" className="inline-flex items-center gap-2 hero-cta bg-mustard text-brown font-bold py-4 px-8 rounded-full text-lg transition-all duration-300 transform hover:scale-105 shadow-2xl btn-glow">
             Explore Collection
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/></svg>
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
           </a>
         </div>
         <div className="absolute top-20 right-20 opacity-20 animate-pulse">
@@ -112,7 +112,7 @@ export default function BluebellHome() {
               { title: 'Luxury Bedroom', badge: 'Luxury Collection', bg: 'from-[color:var(--color-crimson)] via-red-600 to-[color:var(--color-mustard)]' },
               { title: 'Classic Study', badge: 'Classic Design', bg: 'from-[color:var(--color-brown)] via-amber-800 to-[color:var(--color-primary)]' },
             ].map((card, idx) => (
-              <div key={card.title} className={`bg-white rounded-2xl overflow-hidden border border-primary/10 hover:border-mustard/40 shadow-md hover:shadow-lg transition-all duration-700 ease-out hover:-translate-y-1 ${loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'} ${idx===1 ? 'md:mt-10' : ''}`} style={{ transitionDelay: `${idx * 120}ms` }}>
+              <div key={card.title} className={`bg-white rounded-2xl overflow-hidden border border-primary/10 hover:border-mustard/40 shadow-md hover:shadow-lg transition-all duration-700 ease-out hover:-translate-y-1 ${loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'} ${idx === 1 ? 'md:mt-10' : ''}`} style={{ transitionDelay: `${idx * 120}ms` }}>
                 <div className={`h-72 bg-gradient-to-br ${card.bg} relative overflow-hidden`}>
                   <div className="absolute inset-0 opacity-15 [background-image:repeating-linear-gradient(0deg,rgba(255,255,255,0.05)_0px,rgba(255,255,255,0.05)_1px,transparent_1px,transparent_4px),repeating-linear-gradient(90deg,rgba(0,0,0,0.04)_0px,rgba(0,0,0,0.04)_1px,transparent_1px,transparent_4px)] mix-blend-multiply"></div>
                   <div className="absolute bottom-6 left-6 text-white">
@@ -159,25 +159,23 @@ export default function BluebellHome() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {[
-              { title: 'Ocean Breeze', price: '₹ 6,999', tone: 'from-[color:var(--color-primary)] via-blue-600 to-[color:var(--color-primary)]/70' },
-              { title: 'Crimson Velvet', price: '₹ 11,999', tone: 'from-[color:var(--color-crimson)] via-red-600 to-[color:var(--color-crimson)]/70' },
-              { title: 'Golden Silk', price: '₹ 15,999', tone: 'from-[color:var(--color-mustard)] via-yellow-400 to-yellow-300' },
-              { title: 'Earth Linen', price: '₹ 8,999', tone: 'from-[color:var(--color-brown)] via-amber-800 to-amber-700' },
+              { title: 'Ocean Breeze', badge: 'Premium', tone: 'from-[color:var(--color-primary)] via-blue-600 to-[color:var(--color-primary)]/70' },
+              { title: 'Crimson Velvet', badge: 'Luxury', tone: 'from-[color:var(--color-crimson)] via-red-600 to-[color:var(--color-crimson)]/70' },
+              { title: 'Golden Silk', badge: 'Elegant', tone: 'from-[color:var(--color-mustard)] via-yellow-400 to-yellow-300' },
+              { title: 'Earth Linen', badge: 'Natural', tone: 'from-[color:var(--color-brown)] via-amber-800 to-amber-700' },
             ].map((p, idx) => (
-              <div key={p.title} className={`bg-white rounded-2xl p-8 shadow-md hover:shadow-xl border border-primary/20 hover:border-primary transition-all duration-700 ease-out hover:-translate-y-1 hover:scale-[1.02] ${loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`} style={{ transitionDelay: `${idx * 120}ms` }}>
+              <div key={p.title} className={`bg-white rounded-2xl p-8 shadow-md hover:shadow-xl border border-primary/20 hover:border-primary transition-all duration-700 ease-out hover:-translate-y-1 hover:scale-[1.02] flex flex-col ${loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`} style={{ transitionDelay: `${idx * 120}ms` }}>
                 <div className={`product-image h-56 bg-gradient-to-br ${p.tone} rounded-xl mb-6 relative overflow-hidden`}>
                   <div className="absolute inset-0 opacity-25 [background-image:repeating-linear-gradient(45deg,transparent,transparent_8px,rgba(255,255,255,0.15)_8px,rgba(255,255,255,0.15)_16px)]"></div>
                   <div className="absolute top-3 right-3 w-4 h-4 rounded-full bg-mustard/90 shadow-[0_0_0_3px_rgba(255,255,255,0.6)]"></div>
                   <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1">
-                    <span className="text-xs font-semibold text-primary">Premium</span>
+                    <span className="text-xs font-semibold text-primary">{p.badge}</span>
                   </div>
                 </div>
                 <h3 className="text-2xl font-serif font-bold text-primary mb-3">{p.title}</h3>
-                <p className="text-brown mb-6 leading-relaxed">Premium blend with subtle texture and exceptional durability</p>
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-2xl font-bold text-primary">{p.price}</span>
-                  <span className="text-sm text-brown">per metre</span>
-                </div>
+                <p className="text-brown mb-6 leading-relaxed flex-1">Premium blend with subtle texture and exceptional durability</p>
+
+                {/* Buttons - perfectly aligned at bottom */}
                 <button className="w-full bg-mustard text-brown font-bold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 btn-glow">
                   View Details
                 </button>
@@ -186,6 +184,7 @@ export default function BluebellHome() {
           </div>
         </div>
       </section>
+
 
       {/* Testimonials Section */}
       <div className="section-divider bg-white">
@@ -215,7 +214,7 @@ export default function BluebellHome() {
                   <div className={`bg-white p-8 md:p-10 rounded-2xl shadow-xl border-l-4 border-crimson relative overflow-hidden transition-all duration-700 ${loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`} style={{ transitionDelay: `${idx * 120}ms` }}>
                     <div className="relative z-10">
                       <svg className="w-8 h-8 md:w-10 md:h-10 text-crimson mb-4 opacity-60" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h4v10h-10z"/>
+                        <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h4v10h-10z" />
                       </svg>
                       <p className="text-brown text-base md:text-lg mb-6 italic leading-relaxed font-light">
                         {t.quote}
@@ -236,8 +235,8 @@ export default function BluebellHome() {
               ))}
             </div>
             <div className="mt-6 flex justify-center gap-2">
-              {[0,1,2].map((i) => (
-                <button key={i} onClick={() => setTIndex(i)} className={`h-2 w-2 rounded-full transition-colors ${tIndex===i ? 'bg-primary' : 'bg-primary/30'}`} aria-label={`Slide ${i+1}`} />
+              {[0, 1, 2].map((i) => (
+                <button key={i} onClick={() => setTIndex(i)} className={`h-2 w-2 rounded-full transition-colors ${tIndex === i ? 'bg-primary' : 'bg-primary/30'}`} aria-label={`Slide ${i + 1}`} />
               ))}
             </div>
           </div>
@@ -275,7 +274,7 @@ export default function BluebellHome() {
           <div className="mt-8 flex flex-col sm:flex-row gap-6 justify-center">
             <a className="group inline-flex items-center justify-center bg-mustard text-brown font-bold py-4 px-8 rounded-full text-lg transition-all duration-300 shadow-[0_12px_40px_rgba(253,206,89,0.35)] hover:shadow-[0_16px_50px_rgba(253,206,89,0.55)] hover:-translate-y-0.5" href="#contact">
               Get Free Consultation
-              <svg className="ml-2 w-5 h-5 transition-transform group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/></svg>
+              <svg className="ml-2 w-5 h-5 transition-transform group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
             </a>
             <a className="inline-flex items-center justify-center bg-white/10 text-white font-bold py-4 px-8 rounded-full text-lg transition-all duration-300 backdrop-blur-sm shadow-[0_12px_40px_rgba(1,88,157,0.35)] hover:bg-white/20 hover:-translate-y-0.5" href="#products">
               Browse Catalog
@@ -286,7 +285,7 @@ export default function BluebellHome() {
           <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300">
               <div className="w-12 h-12 bg-mustard rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-6 h-6 text-brown" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                <svg className="w-6 h-6 text-brown" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
               </div>
               <h3 className="text-white font-bold text-lg mb-1">Call Us</h3>
               <p className="text-white/80">(+91) 98765-43210</p>
@@ -294,7 +293,7 @@ export default function BluebellHome() {
 
             <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300">
               <div className="w-12 h-12 bg-crimson rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
               </div>
               <h3 className="text-white font-bold text-lg mb-1">Email Us</h3>
               <p className="text-white/80">hello@bluebellFabrics.com</p>
@@ -302,10 +301,10 @@ export default function BluebellHome() {
 
             <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300">
               <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
               </div>
               <h3 className="text-white font-bold text-lg mb-1">Visit Us</h3>
-              <p className="text-white/80">123 Design Street<br/>New Delhi, 110001</p>
+              <p className="text-white/80">123 Design Street<br />New Delhi, 110001</p>
             </div>
           </div>
         </div>

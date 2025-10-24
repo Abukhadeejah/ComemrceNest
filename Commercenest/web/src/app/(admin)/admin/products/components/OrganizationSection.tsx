@@ -57,42 +57,7 @@ export function OrganizationSection({ formData, errors, categories, onInputChang
   }, [categories])
 
   const [selectedGenders, setSelectedGenders] = useState<string[]>([])
-  const [selectedParents, setSelectedParents] = useState<string[]>([])
-
-  // Get parent categories based on selected genders
-  const availableParents = useMemo(() => {
-    if (selectedGenders.length === 0) return []
-    
-    const parents: { name: string; gender: string }[] = []
-    selectedGenders.forEach(gender => {
-      const hierarchy = categoryHierarchy[gender as 'men' | 'women' | 'accessories']
-      Object.keys(hierarchy.children).forEach(parentName => {
-        parents.push({ name: parentName, gender })
-      })
-    })
-    return parents
-  }, [selectedGenders, categoryHierarchy])
-
-  // Get subcategories based on selected parents
-  const availableSubCategories = useMemo(() => {
-    if (selectedParents.length === 0) return []
-    
-    const subs: Category[] = []
-    selectedParents.forEach(parentName => {
-      selectedGenders.forEach(gender => {
-        const hierarchy = categoryHierarchy[gender as 'men' | 'women' | 'accessories']
-        const subNames = hierarchy.children[parentName] || []
-        
-        subNames.forEach(name => {
-          const cat = categories.find(c => c.name.trim() === name.trim())
-          if (cat && !subs.find(s => s.id === cat.id)) {
-            subs.push(cat)
-          }
-        })
-      })
-    })
-    return subs
-  }, [selectedGenders, selectedParents, categoryHierarchy, categories])
+  const [expandedParents, setExpandedParents] = useState<string[]>([])
 
   const selectedCategoryIds = Array.isArray(formData.category_ids) 
     ? formData.category_ids 
@@ -108,23 +73,41 @@ export function OrganizationSection({ formData, errors, categories, onInputChang
     
     setSelectedGenders(newGenders)
     
-    // Clear parent and subcategory selections
-    setSelectedParents([])
-    onInputChange('category_id', '')
-    onInputChange('category_ids', [])
+    // If unchecking, collapse all parents and clear selections
+    if (!newGenders.includes(gender)) {
+      setExpandedParents(expandedParents.filter(p => !p.startsWith(gender)))
+      
+      // Clear subcategory selections for this gender
+      const hierarchy = categoryHierarchy[gender as 'men' | 'women' | 'accessories']
+      const subcatsToRemove: string[] = []
+      Object.values(hierarchy.children).flat().forEach(subName => {
+        const cat = categories.find(c => c.name.trim() === subName.trim())
+        if (cat) subcatsToRemove.push(cat.id)
+      })
+      
+      const updatedSelections = selectedCategoryIds.filter(id => !subcatsToRemove.includes(id))
+      onInputChange('category_ids', updatedSelections)
+      onInputChange('category_id', updatedSelections[0] || '')
+    }
   }
 
-  // Handle parent checkbox toggle
-  const handleParentToggle = (parentName: string) => {
-    const newParents = selectedParents.includes(parentName)
-      ? selectedParents.filter(p => p !== parentName)
-      : [...selectedParents, parentName]
+  // Toggle parent category expansion
+  const toggleParentExpansion = (gender: string, parentName: string) => {
+    const key = `${gender}-${parentName}`
+    setExpandedParents(prev => 
+      prev.includes(key) ? prev.filter(p => p !== key) : [...prev, key]
+    )
+  }
+
+  // Check if parent has any selected subcategories
+  const isParentSelected = (gender: string, parentName: string) => {
+    const hierarchy = categoryHierarchy[gender as 'men' | 'women' | 'accessories']
+    const subNames = hierarchy.children[parentName] || []
     
-    setSelectedParents(newParents)
-    
-    // Clear subcategory selections
-    onInputChange('category_id', '')
-    onInputChange('category_ids', [])
+    return subNames.some(subName => {
+      const cat = categories.find(c => c.name.trim() === subName.trim())
+      return cat && selectedCategoryIds.includes(cat.id)
+    })
   }
 
   // Handle subcategory checkbox toggle
@@ -147,48 +130,140 @@ export function OrganizationSection({ formData, errors, categories, onInputChang
       <h3 className="text-lg font-medium text-gray-900 mb-4">Organization</h3>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        {/* Level 1: Main Category with CHECKBOXES */}
+        {/* NESTED CATEGORY TREE with Visual Hierarchy */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Category <span className="text-red-500">*</span>
-            {selectedGenders.length > 0 && (
+            Categories <span className="text-red-500">*</span>
+            {selectedCategoryIds.length > 0 && (
               <span className="text-xs font-normal text-indigo-600 ml-2">
-                ({selectedGenders.length} selected)
+                ({selectedCategoryIds.length} subcategories selected)
               </span>
             )}
           </label>
-          <div className="rounded-md border border-gray-300 bg-white">
+          <div className="rounded-md border border-gray-300 bg-white max-h-[500px] overflow-y-auto">
             <div className="divide-y divide-gray-200">
               {['men', 'women', 'accessories'].map((gender) => {
-                const isChecked = selectedGenders.includes(gender)
+                const isGenderChecked = selectedGenders.includes(gender)
                 const displayName = gender === 'men' ? 'Men' : gender === 'women' ? 'Women' : 'Fashion Accessories'
+                const hierarchy = categoryHierarchy[gender as 'men' | 'women' | 'accessories']
+                
                 return (
-                  <label
-                    key={gender}
-                    className={`flex items-center px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors ${
-                      isChecked ? 'bg-indigo-50' : ''
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={isChecked}
-                      onChange={() => handleGenderToggle(gender)}
-                      className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer"
-                    />
-                    <span className={`ml-3 text-sm ${isChecked ? 'font-medium text-indigo-900' : 'text-gray-700'}`}>
-                      {displayName}
-                    </span>
-                    {isChecked && (
-                      <svg className="ml-auto h-5 w-5 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
+                  <div key={gender}>
+                    {/* Level 1: Gender/Root Category */}
+                    <label
+                      className={`flex items-center px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors ${
+                        isGenderChecked ? 'bg-indigo-50' : ''
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isGenderChecked}
+                        onChange={() => handleGenderToggle(gender)}
+                        className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer"
+                      />
+                      <span className={`ml-3 text-sm font-semibold ${isGenderChecked ? 'text-indigo-900' : 'text-gray-900'}`}>
+                        {displayName}
+                      </span>
+                      {isGenderChecked && (
+                        <svg className="ml-auto h-5 w-5 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </label>
+
+                    {/* Level 2 & 3: Parent Categories and Subcategories (NESTED) */}
+                    {isGenderChecked && (
+                      <div className="bg-gray-50">
+                        {Object.entries(hierarchy.children).map(([parentName, subNames]) => {
+                          const expandKey = `${gender}-${parentName}`
+                          const isExpanded = expandedParents.includes(expandKey)
+                          const hasSelected = isParentSelected(gender, parentName)
+                          
+                          return (
+                            <div key={parentName} className="border-t border-gray-200">
+                              {/* Level 2: Parent Category with Expand/Collapse */}
+                              <button
+                                type="button"
+                                onClick={() => toggleParentExpansion(gender, parentName)}
+                                className={`w-full flex items-center px-4 py-2.5 pl-10 hover:bg-gray-100 transition-colors text-left ${
+                                  hasSelected ? 'bg-indigo-50' : ''
+                                }`}
+                              >
+                                {/* Expand/Collapse Arrow */}
+                                <svg 
+                                  className={`w-4 h-4 mr-2 text-gray-500 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                                  fill="none" 
+                                  stroke="currentColor" 
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                </svg>
+                                
+                                <span className={`text-sm font-medium ${hasSelected ? 'text-indigo-900' : 'text-gray-700'}`}>
+                                  {parentName}
+                                </span>
+                                
+                                {hasSelected && (
+                                  <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                                    {subNames.filter(subName => {
+                                      const cat = categories.find(c => c.name.trim() === subName.trim())
+                                      return cat && selectedCategoryIds.includes(cat.id)
+                                    }).length}
+                                  </span>
+                                )}
+                              </button>
+
+                              {/* Level 3: Subcategories (INDENTED) */}
+                              {isExpanded && (
+                                <div className="bg-white">
+                                  {subNames.map((subName) => {
+                                    const subCat = categories.find(c => c.name.trim() === subName.trim())
+                                    if (!subCat) return null
+                                    
+                                    const isChecked = selectedCategoryIds.includes(subCat.id)
+                                    
+                                    return (
+                                      <label
+                                        key={subCat.id}
+                                        className={`flex items-center px-4 py-2 pl-20 hover:bg-gray-50 cursor-pointer transition-colors border-t border-gray-100 ${
+                                          isChecked ? 'bg-indigo-50' : ''
+                                        }`}
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          checked={isChecked}
+                                          onChange={() => handleCategoryToggle(subCat.id)}
+                                          className="h-3.5 w-3.5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer"
+                                        />
+                                        <span className={`ml-3 text-xs ${isChecked ? 'font-medium text-indigo-900' : 'text-gray-600'}`}>
+                                          {subCat.name}
+                                        </span>
+                                        {isChecked && (
+                                          <svg className="ml-auto h-4 w-4 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                          </svg>
+                                        )}
+                                      </label>
+                                    )
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
                     )}
-                  </label>
+                  </div>
                 )
               })}
             </div>
           </div>
-          <p className="mt-1 text-xs text-gray-500">Step 1: Select category/categories</p>
+          <p className="mt-1 text-xs text-gray-500">
+            💡 Select root category → Click parent to expand → Check subcategories
+          </p>
+          {errors.category_id && (
+            <p className="mt-1 text-sm text-red-600">{errors.category_id}</p>
+          )}
         </div>
 
         {/* Status */}
@@ -210,137 +285,23 @@ export function OrganizationSection({ formData, errors, categories, onInputChang
         </div>
       </div>
 
-      {/* Level 2: Parent Category with CHECKBOXES */}
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Parent Category <span className="text-red-500">*</span>
-          {selectedParents.length > 0 && (
-            <span className="text-xs font-normal text-indigo-600 ml-2">
-              ({selectedParents.length} selected)
-            </span>
-          )}
-        </label>
-        
-        {selectedGenders.length === 0 ? (
-          <div className="rounded-md border border-gray-300 bg-gray-50 p-4 text-center text-sm text-gray-500">
-            Please select a category first
-          </div>
-        ) : availableParents.length === 0 ? (
-          <div className="rounded-md border border-gray-300 bg-yellow-50 p-4 text-center text-sm text-yellow-800">
-            ⚠️ No parent categories available
-          </div>
-        ) : (
-          <div className="rounded-md border border-gray-300 bg-white max-h-[200px] overflow-y-auto">
-            <div className="divide-y divide-gray-200">
-              {availableParents.map((parent) => {
-                const isChecked = selectedParents.includes(parent.name)
-                return (
-                  <label
-                    key={`${parent.gender}-${parent.name}`}
-                    className={`flex items-center px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors ${
-                      isChecked ? 'bg-indigo-50' : ''
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={isChecked}
-                      onChange={() => handleParentToggle(parent.name)}
-                      className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer"
-                    />
-                    <span className={`ml-3 text-sm ${isChecked ? 'font-medium text-indigo-900' : 'text-gray-700'}`}>
-                      {parent.name}
-                    </span>
-                    {isChecked && (
-                      <svg className="ml-auto h-5 w-5 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    )}
-                  </label>
-                )
-              })}
-            </div>
-          </div>
-        )}
-        
-        <p className="mt-1 text-xs text-gray-500">
-          Step 2: {availableParents.length > 0 ? `${availableParents.length} options available` : 'Select parent categories'}
-        </p>
-      </div>
-
-      {/* Level 3: Subcategories with Checkboxes (EXISTING) */}
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Sub Categories <span className="text-red-500">*</span>
-          {selectedCategoryIds.length > 0 && (
-            <span className="text-xs font-normal text-indigo-600 ml-2">
-              ({selectedCategoryIds.length} selected)
-            </span>
-          )}
-        </label>
-        
-        {selectedGenders.length === 0 ? (
-          <div className="rounded-md border border-gray-300 bg-gray-50 p-4 text-center text-sm text-gray-500">
-            Please select a category first
-          </div>
-        ) : selectedParents.length === 0 ? (
-          <div className="rounded-md border border-gray-300 bg-gray-50 p-4 text-center text-sm text-gray-500">
-            Please select a parent category first
-          </div>
-        ) : availableSubCategories.length === 0 ? (
-          <div className="rounded-md border border-gray-300 bg-yellow-50 p-4 text-center text-sm text-yellow-800">
-            ⚠️ No subcategories available
-          </div>
-        ) : (
-          <div className="rounded-md border border-gray-300 bg-white max-h-[300px] overflow-y-auto">
-            <div className="divide-y divide-gray-200">
-              {availableSubCategories.map((subCat) => {
-                const isChecked = selectedCategoryIds.includes(subCat.id)
-                return (
-                  <label
-                    key={subCat.id}
-                    className={`flex items-center px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors ${
-                      isChecked ? 'bg-indigo-50' : ''
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={isChecked}
-                      onChange={() => handleCategoryToggle(subCat.id)}
-                      className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer"
-                    />
-                    <span className={`ml-3 text-sm ${isChecked ? 'font-medium text-indigo-900' : 'text-gray-700'}`}>
-                      {subCat.name}
-                    </span>
-                    {isChecked && (
-                      <svg className="ml-auto h-5 w-5 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    )}
-                  </label>
-                )
-              })}
-            </div>
-          </div>
-        )}
-        
-        {errors.category_id && (
-          <p className="mt-1 text-sm text-red-600">{errors.category_id}</p>
-        )}
-        <p className="mt-1 text-xs text-gray-500">
-          Step 3: Select subcategories. You can select multiple.
-        </p>
-      </div>
-
-      {/* Display Selected Path */}
-      {selectedGenders.length > 0 && selectedCategoryIds.length > 0 && (
-        <div className="mb-6 p-3 bg-green-50 border border-green-200 rounded-md">
-          <p className="text-sm font-medium text-green-800 mb-1">Selected Categories:</p>
+      {/* Display Selected Categories */}
+      {selectedCategoryIds.length > 0 && (
+        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-md">
+          <p className="text-sm font-semibold text-green-900 mb-2">✓ Selected Subcategories ({selectedCategoryIds.length}):</p>
           <div className="flex flex-wrap gap-2">
             {selectedCategoryIds.map((catId) => {
               const category = categories.find(c => c.id === catId)
               return (
-                <span key={catId} className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-green-100 text-green-800">
+                <span key={catId} className="inline-flex items-center px-3 py-1 rounded-md text-xs font-medium bg-green-100 text-green-800 border border-green-300">
                   {category?.name}
+                  <button
+                    type="button"
+                    onClick={() => handleCategoryToggle(catId)}
+                    className="ml-2 inline-flex items-center justify-center w-4 h-4 rounded-full text-green-600 hover:bg-green-200 hover:text-green-800"
+                  >
+                    ×
+                  </button>
                 </span>
               )
             })}

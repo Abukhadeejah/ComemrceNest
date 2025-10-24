@@ -7,6 +7,8 @@ import { Playfair_Display } from 'next/font/google';
 import { useCart } from '@/lib/cart';
 import { useTenant } from '@/hooks/useTenant';
 import { useBluebellHomeMode } from '@/lib/bluebellHomeMode';
+// IMPORT CONFIG - NEWLY ADDED
+import { shouldShowCart, shouldShowWishlist } from '@/tenants/bluebell/config';
 
 const playfair = Playfair_Display({ subsets: ['latin'], weight: ['700', '800', '900'] });
 
@@ -152,6 +154,7 @@ export default function Header() {
                   </Link>
                 </div>
               )}
+
               {mode === 'interiors' && (
                 <Link href={`${basePath}/portfolio`} className={navClass(`${basePath}/portfolio`)}>
                   PORTFOLIO
@@ -194,34 +197,41 @@ export default function Header() {
                 </svg>
               </Link>
 
-              <Link href="/login" className="text-gray-700 hover:text-primary transition-colors relative group">
+              {/* ACCOUNT ICON - UPDATED TO CUSTOMER LOGIN */}
+              <Link href={`${basePath}/login`} className="text-gray-700 hover:text-primary transition-colors relative group">
                 <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
                 <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs rounded-full w-3 h-3 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">●</span>
               </Link>
 
-              <Link href="/wishlist" className="text-gray-700 hover:text-primary transition-colors relative">
-                <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                </svg>
-                {wishlistCount > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-mustard text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                    {wishlistCount > 9 ? '9+' : wishlistCount}
-                  </span>
-                )}
-              </Link>
+              {/* WISHLIST - HIDE IF E-COMMERCE DISABLED */}
+              {shouldShowWishlist() && (
+                <Link href="/wishlist" className="text-gray-700 hover:text-primary transition-colors relative">
+                  <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                  </svg>
+                  {wishlistCount > 0 && (
+                    <span className="absolute -top-2 -right-2 bg-mustard text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                      {wishlistCount > 9 ? '9+' : wishlistCount}
+                    </span>
+                  )}
+                </Link>
+              )}
 
-              <Link href="/cart" className="text-gray-700 hover:text-primary transition-colors relative">
-                <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                </svg>
-                {cartCount > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-primary text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-semibold">
-                    {cartCount > 9 ? '9+' : cartCount}
-                  </span>
-                )}
-              </Link>
+              {/* CART - HIDE IF E-COMMERCE DISABLED */}
+              {shouldShowCart() && (
+                <Link href="/cart" className="text-gray-700 hover:text-primary transition-colors relative">
+                  <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                  </svg>
+                  {cartCount > 0 && (
+                    <span className="absolute -top-2 -right-2 bg-primary text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-semibold">
+                      {cartCount > 9 ? '9+' : cartCount}
+                    </span>
+                  )}
+                </Link>
+              )}
 
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -237,13 +247,13 @@ export default function Header() {
         </div>
       </header>
 
-      {/* Mobile Menu with Accordion */}
+      {/* Mobile Menu - Rest of the code stays the same */}
       {isMenuOpen && (
         <div className="lg:hidden fixed inset-0 z-[9999]">
           <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setIsMenuOpen(false)} />
-          
+
           <div className="absolute right-0 top-0 h-full w-full sm:w-[85vw] sm:max-w-md bg-white shadow-2xl overflow-y-auto">
-            
+
             <div className="sticky top-0 z-10 bg-gradient-to-b from-primary to-blue-700 px-6 py-6 flex items-center justify-between shadow-lg">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 bg-white rounded-full p-2">
@@ -273,7 +283,7 @@ export default function Header() {
             </div>
 
             <nav className="px-4 py-6 space-y-2 bg-white">
-              
+
               {/* HOME Accordion */}
               <div className="mb-2">
                 <button
@@ -289,12 +299,12 @@ export default function Header() {
                 {openDropdown === 'home' && (
                   <div className="mt-2 ml-2 space-y-1 pl-3 border-l-2 border-blue-200">
                     <Link href={basePath} className="flex items-center py-2 px-3 text-xs font-medium text-gray-700 hover:text-primary hover:bg-blue-50 rounded-lg transition-all"
-                      onClick={(e) => { e.preventDefault(); setMode('interiors'); setIsMenuOpen(false); if (pathname !== basePath) { window.location.href = basePath; }}}>
+                      onClick={(e) => { e.preventDefault(); setMode('interiors'); setIsMenuOpen(false); if (pathname !== basePath) { window.location.href = basePath; } }}>
                       <span className="w-1.5 h-1.5 bg-primary rounded-full mr-2"></span>
                       Bluebell Interiors
                     </Link>
                     <Link href={basePath} className="flex items-center py-2 px-3 text-xs font-medium text-gray-700 hover:text-primary hover:bg-blue-50 rounded-lg transition-all"
-                      onClick={(e) => { e.preventDefault(); setMode('fabrics'); setIsMenuOpen(false); if (pathname !== basePath) { window.location.href = basePath; }}}>
+                      onClick={(e) => { e.preventDefault(); setMode('fabrics'); setIsMenuOpen(false); if (pathname !== basePath) { window.location.href = basePath; } }}>
                       <span className="w-1.5 h-1.5 bg-primary rounded-full mr-2"></span>
                       Bluebell Fabric
                     </Link>

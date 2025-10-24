@@ -5,7 +5,8 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Playfair_Display, Inter } from 'next/font/google'
 import { useCart } from '@/lib/cart'
-import { WHATSAPP_NUMBER } from '@/tenants/bluebell/config'
+// UPDATED IMPORT - Use helper functions
+import { WHATSAPP_NUMBER, getProductInquiryLink, shouldShowAddToCart } from '@/tenants/bluebell/config'
 
 const playfair = Playfair_Display({ subsets: ['latin'], weight: ['700','800','900'] })
 const inter = Inter({ subsets: ['latin'], weight: ['300','400','500','600','700'] })
@@ -97,9 +98,11 @@ export default function PdpClient({ productId, name, description, hero_image_url
     }
   }
 
-  // WhatsApp integration
-  const whatsappMessage = `Hi, I'm interested in ${name}. Can you provide more details?`
-  const whatsappLink = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(whatsappMessage)}`
+  // UPDATED - Use helper function
+  const whatsappLink = getProductInquiryLink(name)
+  
+  // Check if e-commerce is enabled
+  const showEcommerce = shouldShowAddToCart()
 
   return (
     <>
@@ -116,7 +119,7 @@ export default function PdpClient({ productId, name, description, hero_image_url
               Products
               <span className="pointer-events-none absolute -bottom-0.5 left-0 h-0.5 w-0 bg-gradient-to-r from-[color:var(--color-crimson)] to-[color:var(--color-mustard)] transition-all duration-300 group-hover:w-full" />
             </Link>
-            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/></svg>
+            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7-7"/></svg>
             <span className="text-[color:var(--color-primary)] font-semibold">{name}</span>
           </nav>
         </div>
@@ -207,66 +210,69 @@ export default function PdpClient({ productId, name, description, hero_image_url
           </div>
           <p className={`${inter.className} text-[color:var(--color-brown)] text-lg leading-relaxed mb-6`}>{description || 'Premium fabric with refined texture and exceptional durability.'}</p>
 
-          {/* PRICE SECTION REMOVED - WhatsApp Button Added */}
-          {/* WhatsApp Button - ONLY FOR BLUEBELL */}
-{tenantKey === 'bluebell' && (
-  <div className="mb-6">
-    <a
-      href={whatsappLink}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="w-full flex items-center justify-center gap-2 rounded-lg bg-[#25D366] px-6 py-4 text-center text-base font-semibold text-white shadow-md transition-all duration-300 hover:bg-[#20BA5A] active:scale-[0.98]"
-    >
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="flex-shrink-0">
-        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
-      </svg>
-      Message on WhatsApp
-    </a>
-  </div>
-)}
-
-
-          {/* Quantity selector */}
-          <div className="flex items-center gap-3 mb-6">
-            <span className={`${inter.className} text-[color:var(--color-brown)] font-semibold`}>Quantity</span>
-            <div className="inline-flex items-center rounded-xl border border-gray-200 overflow-hidden">
-              <button onClick={() => setQty(q => Math.max(1, q-1))} className="w-10 h-10 grid place-items-center text-[color:var(--color-primary)] hover:bg-neutral-50">-</button>
-              <div className="px-4 font-semibold text-[color:var(--color-brown)] select-none">{qty}</div>
-              <button onClick={() => setQty(q => Math.min(99, q+1))} className="w-10 h-10 grid place-items-center text-[color:var(--color-primary)] hover:bg-neutral-50">+</button>
+          {/* WhatsApp Button - Show when e-commerce is disabled */}
+          {!showEcommerce && (
+            <div className="mb-6">
+              <a
+                href={whatsappLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full flex items-center justify-center gap-2 rounded-lg bg-[#25D366] px-6 py-4 text-center text-base font-semibold text-white shadow-md transition-all duration-300 hover:bg-[#20BA5A] active:scale-[0.98]"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="flex-shrink-0">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                </svg>
+                Message on WhatsApp
+              </a>
             </div>
-          </div>
+          )}
 
-          {/* CTA */}
-          <div className="ripple inline-block w-full sm:w-auto" onMouseDown={(e) => {
-            const t = e.currentTarget as HTMLElement
-            const r = t.getBoundingClientRect()
-            t.style.setProperty('--x', `${e.clientX - r.left}px`)
-            t.style.setProperty('--y', `${e.clientY - r.top}px`)
-            t.classList.remove('active'); void t.offsetWidth; t.classList.add('active')
-          }}>
-            <button
-              type="button"
-              onClick={handleAddToCart}
-              disabled={isAddingToCart}
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-[color:var(--color-mustard)] text-[color:var(--color-brown)] px-8 py-4 font-semibold shadow-[0_12px_40px_rgba(253,206,89,0.35)] transition-all hover:shadow-[0_16px_50px_rgba(253,206,89,0.55)] hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isAddingToCart ? (
-                <>
-                  <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                  Adding to Cart...
-                </>
-              ) : (
-                <>
-                  Add to Cart
-                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/>
-                  </svg>
-                </>
-              )}
-            </button>
-          </div>
+          {/* E-COMMERCE SECTION - Only show when enabled */}
+          {showEcommerce && (
+            <>
+              {/* Quantity selector */}
+              <div className="flex items-center gap-3 mb-6">
+                <span className={`${inter.className} text-[color:var(--color-brown)] font-semibold`}>Quantity</span>
+                <div className="inline-flex items-center rounded-xl border border-gray-200 overflow-hidden">
+                  <button onClick={() => setQty(q => Math.max(1, q-1))} className="w-10 h-10 grid place-items-center text-[color:var(--color-primary)] hover:bg-neutral-50">-</button>
+                  <div className="px-4 font-semibold text-[color:var(--color-brown)] select-none">{qty}</div>
+                  <button onClick={() => setQty(q => Math.min(99, q+1))} className="w-10 h-10 grid place-items-center text-[color:var(--color-primary)] hover:bg-neutral-50">+</button>
+                </div>
+              </div>
+
+              {/* Add to Cart CTA */}
+              <div className="ripple inline-block w-full sm:w-auto" onMouseDown={(e) => {
+                const t = e.currentTarget as HTMLElement
+                const r = t.getBoundingClientRect()
+                t.style.setProperty('--x', `${e.clientX - r.left}px`)
+                t.style.setProperty('--y', `${e.clientY - r.top}px`)
+                t.classList.remove('active'); void t.offsetWidth; t.classList.add('active')
+              }}>
+                <button
+                  type="button"
+                  onClick={handleAddToCart}
+                  disabled={isAddingToCart}
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-[color:var(--color-mustard)] text-[color:var(--color-brown)] px-8 py-4 font-semibold shadow-[0_12px_40px_rgba(253,206,89,0.35)] transition-all hover:shadow-[0_16px_50px_rgba(253,206,89,0.55)] hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isAddingToCart ? (
+                    <>
+                      <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      Adding to Cart...
+                    </>
+                  ) : (
+                    <>
+                      Add to Cart
+                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/>
+                      </svg>
+                    </>
+                  )}
+                </button>
+              </div>
+            </>
+          )}
 
           {/* Details sections */}
           <div className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-6">
