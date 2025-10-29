@@ -41,13 +41,26 @@ export type TenantConfig = {
       address?: string
       phone?: string
       email?: string
-      whatsapp?: string  // ADDED - WhatsApp number for product inquiries
+      whatsapp?: string  // WhatsApp number for product inquiries
     }
   }
   // Feature flags
   features: {
     enabledModules: string[]
     customComponents?: Record<string, React.ComponentType<unknown>>
+    // E-COMMERCE FEATURE FLAGS - NEWLY ADDED
+    ecommerce?: {
+      enabled?: boolean              // Master toggle for e-commerce
+      showPrices?: boolean           // Show/hide product prices
+      showAddToCart?: boolean        // Show/hide "Add to Cart" buttons
+      showBuyNow?: boolean           // Show/hide "Buy Now" buttons
+      showCart?: boolean             // Show/hide cart icon in header
+      showCartPage?: boolean         // Enable/disable cart page
+      showCheckout?: boolean         // Enable/disable checkout
+      showWishlist?: boolean         // Show/hide wishlist features
+      showStock?: boolean            // Show/hide stock information
+      contactMethod?: string         // Contact method (e.g., 'whatsapp', 'email')
+    }
   }
   // Pricing and taxation (tenant-specific)
   pricing?: {
