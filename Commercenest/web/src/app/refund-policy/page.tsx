@@ -1,6 +1,24 @@
+"use client";
+
+import { useRouter } from "next/navigation";
 export default function RefundPolicy() {
+  const router = useRouter();
+
+  const handleGoBack = () => {
+    if (window.history.length > 1) {
+      router.back();
+    } else {
+      router.push("/");
+    }
+  };
   return (
     <div className="prose mx-auto p-4">
+      <button
+        onClick={handleGoBack}
+        className="mb-4 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+      >
+        ← Go Back
+      </button>
       <h1>Refund and Return Policy</h1>
 
       <h2>Refund Policy</h2>

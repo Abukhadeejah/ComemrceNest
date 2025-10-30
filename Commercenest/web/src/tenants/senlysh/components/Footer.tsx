@@ -20,7 +20,6 @@ export default function Footer() {
               Your premier destination for fashion and lifestyle. Discover the latest trends 
               in clothing, accessories, and more with exclusive deals and premium quality.
             </p>
-            
             {/* Social Media Links */}
             <div className="flex space-x-4">
               {/* Social icons (unchanged) */}
@@ -95,31 +94,7 @@ export default function Footer() {
           <div>
             <h4 className="text-lg font-semibold text-cyan-400 mb-6">Customer Service</h4>
             <ul className="space-y-3">
-              <li>
-                <Link href="/contact" className="text-gray-300 hover:text-cyan-400 transition-colors">
-                  Contact Us
-                </Link>
-              </li>
-              <li>
-                <Link href="/shipping" className="text-gray-300 hover:text-cyan-400 transition-colors">
-                  Shipping Info
-                </Link>
-              </li>
-              <li>
-                <Link href="/returns" className="text-gray-300 hover:text-cyan-400 transition-colors">
-                  Returns & Exchanges
-                </Link>
-              </li>
-              <li>
-                <Link href="/size-guide" className="text-gray-300 hover:text-cyan-400 transition-colors">
-                  Size Guide
-                </Link>
-              </li>
-              <li>
-                <Link href="/faq" className="text-gray-300 hover:text-cyan-400 transition-colors">
-                  FAQ
-                </Link>
-              </li>
+            
               {/* Added Legal & Policy Pages */}
               <li>
                 <Link href="/terms-and-conditions" className="text-gray-300 hover:text-cyan-400 transition-colors">
@@ -182,7 +157,6 @@ export default function Footer() {
             <div className="text-gray-400 text-sm">
               © 2024 Senlysh. All rights reserved.
             </div>
-            
           </div>
         </div>
       </div>
