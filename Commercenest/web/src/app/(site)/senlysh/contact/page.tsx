@@ -38,9 +38,9 @@ export default function SenlyshContactPage() {
           <aside className="bg-gray-900 rounded-xl p-6 text-white">
             <h3 className="text-lg font-semibold text-cyan-400 mb-3">Contact Details</h3>
             <ul className="space-y-3 text-gray-200 text-sm">
-              <li>📍 123 Fashion Street, Mumbai, 400001</li>
-              <li>📞 (+91) 98765-43210</li>
-              <li>✉️ support@senlysh.in</li>
+              <li>📍 Shop No.1, Narmada Smruti, Cabin Road, Near Sudha Hospital, Near Station, Bhayandar East, 401105.</li>
+              <li>📞 (+91) 9029460064, 🗨️ 7977439669</li>
+              <li>✉️ helpdesk@senlysh.in, ✉️senlysh.official@gmail.com, ✉️senlysh.in@zohomail.com </li>
             </ul>
           </aside>
         </div>

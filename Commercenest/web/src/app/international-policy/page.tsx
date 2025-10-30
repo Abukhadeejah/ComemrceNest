@@ -1,6 +1,24 @@
+"use client";
+import { useRouter } from "next/navigation";
+
 export default function InternationalPolicy() {
+  const router = useRouter();
+
+  const handleGoBack = () => {
+    if (window.history.length > 1) {
+      router.back();
+    } else {
+      router.push("/");
+    }
+  };
   return (
     <div className="prose mx-auto p-4 max-w-4xl">
+      <button
+        onClick={handleGoBack}
+        className="mb-4 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+      >
+        ← Go Back
+      </button>
       <h1>Our Policy to Serve the Best</h1>
 
       <p>We ship across the globe via Shiprocket.</p>
