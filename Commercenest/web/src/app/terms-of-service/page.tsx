@@ -1,6 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
-export default function TermsAndConditions() {
+export default function TermsofService() {
   const router = useRouter();
 
   const handleGoBack = () => {
