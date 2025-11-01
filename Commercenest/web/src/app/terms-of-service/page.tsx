@@ -1,13 +1,8 @@
 "use client";
 import { useRouter } from "next/navigation";
-<<<<<<< HEAD
 
 export default function TermsofService() {
   console.log("TermsofService page component rendered");
-
-=======
-export default function Termsofservice() {
->>>>>>> 257f201b8b70ac78b4b24ef6b8385b10bdf7c8cb
   const router = useRouter();
 
   const handleGoBack = () => {
