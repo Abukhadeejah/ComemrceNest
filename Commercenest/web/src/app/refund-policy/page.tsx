@@ -1,7 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+
 export default function RefundPolicy() {
+  console.log("RefundPolicy page component rendered");
+
   const router = useRouter();
 
   const handleGoBack = () => {
@@ -11,6 +14,7 @@ export default function RefundPolicy() {
       router.push("/");
     }
   };
+
   return (
     <div className="prose mx-auto p-4">
       <button

@@ -2,6 +2,8 @@
 import { useRouter } from "next/navigation";
 
 export default function ShippingPolicy() {
+  console.log("ShippingPolicy page component rendered");
+
   const router = useRouter();
 
   const handleGoBack = () => {
@@ -11,6 +13,7 @@ export default function ShippingPolicy() {
       router.push("/");
     }
   };
+
   return (
     <div className="prose mx-auto p-4 max-w-4xl">
       <button
@@ -21,7 +24,9 @@ export default function ShippingPolicy() {
       </button>
       <h1>Shipping Policy</h1>
 
-      <p>At Senlysh, we ensure that all products are shipped in excellent condition and use the best shipping partners.</p>
+      <p>
+        At Senlysh, we ensure that all products are shipped in excellent condition and use the best shipping partners.
+      </p>
 
       <h2>Delivery Timelines:</h2>
       <ul>
@@ -33,7 +38,9 @@ export default function ShippingPolicy() {
       <p><strong>COD (Cash On Delivery):</strong> Not Available</p>
       <p><strong>International Orders:</strong> Calculated at checkout</p>
 
-      <p>Please note that delivery times may vary due to factors beyond our control, such as weather or road conditions. However, we are committed to ensuring your order reaches you, no matter what. If you encounter any issues, we're here to assist you.</p>
+      <p>
+        Please note that delivery times may vary due to factors beyond our control, such as weather or road conditions. However, we are committed to ensuring your order reaches you, no matter what. If you encounter any issues, we're here to assist you.
+      </p>
     </div>
   );
 }

@@ -1,6 +1,9 @@
 "use client";
 import { useRouter } from "next/navigation";
+
 export default function TermsofService() {
+  console.log("TermsofService page component rendered");
+
   const router = useRouter();
 
   const handleGoBack = () => {
@@ -10,6 +13,7 @@ export default function TermsofService() {
       router.push("/");
     }
   };
+
   return (
     <div className="prose mx-auto p-4 max-w-4xl">
       <button
@@ -17,7 +21,7 @@ export default function TermsofService() {
         className="mb-4 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
       >
         ← Go Back
-      </button> 
+      </button>
       <h1>Terms of Service</h1>
 
       <h2>Overview</h2>
