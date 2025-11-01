@@ -12,22 +12,6 @@ export function middleware(request: NextRequest) {
   const tenantFromPath = seg === 'bluebell' || seg === 'senlysh' ? seg : '';
   const isAdminRoute = pathname === '/admin' || pathname.startsWith('/admin/');
 
-  const legalPages = new Set([
-    '/terms-and-conditions',
-    '/terms-of-service',
-    '/privacy-policy',
-    '/refund-policy',
-    '/shipping-policy',
-    '/international-policy',
-  ]);
-
-  if (tenantFromPath && legalPages.has(pathname)) {
-    console.log('[Legal Pages] Tenant:', tenantFromPath, 'Path:', pathname);
-    const response = NextResponse.next({ request: { headers } });
-    response.cookies.set('tenant', tenantFromPath, { path: '/', sameSite: 'lax' });
-    return response;
-  }
-
   headers.set('x-pathname', pathname);
 
   // Detect tenant from host header
@@ -38,18 +22,28 @@ export function middleware(request: NextRequest) {
   else if (/(^|\.)senlysh\.local(?::\d+)?$/i.test(host) || /(^|\.)senlysh\.in(?::\d+)?$/i.test(host))
     tenantFromHost = 'senlysh';
 
+  // ✅ UPDATED: Allow localhost root path to show CommerceNest landing page
+  if (!tenantFromHost && host.includes('localhost') && pathname === '/') {
+    console.log('[Middleware] Localhost root - showing CommerceNest landing page');
+    headers.set('x-pathname', '/');
+    return NextResponse.next({ request: { headers } });
+  }
+
+  // ✅ REMOVED: The old localhost fallback that always defaulted to bluebell
+  // This was: if (!tenantFromHost && host.includes('localhost')) { tenantFromHost = 'bluebell'; }
+
   console.log('[Middleware] Tenant from path:', tenantFromPath);
   console.log('[Middleware] Tenant from host:', tenantFromHost);
-
-  // Tenant detection validation - fallback if tenant not found
-  if (!tenantFromPath && !tenantFromHost) {
-    console.error('[Middleware] Tenant NOT found! Path:', pathname, 'Host:', host);
-    return NextResponse.redirect(new URL('/tenant-not-found', request.url));
-  }
 
   // Routes that don't need tenant rewrites
   const globalNoRewrite = new Set(['/login', '/checkout', '/cart']);
   const isGlobalRoute = globalNoRewrite.has(pathname);
+
+  // ✅ UPDATED: Tenant detection validation - allow root path without tenant
+  if (!tenantFromPath && !tenantFromHost && !isAdminRoute && !isGlobalRoute && pathname !== '/') {
+    console.error('[Middleware] Tenant NOT found! Path:', pathname, 'Host:', host);
+    return NextResponse.redirect(new URL('/tenant-not-found', request.url));
+  }
 
   // Skip static assets
   if (/\.[a-zA-Z0-9]+$/.test(pathname)) {

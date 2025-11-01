@@ -6,6 +6,7 @@ import { getSiteUrl } from '@/utils/site-urls';
 
 export default function Footer() {
   const tenant = useTenant();
+  
   return (
     <footer className="bg-gray-900 text-white">
       {/* Main Footer Content */}
@@ -90,35 +91,43 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Customer Service */}
+          {/* Customer Service - UPDATED WITH CORRECT LINKS */}
           <div>
             <h4 className="text-lg font-semibold text-cyan-400 mb-6">Customer Service</h4>
             <ul className="space-y-3">
-            
-              {/* Added Legal & Policy Pages */}
               <li>
-                <Link href="/terms-and-conditions" className="text-gray-300 hover:text-cyan-400 transition-colors">
+                <Link href="/senlysh/about" className="text-gray-300 hover:text-cyan-400 transition-colors">
+                  About Us
+                </Link>
+              </li>
+              <li>
+                <Link href="/senlysh/contact" className="text-gray-300 hover:text-cyan-400 transition-colors">
+                  Contact Us
+                </Link>
+              </li>
+              <li>
+                <Link href="/senlysh/terms" className="text-gray-300 hover:text-cyan-400 transition-colors">
                   Terms & Conditions
                 </Link>
               </li>
               <li>
-                <Link href="/privacy-policy" className="text-gray-300 hover:text-cyan-400 transition-colors">
+                <Link href="/senlysh/privacy" className="text-gray-300 hover:text-cyan-400 transition-colors">
                   Privacy Policy
                 </Link>
               </li>
               <li>
-                <Link href="/refund-policy" className="text-gray-300 hover:text-cyan-400 transition-colors">
-                  Refund Policy
+                <Link href="/senlysh/refund-policy" className="text-gray-300 hover:text-cyan-400 transition-colors">
+                  Refund & Return Policy
                 </Link>
               </li>
               <li>
-                <Link href="/shipping-policy" className="text-gray-300 hover:text-cyan-400 transition-colors">
+                <Link href="/senlysh/shipping-policy" className="text-gray-300 hover:text-cyan-400 transition-colors">
                   Shipping Policy
                 </Link>
               </li>
               <li>
-                <Link href="/international-policy" className="text-gray-300 hover:text-cyan-400 transition-colors">
-                  International Shipping Policy
+                <Link href="/senlysh/international-policy" className="text-gray-300 hover:text-cyan-400 transition-colors">
+                  International Shipping
                 </Link>
               </li>
             </ul>
@@ -155,7 +164,24 @@ export default function Footer() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             <div className="text-gray-400 text-sm">
-              © 2024 Senlysh. All rights reserved.
+              © 2025 Senlysh. All rights reserved.
+            </div>
+            <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-gray-400 text-sm">
+              <Link href="/senlysh/terms" className="hover:text-cyan-400 transition-colors">
+                Terms
+              </Link>
+              <span>•</span>
+              <Link href="/senlysh/privacy" className="hover:text-cyan-400 transition-colors">
+                Privacy
+              </Link>
+              <span>•</span>
+              <Link href="/senlysh/refund-policy" className="hover:text-cyan-400 transition-colors">
+                Refunds
+              </Link>
+              <span>•</span>
+              <Link href="/senlysh/shipping-policy" className="hover:text-cyan-400 transition-colors">
+                Shipping
+              </Link>
             </div>
           </div>
         </div>
