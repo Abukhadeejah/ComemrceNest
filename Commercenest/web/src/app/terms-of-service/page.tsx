@@ -1,6 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 
+
 export default function TermsofService() {
   console.log("TermsofService page component rendered");
   const router = useRouter();
