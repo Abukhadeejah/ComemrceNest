@@ -65,6 +65,40 @@ export function OrganizationSection({ formData, errors, categories, onInputChang
     ? [formData.category_id] 
     : []
 
+  // Helper: determine if a category is a descendant of a given root category id
+  const isDescendantOf = (categoryId: string, rootId?: string) => {
+    if (!rootId) return true
+    const idToCategory = new Map(categories.map(c => [c.id, c]))
+    let currentId: string | null = categoryId
+    while (currentId) {
+      const cat = idToCategory.get(currentId)
+      if (!cat) break
+      if (cat.id === rootId) return true
+      currentId = cat.parent_id
+    }
+    return false
+  }
+
+  // Helper: whether category path contains a gender keyword (e.g., 'men', 'women')
+  const pathContainsGender = (categoryId: string, genderKey: 'men' | 'women' | 'accessories') => {
+    const genderWord = genderKey === 'men' ? 'men' : genderKey === 'women' ? 'women' : 'accessor'
+    const path = getCategoryPath(categoryId, categories)
+    return path.some(name => name.toLowerCase().includes(genderWord))
+  }
+
+  // Helper: find category by name for a gender, preferring under the gender root or path match, with safe fallback
+  const findCategoryForGender = (name: string, genderKey: 'men' | 'women' | 'accessories', rootId?: string) => {
+    const target = name.trim().toLowerCase()
+    // 1) Prefer strict descendant of provided root
+    let match = categories.find(c => c.name.trim().toLowerCase() === target && isDescendantOf(c.id, rootId))
+    if (match) return match
+    // 2) Next, prefer items whose breadcrumb path contains the gender keyword
+    match = categories.find(c => c.name.trim().toLowerCase() === target && pathContainsGender(c.id, genderKey))
+    if (match) return match
+    // 3) Fallback: any exact name match to ensure UI still shows something
+    return categories.find(c => c.name.trim().toLowerCase() === target)
+  }
+
   // Handle gender checkbox toggle
   const handleGenderToggle = (gender: string) => {
     const newGenders = selectedGenders.includes(gender)
@@ -77,11 +111,11 @@ export function OrganizationSection({ formData, errors, categories, onInputChang
     if (!newGenders.includes(gender)) {
       setExpandedParents(expandedParents.filter(p => !p.startsWith(gender)))
       
-      // Clear subcategory selections for this gender
+      // Clear subcategory selections for this gender (constrained under the gender root)
       const hierarchy = categoryHierarchy[gender as 'men' | 'women' | 'accessories']
       const subcatsToRemove: string[] = []
       Object.values(hierarchy.children).flat().forEach(subName => {
-        const cat = categories.find(c => c.name.trim() === subName.trim())
+        const cat = findCategoryForGender(subName, gender as 'men' | 'women' | 'accessories', hierarchy.id)
         if (cat) subcatsToRemove.push(cat.id)
       })
       
@@ -105,7 +139,7 @@ export function OrganizationSection({ formData, errors, categories, onInputChang
     const subNames = hierarchy.children[parentName] || []
     
     return subNames.some(subName => {
-      const cat = categories.find(c => c.name.trim() === subName.trim())
+      const cat = findCategoryForGender(subName, gender as 'men' | 'women' | 'accessories', hierarchy.id)
       return cat && selectedCategoryIds.includes(cat.id)
     })
   }
@@ -205,8 +239,8 @@ export function OrganizationSection({ formData, errors, categories, onInputChang
                                 
                                 {hasSelected && (
                                   <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                                    {subNames.filter(subName => {
-                                      const cat = categories.find(c => c.name.trim() === subName.trim())
+                                  {subNames.filter(subName => {
+                                      const cat = findCategoryForGender(subName, gender as 'men' | 'women' | 'accessories', hierarchy.id)
                                       return cat && selectedCategoryIds.includes(cat.id)
                                     }).length}
                                   </span>
@@ -217,7 +251,7 @@ export function OrganizationSection({ formData, errors, categories, onInputChang
                               {isExpanded && (
                                 <div className="bg-white">
                                   {subNames.map((subName) => {
-                                    const subCat = categories.find(c => c.name.trim() === subName.trim())
+                                    const subCat = findCategoryForGender(subName, gender as 'men' | 'women' | 'accessories', hierarchy.id)
                                     if (!subCat) return null
                                     
                                     const isChecked = selectedCategoryIds.includes(subCat.id)
