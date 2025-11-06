@@ -3,7 +3,8 @@ import { resolveTenantIdFromRequest } from '@/server/tenant'
 import { assertTenantAdmin } from '@/server/auth'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
 
-export async function GET(_req: NextRequest, { params }: { params: { productId: string } }) {
+export async function GET(_req: NextRequest, context: { params: Promise<{ productId: string }> }) {
+  const { productId } = await context.params
   const tenantId = await resolveTenantIdFromRequest()
   if (!tenantId) return NextResponse.json({ error: 'Tenant not found' }, { status: 401 })
   await assertTenantAdmin(tenantId)
@@ -12,14 +13,15 @@ export async function GET(_req: NextRequest, { params }: { params: { productId: 
     .from('product_drafts')
     .select('data')
     .eq('tenant_id', tenantId)
-    .eq('product_id', params.productId)
+    .eq('product_id', productId)
     .maybeSingle()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data?.data || null)
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { productId: string } }) {
+export async function PUT(req: NextRequest, context: { params: Promise<{ productId: string }> }) {
+  const { productId } = await context.params
   const tenantId = await resolveTenantIdFromRequest()
   if (!tenantId) return NextResponse.json({ error: 'Tenant not found' }, { status: 401 })
   await assertTenantAdmin(tenantId)
@@ -29,7 +31,7 @@ export async function PUT(req: NextRequest, { params }: { params: { productId: s
     .from('product_drafts')
     .upsert({
       tenant_id: tenantId,
-      product_id: params.productId,
+      product_id: productId,
       data: payload
     }, { onConflict: 'tenant_id,product_id' })
 
@@ -37,7 +39,8 @@ export async function PUT(req: NextRequest, { params }: { params: { productId: s
   return NextResponse.json({ ok: true })
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: { productId: string } }) {
+export async function DELETE(_req: NextRequest, context: { params: Promise<{ productId: string }> }) {
+  const { productId } = await context.params
   const tenantId = await resolveTenantIdFromRequest()
   if (!tenantId) return NextResponse.json({ error: 'Tenant not found' }, { status: 401 })
   await assertTenantAdmin(tenantId)
@@ -46,7 +49,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: { productI
     .from('product_drafts')
     .delete()
     .eq('tenant_id', tenantId)
-    .eq('product_id', params.productId)
+    .eq('product_id', productId)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
