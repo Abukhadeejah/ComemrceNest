@@ -88,7 +88,12 @@ export function middleware(request: NextRequest) {
     const hasAuthCookie = /sb-.*-auth-token/.test(cookieHeader);
 
     const cookieTenant = request.cookies.get('tenant')?.value;
-    const inferredTenant = cookieTenant === 'bluebell' || cookieTenant === 'senlysh' ? cookieTenant : 'bluebell';
+    // Prefer host-derived tenant first for production domains, then cookie, then fallback
+    const inferredTenant = (tenantFromHost && (tenantFromHost === 'bluebell' || tenantFromHost === 'senlysh'))
+      ? tenantFromHost
+      : (cookieTenant === 'bluebell' || cookieTenant === 'senlysh')
+        ? cookieTenant
+        : 'bluebell';
     headers.set('x-tenant-admin', inferredTenant);
 
     console.log('[Middleware] Admin route:', pathname, 'Tenant:', inferredTenant, 'Auth cookie:', hasAuthCookie);
