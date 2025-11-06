@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, Globe, CreditCard, Package, Clock, Mail, AlertTriangle, CheckCircle, Phone, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 
-export default function InternationalShippingPolicyPage() {
+export default function InternationalPolicyPage() {
   const router = useRouter();
 
   const handleGoBack = () => {

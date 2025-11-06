@@ -127,7 +127,7 @@ export default function Footer() {
               </li>
               <li>
                 <Link href="/senlysh/international-policy" className="text-gray-300 hover:text-cyan-400 transition-colors">
-                  International Shipping
+                  International Policy
                 </Link>
               </li>
             </ul>
