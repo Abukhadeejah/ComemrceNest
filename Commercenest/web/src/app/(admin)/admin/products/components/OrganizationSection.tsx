@@ -306,6 +306,7 @@ export function OrganizationSection({ formData, errors, categories, onInputChang
             Status
           </label>
           <select
+            name="status"
             value={String(formData.status || 'draft')}
             onChange={(e) => onInputChange('status', e.target.value)}
             className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
