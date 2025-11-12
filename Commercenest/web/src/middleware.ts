@@ -5,80 +5,87 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const headers = new Headers(request.headers);
 
-  console.log('[Middleware] Request path:', pathname);
-
+  // Normalize path and get first segment
   const segments = pathname.replace(/\/+/g, '/').split('/').filter(Boolean);
-  const seg = segments[0] || '';
-  const tenantFromPath = seg === 'bluebell' || seg === 'senlysh' ? seg : '';
-  const isAdminRoute = pathname === '/admin' || pathname.startsWith('/admin/');
+  const firstSegment = segments[0] || '';
+  const knownTenants = new Set(['bluebell', 'senlysh']);
+  const tenantFromPath = knownTenants.has(firstSegment) ? firstSegment : '';
 
-  headers.set('x-pathname', pathname);
+  // Known global routes that skip tenant logic
+  const globalRoutes = new Set(['/login', '/checkout', '/cart']);
+  const isGlobalRoute = globalRoutes.has(pathname);
+
+  const isAdminRoute = pathname === '/admin' || pathname.startsWith('/admin/');
 
   // Detect tenant from host header
   const host = request.headers.get('host') || '';
   let tenantFromHost = '';
-  if (/(^|\.)bluebell\.local(?::\d+)?$/i.test(host) || /(^|\.)bluebellstudio\.in(?::\d+)?$/i.test(host))
+  if (/(^|\.)bluebell\.local(?::\d+)?$/i.test(host) || /(^|\.)bluebellstudio\.in(?::\d+)?$/i.test(host)) {
     tenantFromHost = 'bluebell';
-  else if (/(^|\.)senlysh\.local(?::\d+)?$/i.test(host) || /(^|\.)senlysh\.in(?::\d+)?$/i.test(host))
+  } else if (/(^|\.)senlysh\.local(?::\d+)?$/i.test(host) || /(^|\.)senlysh\.in(?::\d+)?$/i.test(host)) {
     tenantFromHost = 'senlysh';
-
-  // ✅ UPDATED: Allow localhost root path to show CommerceNest landing page
-  if (!tenantFromHost && host.includes('localhost') && pathname === '/') {
-    console.log('[Middleware] Localhost root - showing CommerceNest landing page');
-    headers.set('x-pathname', '/');
-    return NextResponse.next({ request: { headers } });
   }
 
-  // ✅ REMOVED: The old localhost fallback that always defaulted to bluebell
-  // This was: if (!tenantFromHost && host.includes('localhost')) { tenantFromHost = 'bluebell'; }
-
-  console.log('[Middleware] Tenant from path:', tenantFromPath);
-  console.log('[Middleware] Tenant from host:', tenantFromHost);
-
-  // Routes that don't need tenant rewrites
-  const globalNoRewrite = new Set(['/login', '/checkout', '/cart']);
-  const isGlobalRoute = globalNoRewrite.has(pathname);
-
-  // ✅ UPDATED: Tenant detection validation - allow root path without tenant
-  if (!tenantFromPath && !tenantFromHost && !isAdminRoute && !isGlobalRoute && pathname !== '/') {
-    console.error('[Middleware] Tenant NOT found! Path:', pathname, 'Host:', host);
-    return NextResponse.redirect(new URL('/tenant-not-found', request.url));
+  // Set x-pathname header for proper tenant resolution
+  headers.set('x-pathname', pathname);
+  
+  // Allow localhost requests to pass through without tenant redirect
+  if (host.includes('localhost')) {
+    const response = NextResponse.next({ request: { headers } });
+    // Set x-pathname header in response for server components
+    response.headers.set('x-pathname', pathname);
+    // Still set tenant cookie for localhost
+    if (tenantFromPath) {
+      response.cookies.set('tenant', tenantFromPath, { path: '/', sameSite: 'lax' });
+    }
+    return response;
   }
 
-  // Skip static assets
+  // Skip static assets immediately
   if (/\.[a-zA-Z0-9]+$/.test(pathname)) {
-    console.log('[Middleware] Asset request, skip:', pathname);
-    return NextResponse.next({ request: { headers } });
+    const response = NextResponse.next({ request: { headers } });
+    response.headers.set('x-pathname', pathname);
+    return response;
   }
 
-  // Rewrite routes if tenant detected via host and no prefix in path
-  if (tenantFromHost && !tenantFromPath && !isGlobalRoute) {
-    headers.set('x-tenant-admin', tenantFromHost);
-    console.log('[Middleware] Rewrite for tenant from host:', tenantFromHost);
+  // If no tenant detected in path or host and path isn't global/admin/root,
+  // allow request to proceed in non-production environments (e.g., preview, local).
+  // Enforce tenant-not-found redirect only in production.
+  if (!tenantFromPath && !tenantFromHost && !isAdminRoute && !isGlobalRoute && pathname !== '/') {
+    if (process.env.NODE_ENV === 'production') {
+      // Redirect to tenant not found page in production for unmatched tenants
+      console.warn('[Middleware] Tenant NOT found - redirecting to tenant-not-found:', pathname, host);
+      const tenantNotFoundUrl = new URL('/tenant-not-found', request.url);
+      const response = NextResponse.next();
+      headers.forEach((value, key) => {
+         response.headers.set(key, value);
+        });
+        return response;
 
-    const isProductsDetail = pathname.startsWith('/products/');
-    if (tenantFromHost === 'senlysh' && isProductsDetail) {
-      headers.set('x-pathname', pathname);
+    } else {
+      // In non-production, just log and allow
+      console.warn('[Middleware] Tenant NOT found but allowing:', pathname, host);
       const response = NextResponse.next({ request: { headers } });
-      response.cookies.set('tenant', tenantFromHost, { path: '/', sameSite: 'lax' });
+      response.headers.set('x-pathname', pathname);
       return response;
     }
+  }
 
+  // If tenant found from host and not in path, rewrite to add tenant prefix
+  if (tenantFromHost && !tenantFromPath && !isGlobalRoute) {
     const targetPath = pathname === '/' ? `/${tenantFromHost}` : `/${tenantFromHost}${pathname}`;
-    headers.set('x-pathname', targetPath);
     const response = NextResponse.rewrite(new URL(targetPath, request.url), { request: { headers } });
+    response.headers.set('x-pathname', targetPath);
     response.cookies.set('tenant', tenantFromHost, { path: '/', sameSite: 'lax' });
     response.cookies.set('tenant_mode', 'host', { path: '/', sameSite: 'lax' });
     return response;
   }
 
-  // Tenant prefix detected in path
+  // Handle tenant prefix in path: set tenant cookie and x-pathname header
   if (tenantFromPath) {
-    headers.set('x-tenant-admin', tenantFromPath);
-    console.log('[Middleware] Tenant from path:', tenantFromPath);
-
     const response = NextResponse.next({ request: { headers } });
     response.cookies.set('tenant', tenantFromPath, { path: '/', sameSite: 'lax' });
+    response.headers.set('x-pathname', pathname);
     return response;
   }
 
@@ -88,55 +95,55 @@ export function middleware(request: NextRequest) {
     const hasAuthCookie = /sb-.*-auth-token/.test(cookieHeader);
 
     const cookieTenant = request.cookies.get('tenant')?.value;
-    const inferredTenant = cookieTenant === 'bluebell' || cookieTenant === 'senlysh' ? cookieTenant : 'bluebell';
-    headers.set('x-tenant-admin', inferredTenant);
+    const inferredTenant = (tenantFromHost && knownTenants.has(tenantFromHost))
+      ? tenantFromHost
+      : (cookieTenant && knownTenants.has(cookieTenant))
+        ? cookieTenant
+        : 'bluebell';
 
-    console.log('[Middleware] Admin route:', pathname, 'Tenant:', inferredTenant, 'Auth cookie:', hasAuthCookie);
+    headers.set('x-tenant-admin', inferredTenant);
 
     if (!hasAuthCookie) {
       const redirectResp = NextResponse.redirect(new URL('/login', request.url));
+      redirectResp.headers.set('x-pathname', pathname);
       redirectResp.cookies.set('tenant', inferredTenant, { path: '/', sameSite: 'lax' });
       return redirectResp;
     }
 
     const response = NextResponse.next({ request: { headers } });
+    response.headers.set('x-pathname', pathname);
     response.cookies.set('tenant', inferredTenant, { path: '/', sameSite: 'lax' });
     return response;
   }
 
-  // Rewrites from tenant prefixed global routes
+  // Rewrite global routes from tenant prefixed paths
   if (tenantFromPath) {
     if (pathname === `/${tenantFromPath}/checkout` || pathname === `/${tenantFromPath}/cart`) {
       const globalTarget = `/${segments.slice(1).join('/')}`;
-      console.log('[Middleware] Rewrite tenant-prefixed global route:', pathname, '->', globalTarget);
-      headers.set('x-pathname', globalTarget);
-      headers.set('x-tenant-admin', tenantFromPath);
       const response = NextResponse.rewrite(new URL(globalTarget, request.url), { request: { headers } });
+      response.headers.set('x-pathname', pathname);
       response.cookies.set('tenant', tenantFromPath, { path: '/', sameSite: 'lax' });
       return response;
     }
     if (segments.length >= 3 && segments[1] === 'orders') {
       const globalTarget = `/${segments.slice(1).join('/')}`;
-      console.log('[Middleware] Rewrite tenant-prefixed orders:', pathname, '->', globalTarget);
-      headers.set('x-pathname', globalTarget);
-      headers.set('x-tenant-admin', tenantFromPath);
       const response = NextResponse.rewrite(new URL(globalTarget, request.url), { request: { headers } });
+      response.headers.set('x-pathname', pathname);
       response.cookies.set('tenant', tenantFromPath, { path: '/', sameSite: 'lax' });
       return response;
     }
     if (tenantFromPath === 'senlysh' && segments.length >= 3 && segments[1] === 'products') {
       const globalTarget = `/${segments.slice(1).join('/')}`;
-      console.log('[Middleware] Rewrite Senlysh PDP:', pathname, '->', globalTarget);
-      headers.set('x-pathname', globalTarget);
-      headers.set('x-tenant-admin', tenantFromPath);
       const response = NextResponse.rewrite(new URL(globalTarget, request.url), { request: { headers } });
+      response.headers.set('x-pathname', pathname);
       response.cookies.set('tenant', tenantFromPath, { path: '/', sameSite: 'lax' });
       return response;
     }
   }
 
-  console.log('[Middleware] No rewrite for:', pathname);
-  return NextResponse.next({ request: { headers } });
+  const response = NextResponse.next({ request: { headers } });
+  response.headers.set('x-pathname', pathname);
+  return response;
 }
 
 export const config = {

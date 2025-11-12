@@ -177,7 +177,10 @@ export async function createProduct(formData: FormData) {
     gift_card_amount_cents: formData.get('gift_card_amount_cents') ? parseInt(formData.get('gift_card_amount_cents') as string) : null,
     gift_card_expiry_days: formData.get('gift_card_expiry_days') ? parseInt(formData.get('gift_card_expiry_days') as string) : null,
     category_id: formData.get('category_id') as string,
-    status: formData.get('status') as string,
+    status: (() => {
+      const statusValue = (formData.get('status') as string)?.trim()
+      return (statusValue && ['draft', 'published'].includes(statusValue)) ? statusValue : 'draft'
+    })(),
     tax_class_id: formData.get('tax_class_id') as string,
     images: formData.getAll('images') as string[],
     variantOptions: JSON.parse(formData.get('variantOptions') as string || '[]'),
@@ -204,7 +207,7 @@ export async function createProduct(formData: FormData) {
   const creationProblems: string[] = []
   if (!productData.name || !String(productData.name).trim()) creationProblems.push('Product name is required.')
   if (!productData.slug || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(String(productData.slug))) creationProblems.push('Slug must be kebab-case, lowercase letters, numbers and hyphens only.')
-  if (!productData.status || !['draft', 'active', 'archived'].includes(String(productData.status))) creationProblems.push('Invalid status. Use draft, active, or archived.')
+  if (!productData.status || !['draft', 'published'].includes(String(productData.status))) creationProblems.push('Invalid status. Use draft or published.')
   if (productData.price_cents != null && Number(productData.price_cents) < 0) creationProblems.push('Price must be ≥ 0.')
   if (productData.compare_at_price_cents != null && Number(productData.compare_at_price_cents) < 0) creationProblems.push('Compare-at price must be ≥ 0.')
   if (productData.cost_per_item_cents != null && Number(productData.cost_per_item_cents) < 0) creationProblems.push('Cost per item must be ≥ 0.')
