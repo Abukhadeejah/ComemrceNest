@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useTransition, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { ADMIN_URLS } from '@/utils/admin-urls'
 import { useAdminTenantKey } from '@/components/admin/AdminBrandingWrapper'
-// Removed draft persistence - interferes with database operations
+import { useDraftAutoSave } from '@/hooks/useDraftAutoSave'
 import { 
   createProduct, 
   updateProduct,
@@ -18,7 +18,6 @@ import { InventorySection } from './components/InventorySection'
 import { ShippingSection } from './components/ShippingSection'
 import { TaxSection } from './components/TaxSection'
 import { OrganizationSection } from './components/OrganizationSection'
-
 import { MediaSection } from './components/MediaSection'
 import { SeoSection } from './components/SeoSection'
 import { ProductPreview } from './components/ProductPreview'
@@ -31,9 +30,11 @@ interface ProductFormProps {
   mode: 'create' | 'edit'
   initialData?: Partial<ProductFormData> & { variantOptions?: unknown[]; variantCombinations?: unknown[] }
   categories: Category[]
+  tenantId: string // Add this to props
 }
 
-export function ProductForm({ mode, initialData, categories }: ProductFormProps) {
+export function ProductForm({ mode, initialData, categories, tenantId }: ProductFormProps) {
+  //console.log('Productform recieved tenantId prop:', tenantId,); // ADD THIS
   const [formData, setFormData] = useState<ProductFormData>({
     name: '',
     slug: '',
@@ -75,11 +76,9 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
     variantOptions: [],
     sizeGuides: [],
     sizeGuideId: '',
-    // Fashion-specific fields
     brand: '',
     color: '',
     material: '',
-    // Badge System
     is_featured: false,
     is_bestseller: false,
     is_new_arrival: false,
@@ -91,16 +90,21 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
     badge_priority: 0,
     badge_display_until: '',
     badge_display_from: '',
-    // Tags
     tags: []
   })
 
-  // Draft persistence removed - was interfering with database operations
+  const searchParams = useSearchParams()
+  const initialDraftId = searchParams?.get('draftId')
 
-  // State for images (can be File objects for new uploads or URL strings for existing images)
+  // Database-backed draft auto-save
+  const { draftId, isSaving, lastSaved, deleteDraft } = useDraftAutoSave(
+    tenantId,
+    mode === 'create' ? formData : null, // Only auto-save in create mode
+    initialDraftId
+  )
+
   const [imageFiles, setImageFiles] = useState<(File | string)[]>(initialData?.images || [])
 
-  // State for variants
   type UIOptionValue = { id: string; value: string; displayValue: string; colorHex?: string; imageUrl?: string }
   type UIOption = { id: string; name: string; displayName: string; type: 'text'|'color'|'image'|'select'; required: boolean; values: UIOptionValue[] }
   type UICombination = { id: string; options: Record<string, string>; priceCents: number; stock: number; sku: string; imageUrl?: string }
@@ -118,10 +122,8 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
   const [showPreview, setShowPreview] = useState(false)
   const tenantKey = useAdminTenantKey()
 
-  // Use initialData if provided
   const data = initialData
 
-  // Populate form data when initialData is provided (edit mode)
   useEffect(() => {
     if (initialData && mode === 'edit') {
       console.log('ProductForm: Loading initial data for edit mode:', {
@@ -133,15 +135,11 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
       setFormData((prev: ProductFormData) => ({
         ...prev,
         ...initialData,
-        // Explicit handling for has_variants to prevent undefined
         has_variants: Boolean(initialData.has_variants)
       }))
     }
   }, [initialData, mode])
 
-  // Draft persistence removed - was interfering with database operations
-
-  // Dedicated variant update handler
   const handleVariantUpdate = async (variantData: {
     hasVariants: boolean
     variantOptions: Array<{
@@ -179,7 +177,6 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
       await updateProductVariants(formData.id, variantData)
       console.log('DEBUG: ProductForm variant update completed')
       
-      // Update the local form state to reflect the changes
       setFormData((prev: ProductFormData) => ({
         ...prev,
         has_variants: variantData.hasVariants
@@ -191,7 +188,6 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
     }
   }
 
-  // Generate slug from name
   const generateSlug = (name: string) => {
     return name
       .toLowerCase()
@@ -205,7 +201,6 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
       [field]: value
     }))
     
-    // Auto-generate slug when name changes
     if (field === 'name' && typeof value === 'string' && value.trim()) {
       const generatedSlug = generateSlug(value)
       setFormData((prev: ProductFormData) => ({
@@ -214,7 +209,6 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
       }))
     }
     
-    // Clear error for this field
     if (errors[field as keyof typeof errors]) {
       setErrors((prev) => ({
         ...prev,
@@ -224,128 +218,113 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
   }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-  e.preventDefault()
-  
-  const form = new FormData(e.currentTarget)
-  
-  // Add all form data (excluding variant data which is handled separately)
-  Object.entries(formData).forEach(([key, value]) => {
-    // Skip variant data - handled by updateProductVariants action
-    if (key === 'variantOptions' || key === 'variantCombinations') {
-      return
-    }
+    e.preventDefault()
     
-    // Special handling for category_ids array
-    if (key === 'category_ids') {
-      if (Array.isArray(value) && value.length > 0) {
-        // Send each category_id individually
-        value.forEach((catId) => {
-          form.append('category_ids[]', catId)
-        })
-      }
-      return
-    }
+    const form = new FormData(e.currentTarget)
     
-    if (Array.isArray(value)) {
-      // Only append arrays if they have content
-      if (value.length > 0) {
-        form.append(key, JSON.stringify(value))
+    Object.entries(formData).forEach(([key, value]) => {
+      if (key === 'variantOptions' || key === 'variantCombinations') {
+        return
       }
-    } else if (value !== null && value !== undefined) {
-      // Include all values, including empty strings
-      form.append(key, String(value))
-    }
-  })
-
-  // Ensure category_id is set to the first selected category for backward compatibility
-  if (formData.category_ids && formData.category_ids.length > 0) {
-    form.set('category_id', formData.category_ids[0])
-  }
-
-  // Variant data is handled separately via updateProductVariants action
-  // Do not include variant data in main product update
-
-  startTransition(async () => {
-    try {
-      let createdProductId: string | undefined
       
-      if (mode === 'edit' && data?.id) {
-        await updateProduct(data.id as string, form)
-        
-        // Handle new image uploads for edit mode
-        const fileImages = imageFiles.filter(img => img instanceof File) as File[]
-        if (fileImages.length > 0) {
-          try {
-            console.log(`Uploading ${fileImages.length} new images for product ${data.id}`)
-            for (let i = 0; i < fileImages.length; i++) {
-              const file = fileImages[i]
-              await uploadProductImage(file, data.id)
-              console.log(`Uploaded image ${i + 1}/${fileImages.length}`)
-            }
-          } catch (uploadError) {
-            console.error('Error uploading images:', uploadError)
-            // Don't fail the product update if image upload fails
-          }
+      if (key === 'category_ids') {
+        if (Array.isArray(value) && value.length > 0) {
+          value.forEach((catId) => {
+            form.append('category_ids[]', catId)
+          })
         }
-      } else {
-        const result = await createProduct(form)
-        if ('id' in result) {
-          createdProductId = result.id
+        return
+      }
+      
+      if (Array.isArray(value)) {
+        if (value.length > 0) {
+          form.append(key, JSON.stringify(value))
+        }
+      } else if (value !== null && value !== undefined) {
+        form.append(key, String(value))
+      }
+    })
+
+    if (formData.category_ids && formData.category_ids.length > 0) {
+      form.set('category_id', formData.category_ids[0])
+    }
+
+    startTransition(async () => {
+      try {
+        let createdProductId: string | undefined
+        
+        if (mode === 'edit' && data?.id) {
+          await updateProduct(data.id as string, form)
+          
+          const fileImages = imageFiles.filter(img => img instanceof File) as File[]
+          if (fileImages.length > 0) {
+            try {
+              console.log(`Uploading ${fileImages.length} new images for product ${data.id}`)
+              for (let i = 0; i < fileImages.length; i++) {
+                const file = fileImages[i]
+                await uploadProductImage(file, data.id)
+                console.log(`Uploaded image ${i + 1}/${fileImages.length}`)
+              }
+            } catch (uploadError) {
+              console.error('Error uploading images:', uploadError)
+            }
+          }
         } else {
-          throw new Error(result.error || 'Failed to create product')
-        }
-        
-        // After product creation, upload images if any
-        if (imageFiles.length > 0 && createdProductId) {
-          try {
-            const fileImages = imageFiles.filter(img => img instanceof File) as File[]
-            console.log(`Uploading ${fileImages.length} images for product ${createdProductId}`)
-            for (let i = 0; i < fileImages.length; i++) {
-              const file = fileImages[i]
-              await uploadProductImage(file, createdProductId)
-              console.log(`Uploaded image ${i + 1}/${fileImages.length}`)
+          const result = await createProduct(form)
+          if ('id' in result) {
+            createdProductId = result.id
+          } else {
+            throw new Error(result.error || 'Failed to create product')
+          }
+          
+          if (imageFiles.length > 0 && createdProductId) {
+            try {
+              const fileImages = imageFiles.filter(img => img instanceof File) as File[]
+              console.log(`Uploading ${fileImages.length} images for product ${createdProductId}`)
+              for (let i = 0; i < fileImages.length; i++) {
+                const file = fileImages[i]
+                await uploadProductImage(file, createdProductId)
+                console.log(`Uploaded image ${i + 1}/${fileImages.length}`)
+              }
+            } catch (uploadError) {
+              console.error('Error uploading images:', uploadError)
             }
-          } catch (uploadError) {
-            console.error('Error uploading images:', uploadError)
-            // Don't fail the product creation if image upload fails
+          }
+
+          // Delete draft after successful product creation
+          if (draftId) {
+            await deleteDraft()
           }
         }
+        
+        await new Promise(resolve => setTimeout(resolve, 100))
+        
+        router.push(ADMIN_URLS.products(tenantKey))
+        router.refresh()
+      } catch (error) {
+        console.error('Failed to save product:', error)
+        
+        const errorMessage = error instanceof Error ? error.message : 'An error occurred'
+        
+        if (errorMessage.includes('duplicate key value violates unique constraint "products_tenant_id_slug_key"')) {
+          setErrors(prev => ({
+            ...prev,
+            slug: 'A product with this slug already exists. Please choose a different slug.'
+          }))
+        } else if (errorMessage.includes('slug')) {
+          setErrors(prev => ({
+            ...prev,
+            slug: 'Invalid slug format. Use only lowercase letters, numbers, and hyphens.'
+          }))
+        } else {
+          setErrors(prev => ({
+            ...prev,
+            general: 'An unexpected error occurred. Please try again or contact support.'
+          }))
+        }
       }
-      
-      // Draft persistence removed - no need to clear
-      
-      // Small delay to ensure cache invalidation completes
-      await new Promise(resolve => setTimeout(resolve, 100))
-      
-      router.push(ADMIN_URLS.products(tenantKey))
-      router.refresh()
-    } catch (error) {
-      console.error('Failed to save product:', error)
-      
-      // Handle specific error types
-      const errorMessage = error instanceof Error ? error.message : 'An error occurred'
-      
-      if (errorMessage.includes('duplicate key value violates unique constraint "products_tenant_id_slug_key"')) {
-        setErrors(prev => ({
-          ...prev,
-          slug: 'A product with this slug already exists. Please choose a different slug.'
-        }))
-      } else if (errorMessage.includes('slug')) {
-        setErrors(prev => ({
-          ...prev,
-          slug: 'Invalid slug format. Use only lowercase letters, numbers, and hyphens.'
-        }))
-      } else {
-        // Set a general error
-        setErrors(prev => ({
-          ...prev,
-          general: 'An unexpected error occurred. Please try again or contact support.'
-        }))
-      }
-    }
-  })
-}
-
+    })
+  }
 
   return (
     <div className="max-w-4xl mx-auto p-6">
@@ -353,7 +332,24 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
         <h1 className="text-2xl font-bold">
           {mode === 'edit' ? 'Edit Product' : 'Create Product'}
         </h1>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          {/* Draft status indicator */}
+          {mode === 'create' && (
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              {isSaving && (
+                <span className="flex items-center gap-1">
+                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Saving draft...
+                </span>
+              )}
+              {!isSaving && lastSaved && (
+                <span>Draft saved at {lastSaved.toLocaleTimeString()}</span>
+              )}
+            </div>
+          )}
           <button
             type="button"
             onClick={() => setShowPreview(true)}
@@ -365,8 +361,6 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
-        {/* Draft notification removed - no longer using local storage drafts */}
-        
         {errors.general && (
           <div className="bg-red-50 border border-red-200 rounded-md p-4">
             <div className="text-sm text-red-800">{errors.general}</div>
@@ -430,8 +424,6 @@ export function ProductForm({ mode, initialData, categories }: ProductFormProps)
           images={imageFiles}
           onImagesChange={(images: (File | string)[]) => {
             setImageFiles(images)
-            // Only include existing image URLs (strings) in formData
-            // File objects will be handled separately during upload
             const imageUrls = images
               .filter(item => typeof item === 'string')
               .map(item => item as string)

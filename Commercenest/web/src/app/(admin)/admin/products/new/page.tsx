@@ -4,7 +4,7 @@ import { ProductForm } from '../ProductForm'
 
 export default async function NewProductPage() {
   const tenantId = await resolveTenantIdFromRequest()
-  
+  console.log('Server-side tennantId:', tenantId); // ADD THIS
   if (!tenantId) {
     throw new Error('Tenant not found')
   }
@@ -12,7 +12,7 @@ export default async function NewProductPage() {
   // Get categories for the form
   const { data: categories } = await supabaseAdmin
     .from('categories')
-    .select('id, name, slug')
+    .select('id, name, slug')  
     .eq('tenant_id', tenantId)
     .order('name')
 
@@ -36,6 +36,7 @@ export default async function NewProductPage() {
               created_at: (c as Record<string, unknown>).created_at as string || new Date().toISOString()
             }))}
             mode="create"
+            tenantId={tenantId}
           />
         </div>
       </div>

@@ -245,7 +245,10 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
               slug: (c as Record<string, unknown>).slug as string || '',
               parent_id: (c as Record<string, unknown>).parent_id as string | null || null,
               created_at: (c as Record<string, unknown>).created_at as string || new Date().toISOString()
+            
             }))}
+           
+            tenantId={tenantId}
           />
         </div>
       </div>

@@ -36,6 +36,7 @@ export default async function NewProductPage() {
               created_at: (c as Record<string, unknown>).created_at as string || new Date().toISOString()
             }))}
             mode="create"
+            tenantId={tenantId}  // <-- ADD THIS LINE
           />
         </div>
       </div>
