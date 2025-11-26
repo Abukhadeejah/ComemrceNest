@@ -3,14 +3,17 @@
 import { useState, useEffect, useCallback } from 'react'
 import { ProductFormData, TaxClass } from '@/types/product'
 import { getTaxClasses } from '../../tax-classes/actions'
+import { FieldErrors, UseFormRegister } from 'react-hook-form'
 
 interface TaxSectionProps {
   formData: ProductFormData
-  errors: Record<string, string>
-  onInputChange: (field: keyof ProductFormData, value: string | number | boolean | null | unknown[]) => void
+  errors?: FieldErrors<ProductFormData>
+  onInputChange?: (field: keyof ProductFormData, value: string | number | boolean | null | unknown[]) => void
+  setValue?: (field: keyof ProductFormData, value: any, options?: { shouldValidate?: boolean; shouldDirty?: boolean }) => void
+  register?: UseFormRegister<ProductFormData>
 }
 
-export function TaxSection({ formData, errors, onInputChange }: TaxSectionProps) {
+export function TaxSection({ formData, errors, onInputChange, setValue }: TaxSectionProps) {
   const [taxClasses, setTaxClasses] = useState<TaxClass[]>([])
   const [loading, setLoading] = useState(true)
   const [showAdvanced, setShowAdvanced] = useState(false)
@@ -36,29 +39,45 @@ export function TaxSection({ formData, errors, onInputChange }: TaxSectionProps)
     if (formData.taxable && !formData.tax_class_id && taxClasses.length > 0) {
       const defaultClass = taxClasses.find(c => c.is_default)
       if (defaultClass) {
-        onInputChange('tax_class_id', defaultClass.id)
+        onInputChange?.('tax_class_id', defaultClass.id)
       }
     }
   }, [formData.taxable, formData.tax_class_id, taxClasses]) // ✅ FIXED: Removed onInputChange from dependencies
 
   const handleTaxableChange = useCallback((taxable: boolean) => {
-    onInputChange('taxable', taxable)
+    if (setValue) {
+      setValue('taxable', taxable, { shouldValidate: true, shouldDirty: true })
+    } else {
+      onInputChange?.('taxable', taxable)
+    }
     
     if (taxable && !formData.tax_class_id) {
       // Auto-select default tax class when enabling taxable
       const defaultClass = taxClasses.find(c => c.is_default)
       if (defaultClass) {
-        onInputChange('tax_class_id', defaultClass.id)
+        if (setValue) {
+          setValue('tax_class_id', defaultClass.id, { shouldValidate: true, shouldDirty: true })
+        } else {
+          onInputChange?.('tax_class_id', defaultClass.id)
+        }
       }
     } else if (!taxable) {
       // Clear tax class when disabling taxable
-      onInputChange('tax_class_id', null)
+      if (setValue) {
+        setValue('tax_class_id', '', { shouldValidate: true, shouldDirty: true })
+      } else {
+        onInputChange?.('tax_class_id', null)
+      }
     }
-  }, [formData.tax_class_id, taxClasses, onInputChange]) // ✅ FIXED: Wrapped with useCallback
+  }, [formData.tax_class_id, taxClasses, onInputChange, setValue])
 
   const handleTaxClassChange = useCallback((taxClassId: string) => {
-    onInputChange('tax_class_id', taxClassId || null)
-  }, [onInputChange]) // ✅ FIXED: Wrapped with useCallback
+    if (setValue) {
+      setValue('tax_class_id', taxClassId || '', { shouldValidate: true, shouldDirty: true })
+    } else {
+      onInputChange?.('tax_class_id', taxClassId || null)
+    }
+  }, [onInputChange, setValue])
 
   const selectedTaxClass = taxClasses.find(c => c.id === formData.tax_class_id)
   const defaultTaxClass = taxClasses.find(c => c.is_default)
@@ -106,7 +125,7 @@ export function TaxSection({ formData, errors, onInputChange }: TaxSectionProps)
                 <select
                   value={formData.tax_class_id || ''} // ✅ FIXED: Ensures controlled input
                   onChange={(e) => handleTaxClassChange(e.target.value)}
-                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  className="block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-3 py-2"
                 >
                   <option value="">Select tax class...</option>
                   {taxClasses.map((taxClass) => (
@@ -155,8 +174,8 @@ export function TaxSection({ formData, errors, onInputChange }: TaxSectionProps)
                 )}
               </div>
             )}
-            {errors.tax_class_id && (
-              <p className="mt-1 text-sm text-red-600">{errors.tax_class_id}</p>
+                {errors?.tax_class_id && (
+              <p className="mt-1 text-sm text-red-600">{errors?.tax_class_id?.message}</p>
             )}
           </div>
         )}
@@ -172,12 +191,12 @@ export function TaxSection({ formData, errors, onInputChange }: TaxSectionProps)
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 HS Code (Harmonized System)
               </label>
-              <input
+                <input
                 type="text"
                 value={formData.hs_code || ''}
-                onChange={(e) => onInputChange('hs_code', e.target.value)}
+                onChange={(e) => onInputChange?.('hs_code', e.target.value)}
                 placeholder="e.g., 6203.42.90"
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                className="block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-3 py-2"
               />
               <p className="mt-1 text-sm text-gray-500">
                 For customs and international shipping

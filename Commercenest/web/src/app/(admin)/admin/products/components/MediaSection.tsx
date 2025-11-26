@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useId } from 'react'
+import { useRef, useId, useEffect, useState } from 'react'
 import Image from 'next/image'
 import { PhotoIcon, XMarkIcon } from '@heroicons/react/24/outline'
 
@@ -10,118 +10,166 @@ interface MediaSectionProps {
   productId?: string
 }
 
+const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB in bytes
+const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif']
+
 export function MediaSection({ images, onImagesChange }: MediaSectionProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const inputId = useId()
+  const [objectUrls, setObjectUrls] = useState<string[]>([])
+  const [uploadError, setUploadError] = useState<string>('')
+
+  // Clean up object URLs on unmount
+  useEffect(() => {
+    return () => {
+      objectUrls.forEach(url => URL.revokeObjectURL(url))
+    }
+  }, [objectUrls])
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setUploadError('')
+    
     if (event.target.files && event.target.files.length > 0) {
       const newFiles = Array.from(event.target.files)
-      onImagesChange([...images, ...newFiles])
+      
+      // Validate each file
+      const validFiles: File[] = []
+      const errors: string[] = []
+
+      newFiles.forEach(file => {
+        // Check file type
+        if (!ALLOWED_TYPES.includes(file.type)) {
+          errors.push(`${file.name}: Invalid file type. Only PNG, JPG, WebP, GIF allowed.`)
+          return
+        }
+        
+        // Check file size
+        if (file.size > MAX_FILE_SIZE) {
+          errors.push(`${file.name}: File too large. Max size is 5MB.`)
+          return
+        }
+        
+        validFiles.push(file)
+      })
+
+      if (errors.length > 0) {
+        setUploadError(errors.join(' '))
+      }
+
+      if (validFiles.length > 0) {
+        // Create object URLs for preview
+        const newUrls = validFiles.map(file => URL.createObjectURL(file))
+        setObjectUrls(prev => [...prev, ...newUrls])
+        
+        onImagesChange([...images, ...validFiles])
+      }
+      
       event.target.value = ''
     }
   }
 
   const removeImage = (index: number) => {
+    // Revoke object URL if it's a File
+    if (images[index] instanceof File) {
+      const urlToRevoke = objectUrls[index]
+      if (urlToRevoke) {
+        URL.revokeObjectURL(urlToRevoke)
+        setObjectUrls(prev => prev.filter((_, i) => i !== index))
+      }
+    }
+    
     onImagesChange(images.filter((_, i) => i !== index))
   }
 
-  // Clicking the label triggers the input via htmlFor; no JS click needed
+  const getImageSrc = (image: File | string, index: number): string => {
+    if (typeof image === 'string') {
+      return image
+    }
+    return objectUrls[index] || ''
+  }
 
   return (
     <div>
       <h3 className="text-lg font-medium text-gray-900 mb-4">Media</h3>
-      <div className="space-y-4">
-        {/* Image Upload */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Upload Images
-          </label>
-          <div 
-            className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 hover:bg-gray-50"
-            role="group"
-          >
-            <PhotoIcon className="mx-auto h-12 w-12 text-gray-400" />
-            <div className="mt-4">
-              <label htmlFor={inputId} className="text-indigo-600 hover:text-indigo-500 font-medium cursor-pointer">
-                Click to upload
-              </label>
-              <p className="text-gray-500 mt-1">or drag and drop</p>
-            </div>
-            <p className="text-xs text-gray-500 mt-2">
-              PNG, JPG, WebP, GIF up to 5MB each
-            </p>
-            
-            <input
-              ref={fileInputRef}
-              id={inputId}
-              type="file"
-              multiple
-              accept="image/*"
-              onChange={handleFileChange}
-              className="hidden"
-            />
-          </div>
+      
+      {/* Upload Error */}
+      {uploadError && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+          <p className="text-sm text-red-600">⚠️ {uploadError}</p>
         </div>
+      )}
 
-        {/* Image Gallery */}
-        {images.length > 0 && (
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h4 className="text-sm font-medium text-gray-700">Image Gallery</h4>
-              <span className="text-xs text-gray-500">
-                {images.length} images
-              </span>
-            </div>
-            
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {images.map((image, index) => {
-                const imageSrc = typeof image === 'string' ? image : URL.createObjectURL(image)
-                const imageName = typeof image === 'string' 
-                  ? image.split('/').pop()?.split('?')[0] || 'Image' 
-                  : image.name
-                
-                return (
-                  <div key={index} className="relative group">
+      {/* Image Upload */}
+      <div className="mb-6">
+        <label
+          htmlFor={inputId}
+          className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors"
+        >
+          <div className="flex flex-col items-center justify-center pt-5 pb-6">
+            <PhotoIcon className="w-10 h-10 mb-3 text-gray-400" />
+            <p className="mb-2 text-sm text-gray-500">
+              <span className="font-semibold">Click to upload</span> or drag and drop
+            </p>
+            <p className="text-xs text-gray-500">PNG, JPG, WebP, GIF up to 5MB each</p>
+          </div>
+          <input
+            id={inputId}
+            ref={fileInputRef}
+            type="file"
+            className="hidden"
+            accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
+            multiple
+            onChange={handleFileChange}
+          />
+        </label>
+      </div>
+
+      {/* Image Gallery */}
+      {images.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-medium text-gray-700">Image Gallery</h4>
+            <span className="text-sm text-gray-500">{images.length} image(s)</span>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {images.map((image, index) => {
+              const imageSrc = getImageSrc(image, index)
+              const imageName = typeof image === 'string'
+                ? image.split('/').pop()?.split('?')[0] || 'Image'
+                : image.name
+
+              return (
+                <div key={index} className="relative group">
+                  {index === 0 && (
+                    <div className="absolute top-2 left-2 z-10 bg-indigo-600 text-white text-xs font-medium px-2 py-1 rounded">
+                      Hero
+                    </div>
+                  )}
+                  <div className="aspect-square relative rounded-lg overflow-hidden border border-gray-200">
                     <Image
                       src={imageSrc}
-                      alt={`Product image ${index + 1}`}
-                      width={96}
-                      height={96}
-                      className="w-full h-24 object-cover rounded-lg border border-gray-200"
+                      alt={imageName}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 50vw, 25vw"
                     />
-                    
-                    {index === 0 && (
-                      <div className="absolute top-1 left-1 bg-blue-500 text-white text-xs px-2 py-1 rounded-full font-medium">
-                        Hero
-                      </div>
-                    )}
-                    
-                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded-lg flex items-center justify-center">
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          type="button"
-                          onClick={() => removeImage(index)}
-                          className="bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
-                          title="Remove image"
-                        >
-                          <XMarkIcon className="h-3 w-3" />
-                        </button>
-                      </div>
-                    </div>
-                    
-                    <div className="absolute bottom-1 left-1 right-1">
-                      <div className="bg-black bg-opacity-50 text-white text-xs px-1 py-0.5 rounded truncate">
-                        {imageName}
-                      </div>
-                    </div>
                   </div>
-                )
-              })}
-            </div>
+                  <button
+                    type="button"
+                    onClick={() => removeImage(index)}
+                    className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors opacity-0 group-hover:opacity-100"
+                    title="Remove image"
+                  >
+                    <XMarkIcon className="w-4 h-4" />
+                  </button>
+                  <p className="mt-1 text-xs text-gray-500 truncate">{imageName}</p>
+                </div>
+              )
+            })}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }
+        

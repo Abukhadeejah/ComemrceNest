@@ -1,228 +1,145 @@
 'use client'
 
 import { useState } from 'react'
-import { 
-  Square3Stack3DIcon, 
-  PlusIcon, 
-  XMarkIcon,
-  TableCellsIcon
-} from '@heroicons/react/24/outline'
+import { XMarkIcon } from '@heroicons/react/24/outline'
 import { ProductFormData } from '@/types/product'
+import { UseFormSetValue, FieldErrors } from 'react-hook-form'
 
-interface SizeGuideSectionProps {
-  formData: ProductFormData
-  onInputChange: (field: keyof ProductFormData, value: string | number | boolean | null | unknown[]) => void
+interface SizeGuide {
+  id: string
+  name: string
+  category: string
+  gender: string
+  measurements: Record<string, Record<string, number>> // size -> measurement field -> value in cm
 }
 
-export default function SizeGuideSection({ formData, onInputChange }: SizeGuideSectionProps) {
-  const [showSizeGuideModal, setShowSizeGuideModal] = useState(false)
-  const [newSizeGuide, setNewSizeGuide] = useState({
+interface SizeGuideSectionProps {
+  sizeGuides?: SizeGuide[] // made optional to add default
+  newSizeGuide?: SizeGuide
+  setNewSizeGuide?: (guide: SizeGuide) => void
+  onSaveSizeGuide?: (guide: SizeGuide) => Promise<void>
+  onDeleteSizeGuide?: (id: string) => Promise<void>
+  // Optional RHF props to align with ProductForm usage
+  formData?: ProductFormData
+  errors?: FieldErrors<ProductFormData>
+  setValue?: UseFormSetValue<ProductFormData>
+}
+
+export function SizeGuideSection({
+  sizeGuides = [], // default to empty array
+  newSizeGuide = {
+    id: '',
     name: '',
-    category: 'clothing',
-    gender: 'unisex',
+    category: '',
+    gender: '',
     measurements: {}
-  })
+  },
+  setNewSizeGuide = () => {},
+  onSaveSizeGuide = async () => {},
+  onDeleteSizeGuide = async () => {},
+  formData,
+  errors,
+  setValue
+}: SizeGuideSectionProps) {
+  const [editingGuideId, setEditingGuideId] = useState<string | null>(null)
 
-  const sizeCategories = [
-    { value: 'clothing', label: 'Clothing' },
-    { value: 'shoes', label: 'Shoes' },
-    { value: 'accessories', label: 'Accessories' }
-  ]
-
-  const genderOptions = [
-    { value: 'men', label: 'Men' },
-    { value: 'women', label: 'Women' },
-    { value: 'unisex', label: 'Unisex' }
-  ]
-
-  const commonSizes = {
-    clothing: {
-      men: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
-      women: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
-      unisex: ['XS', 'S', 'M', 'L', 'XL', 'XXL']
-    },
-    shoes: {
-      men: ['7', '8', '9', '10', '11', '12'],
-      women: ['5', '6', '7', '8', '9', '10'],
-      unisex: ['7', '8', '9', '10', '11', '12']
-    },
-    accessories: {
-      men: ['S', 'M', 'L'],
-      women: ['S', 'M', 'L'],
-      unisex: ['S', 'M', 'L']
+  // Helper: gets measurement fields depending on category, e.g., waist, chest, length
+  const getMeasurementFields = (category: string): string[] => {
+    switch (category?.toLowerCase()) {
+      case 'men':
+        return ['waist', 'chest', 'length']
+      case 'women':
+        return ['waist', 'bust', 'hip', 'length']
+      default:
+        return ['waist', 'chest', 'length']
     }
   }
 
-  const measurementFields = {
-    clothing: ['chest', 'waist', 'hips', 'length', 'shoulder', 'sleeve'],
-    shoes: ['length', 'width'],
-    accessories: ['length', 'width', 'height']
+  // Helper: get sizes list from measurements defined
+  const getSizes = (guide: SizeGuide): string[] => {
+    if (!guide?.measurements) return []
+    return Object.keys(guide.measurements)
   }
 
-  const addSizeGuide = () => {
-    if (!newSizeGuide.name.trim()) return
-
-    const guide = {
-      id: Date.now().toString(),
-      ...newSizeGuide,
-      measurements: generateMeasurementTable(newSizeGuide.category, newSizeGuide.gender)
-    }
-
-    const currentGuides = Array.isArray(formData.sizeGuides) ? formData.sizeGuides : []
-    onInputChange('sizeGuides', [...currentGuides, guide])
-    setNewSizeGuide({ name: '', category: 'clothing', gender: 'unisex', measurements: {} })
-    setShowSizeGuideModal(false)
-  }
-
-    const removeSizeGuide = (guideId: string) => {
-    const currentGuides = Array.isArray(formData.sizeGuides) ? formData.sizeGuides : []
-    onInputChange('sizeGuides',
-      currentGuides.filter((guide: unknown) => {
-        const guideObj = guide as Record<string, unknown>
-        return guideObj.id !== guideId
-      })
-    )
-  }
-
+  // Update a measurement value for a size
   const updateMeasurement = (guideId: string, size: string, field: string, value: string) => {
-    const currentGuides = Array.isArray(formData.sizeGuides) ? formData.sizeGuides : []
-    const updatedGuides = currentGuides.map((guide: unknown) => {
-      const guideObj = guide as Record<string, unknown>
-      if (guideObj.id === guideId) {
-        const measurements = guideObj.measurements as Record<string, unknown> || {}
-        const sizeMeasurements = measurements[size] as Record<string, unknown> || {}
-        return {
-          ...guideObj,
-          measurements: {
-            ...measurements,
-            [size]: {
-              ...sizeMeasurements,
-              [field]: value
-            }
-          }
-        }
+    if (guideId !== newSizeGuide.id) return
+    const parsed = parseFloat(value)
+    if (isNaN(parsed) || parsed < 0) return // Could add UI feedback for validation
+
+    const updatedMeasurements = {
+      ...newSizeGuide.measurements,
+      [size]: {
+        ...newSizeGuide.measurements?.[size],
+        [field]: Number(parsed.toFixed(2))
       }
-      return guideObj
+    }
+
+    setNewSizeGuide({ ...newSizeGuide, measurements: updatedMeasurements })
+  }
+
+  // Add a new size
+  const addSize = () => {
+    if (newSizeGuide.measurements?.['new']) return // Prevent duplicate key
+    setNewSizeGuide({
+      ...newSizeGuide,
+      measurements: {
+        ...newSizeGuide.measurements,
+        new: getMeasurementFields(newSizeGuide.category).reduce((acc, field) => {
+          acc[field] = 0
+          return acc
+        }, {} as Record<string, number>)
+      }
     })
-    onInputChange('sizeGuides', updatedGuides)
   }
 
-  const generateMeasurementTable = (category: string, gender: string) => {
-    const sizes = commonSizes[category as keyof typeof commonSizes]?.[gender as keyof typeof commonSizes.clothing] || []
-    const fields = measurementFields[category as keyof typeof measurementFields] || []
-    
-    const measurements: Record<string, Record<string, string>> = {}
-    sizes.forEach(size => {
-      measurements[size] = {}
-      fields.forEach(field => {
-        measurements[size][field] = ''
-      })
-    })
-    
-    return measurements
-  }
-
-  const getMeasurementFields = (category: string) => {
-    return measurementFields[category as keyof typeof measurementFields] || []
-  }
-
-  const getSizes = (category: string, gender: string) => {
-    return commonSizes[category as keyof typeof commonSizes]?.[gender as keyof typeof commonSizes.clothing] || []
+  // Remove a size
+  const removeSize = (size: string) => {
+    if (size === 'new') return
+    const updatedMeasurements = { ...newSizeGuide.measurements }
+    delete updatedMeasurements[size]
+    setNewSizeGuide({ ...newSizeGuide, measurements: updatedMeasurements })
   }
 
   return (
-    <div className="bg-white shadow rounded-lg p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center">
-          <Square3Stack3DIcon className="h-6 w-6 text-gray-400 mr-3" />
-          <h3 className="text-lg font-medium text-gray-900">Size Guide</h3>
-        </div>
-        <button
-          type="button"
-          onClick={() => setShowSizeGuideModal(true)}
-          className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-        >
-          <PlusIcon className="h-4 w-4 mr-2" />
-          Add Size Guide
-        </button>
-      </div>
-
-      {/* Size Guide Selection */}
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Select Size Guide
-        </label>
-        <select
-          value={formData.sizeGuideId || ''}
-          onChange={(e) => onInputChange('sizeGuideId', e.target.value)}
-          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-        >
-          <option value="">No size guide</option>
-          {(formData.sizeGuides || []).map((guide: unknown) => {
-            const guideObj = guide as Record<string, unknown>
-            return (
-              <option key={String(guideObj.id)} value={String(guideObj.id)}>
-                {String(guideObj.name)}
-              </option>
-            )
-          })}
-        </select>
-        <p className="mt-1 text-sm text-gray-500">
-          Choose a size guide to help customers find their perfect fit
-        </p>
-      </div>
-
-      {/* Size Guides List */}
-      {(formData.sizeGuides || []).map((guide: unknown) => {
-        const guideObj = guide as Record<string, unknown>
-        return (
-        <div key={String(guideObj.id)} className="border border-gray-200 rounded-lg p-4 mb-4">
-          <div className="flex items-center justify-between mb-4">
+    <div>
+      <h3 className="text-lg font-medium text-gray-900 mb-4">Size Guide</h3>
+      {sizeGuides.length === 0 && <p className="text-gray-500">No size guides available.</p>}
+      {sizeGuides.map(guide => (
+        <div key={guide.id} className="p-4 border rounded mb-4">
+          <div className="flex justify-between items-center">
             <div>
-              <h4 className="text-sm font-medium text-gray-900">{String(guideObj.name)}</h4>
-              <p className="text-sm text-gray-500">
-                {String(guideObj.category)} • {String(guideObj.gender)}
+              <h4 className="font-semibold">{guide.name}</h4>
+              <p className="text-sm text-gray-600">
+                {guide.category} • {guide.gender}
               </p>
             </div>
             <button
-              type="button"
-              onClick={() => removeSizeGuide(String(guideObj.id))}
               className="text-red-600 hover:text-red-800"
+              onClick={() => onDeleteSizeGuide(guide.id)}
             >
               <XMarkIcon className="h-5 w-5" />
             </button>
           </div>
-
-          {/* Measurement Table */}
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+          <div className="overflow-auto mt-2">
+            <table className="w-full border-collapse border border-gray-300 text-sm">
+              <thead>
                 <tr>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Size
-                  </th>
-                  {getMeasurementFields(String(guideObj.category)).map((field) => (
-                    <th key={field} className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      {field.charAt(0).toUpperCase() + field.slice(1)} (cm)
+                  <th className="border border-gray-300 p-2">Size</th>
+                  {getMeasurementFields(guide.category).map(field => (
+                    <th key={field} className="border border-gray-300 p-2 capitalize">
+                      {field} (cm)
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {getSizes(String(guideObj.category), String(guideObj.gender)).map((size) => (
+              <tbody>
+                {getSizes(guide).map(size => (
                   <tr key={size}>
-                    <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {size}
-                    </td>
-                    {getMeasurementFields(String(guideObj.category)).map((field) => (
-                      <td key={field} className="px-3 py-2 whitespace-nowrap">
-                        <input
-                          type="text"
-                          value={((guideObj.measurements as Record<string, Record<string, string>>)?.[size]?.[field]) ?? ''}
-                          onChange={(e) => updateMeasurement(String(guideObj.id), size, field, e.target.value)}
-                          placeholder="0"
-                          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-xs"
-                        />
+                    <td className="border border-gray-300 p-2">{size}</td>
+                    {getMeasurementFields(guide.category).map(field => (
+                      <td key={field} className="border border-gray-300 p-2 text-center">
+                        {(guide.measurements?.[size]?.[field] ?? '')}
                       </td>
                     ))}
                   </tr>
@@ -231,111 +148,83 @@ export default function SizeGuideSection({ formData, onInputChange }: SizeGuideS
             </table>
           </div>
         </div>
-        )
-      })}
+      ))}
 
-      {/* Add Size Guide Modal */}
-      {showSizeGuideModal && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <div className="mt-3">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Add Size Guide</h3>
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Guide Name
-                  </label>
-                  <input
-                    type="text"
-                    value={newSizeGuide.name}
-                    onChange={(e) => setNewSizeGuide({ ...newSizeGuide, name: e.target.value })}
-                    placeholder="e.g., US Women's Clothing"
-                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  />
-                </div>
+      <div className="mt-6 p-4 border rounded">
+        <h4 className="text-md font-semibold mb-2">Add / Edit Size Guide</h4>
+        <input
+          type="text"
+          placeholder="Guide Name"
+          value={newSizeGuide.name}
+          onChange={e => setNewSizeGuide({ ...newSizeGuide, name: e.target.value })}
+          className="w-full mb-2 px-3 py-2 border rounded focus:ring-indigo-500 focus:border-indigo-500"
+        />
+        <input
+          type="text"
+          placeholder="Category (men/women)"
+          value={newSizeGuide.category}
+          onChange={e => setNewSizeGuide({ ...newSizeGuide, category: e.target.value })}
+          className="w-full mb-2 px-3 py-2 border rounded focus:ring-indigo-500 focus:border-indigo-500"
+        />
+        <input
+          type="text"
+          placeholder="Gender"
+          value={newSizeGuide.gender}
+          onChange={e => setNewSizeGuide({ ...newSizeGuide, gender: e.target.value })}
+          className="w-full mb-2 px-3 py-2 border rounded focus:ring-indigo-500 focus:border-indigo-500"
+        />
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Category
-                  </label>
-                  <select
-                    value={newSizeGuide.category}
-                    onChange={(e) => setNewSizeGuide({ ...newSizeGuide, category: e.target.value })}
-                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  >
-                    {sizeCategories.map((category) => (
-                      <option key={category.value} value={category.value}>
-                        {category.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+        <button onClick={addSize} className="mb-2 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">
+          Add Size
+        </button>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Gender
-                  </label>
-                  <select
-                    value={newSizeGuide.gender}
-                    onChange={(e) => setNewSizeGuide({ ...newSizeGuide, gender: e.target.value })}
-                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  >
-                    {genderOptions.map((gender) => (
-                      <option key={gender.value} value={gender.value}>
-                        {gender.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Preview */}
-                <div className="p-3 bg-gray-50 rounded-lg">
-                  <h4 className="text-sm font-medium text-gray-900 mb-2">Preview</h4>
-                  <p className="text-sm text-gray-600">
-                    {newSizeGuide.name || 'Guide Name'} • {newSizeGuide.category} • {newSizeGuide.gender}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {getSizes(newSizeGuide.category, newSizeGuide.gender).length} sizes • {getMeasurementFields(newSizeGuide.category).length} measurements
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex justify-end space-x-3 mt-6">
-                <button
-                  type="button"
-                  onClick={() => setShowSizeGuideModal(false)}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={addSizeGuide}
-                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                  Add Guide
-                </button>
-              </div>
-            </div>
-          </div>
+        <div className="overflow-auto max-h-64 border border-gray-300">
+          <table className="w-full border-collapse border border-gray-300 text-sm">
+            <thead>
+              <tr>
+                <th className="border border-gray-300 p-2">Size</th>
+                {getMeasurementFields(newSizeGuide.category).map(field => (
+                  <th key={field} className="border border-gray-300 p-2 capitalize">
+                    {field} (cm)
+                  </th>
+                ))}
+                <th className="border border-gray-300 p-2">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {getSizes(newSizeGuide).map(size => (
+                <tr key={size}>
+                  <td className="border border-gray-300 p-2">{size}</td>
+                  {getMeasurementFields(newSizeGuide.category).map(field => (
+                    <td key={field} className="border border-gray-300 p-2 text-center">
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="0"
+                        value={newSizeGuide.measurements?.[size]?.[field] ?? ''}
+                        onChange={e => updateMeasurement(newSizeGuide.id, size, field, e.target.value)}
+                        className="w-20 rounded border border-gray-300 text-center focus:ring-indigo-500 focus:border-indigo-500"
+                      />
+                    </td>
+                  ))}
+                  <td className="border border-gray-300 p-2 text-center">
+                    <button onClick={() => removeSize(size)} className="text-red-600 hover:text-red-900">
+                      <XMarkIcon className="inline h-4 w-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-      )}
 
-      {/* Size Guide Help */}
-      <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-        <div className="flex">
-          <TableCellsIcon className="h-5 w-5 text-blue-400 mr-3 mt-0.5" />
-          <div>
-            <h4 className="text-sm font-medium text-blue-900">Size Guide Tips</h4>
-            <ul className="mt-2 text-sm text-blue-700 space-y-1">
-              <li>• Use centimeters for all measurements</li>
-              <li>• Include model measurements for reference</li>
-              <li>• Test the guide with real customers</li>
-              <li>• Update measurements based on feedback</li>
-            </ul>
-          </div>
-        </div>
+        <button
+          onClick={() => onSaveSizeGuide(newSizeGuide)}
+          disabled={!newSizeGuide.name || !newSizeGuide.category || !newSizeGuide.gender}
+          className="mt-4 w-full px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Save Size Guide
+        </button>
       </div>
     </div>
   )

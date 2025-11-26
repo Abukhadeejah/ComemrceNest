@@ -170,12 +170,12 @@ export function adaptProductListItem(
     id: dbProduct.id,
     name: dbProduct.name,
     slug: dbProduct.slug,
-    description: adaptString(dbProduct.description),
+    description: dbProduct.description ?? null, // Return null instead of undefined
     price_cents: dbProduct.price_cents,
     compare_at_price_cents: adaptNumber(dbProduct.compare_at_price_cents),
     stock: dbProduct.stock,
     currency: dbProduct.currency,
-    hero_image_url: adaptString(dbProduct.hero_image_url),
+    hero_image_url: dbProduct.hero_image_url ?? null, // Return null instead of undefined
     is_featured: adaptBoolean(dbProduct.is_featured),
     badge_color: adaptString(dbProduct.badge_color),
     badge_display_from: adaptString(dbProduct.badge_display_from),
@@ -252,7 +252,7 @@ export function adaptProject(
     id: dbProject.id,
     title: dbProject.title,
     slug: dbProject.slug,
-    hero_image_url: adaptString(dbProject.hero_image_url),
+    hero_image_url: dbProject.hero_image_url ?? null, // Return null instead of undefined
     featured: dbProject.featured,
     description: adaptString(dbProject.description),
     location: adaptString(dbProject.location)

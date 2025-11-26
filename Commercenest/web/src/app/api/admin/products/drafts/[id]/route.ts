@@ -51,8 +51,7 @@ export async function PATCH(
         name: productFields.name || null,
         sku: productFields.sku || null,
         price_cents: productFields.price_cents || null,
-        category_id: productFields.category_id || null
-        //
+        category_id: productFields.category_id || null,
       })
       .eq('id', id)
       .select()

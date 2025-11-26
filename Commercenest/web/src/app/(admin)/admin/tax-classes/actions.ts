@@ -4,7 +4,7 @@ import { resolveTenantIdFromRequest } from '@/server/tenant'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
 import { assertTenantAdmin } from '@/server/auth'
 import { revalidateTag } from 'next/cache'
-import type { TaxClass } from '@/types/supabase'
+import type { TaxClass } from '@/types/product'
 
 export async function getTaxClasses(): Promise<TaxClass[]> {
   try {

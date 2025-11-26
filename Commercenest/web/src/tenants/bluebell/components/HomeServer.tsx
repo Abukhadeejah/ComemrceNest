@@ -17,12 +17,7 @@ export default async function HomeServer() {
 
   return <Home 
     products={adaptProductListItems(products || [])} 
-    projects={adaptProjects(projects || []).map(p => ({
-      id: p.id,
-      title: p.title,
-      slug: p.slug,
-      hero_image_url: p.hero_image_url ?? undefined
-    }))} 
+    projects={adaptProjects(projects || [])} 
   />
 }
 

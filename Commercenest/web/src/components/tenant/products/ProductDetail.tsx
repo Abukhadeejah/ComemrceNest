@@ -643,7 +643,7 @@ export function ProductDetail({
                     <tbody>
                       <tr className="border-b">
                         <td className="py-2 font-medium">Brand</td>
-                        <td className="py-2">{product.brand || 'N/A'}</td>
+                        <td className="py-2">{product.brand ? String(product.brand) : 'N/A'}</td>
                       </tr>
                       <tr className="border-b">
                         <td className="py-2 font-medium">Quantity</td>

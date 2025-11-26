@@ -68,6 +68,15 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ['lucide-react', 'framer-motion'],
   },
+  // Disable caching during development
+  ...(process.env.NODE_ENV === 'development'
+    ? {
+        webpack: (config: any) => {
+          config.cache = false;
+          return config;
+        },
+      }
+    : {}),
   // Security headers
   async headers() {
     return [

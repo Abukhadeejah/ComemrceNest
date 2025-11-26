@@ -178,14 +178,26 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
       meta_title: productWithRelations.meta_title || '',
       meta_description: productWithRelations.meta_description || '',
       category_id: categoryId,
+      // Extract all category IDs from the product_categories relationship
+      category_ids: Array.isArray(productWithRelations.categories) 
+        ? productWithRelations.categories
+            .map((pc: unknown) => {
+              if (pc && typeof pc === 'object' && 'category' in pc) {
+                const cat = (pc as { category?: { id?: unknown } }).category
+                if (cat && typeof cat.id === 'string') return cat.id
+              }
+              return null
+            })
+            .filter((id): id is string => id !== null)
+        : [],
       images: (productWithRelations.images?.map((img: Record<string, unknown>) => String(img.url)).filter(Boolean) as string[]) || [],
       has_variants: productWithRelations.has_variants === true,
       // Fashion-specific fields
       material_composition: productWithRelations.material_composition || '',
       care_instructions: productWithRelations.care_instructions || '',
       fit_type: productWithRelations.fit_type || '',
-      model_height_cm: productWithRelations.model_height_cm ?? '',
-      model_weight_kg: productWithRelations.model_weight_kg ?? '',
+      model_height_cm: typeof productWithRelations.model_height_cm === 'number' ? productWithRelations.model_height_cm : null,
+      model_weight_kg: typeof productWithRelations.model_weight_kg === 'number' ? productWithRelations.model_weight_kg : null,
       model_wearing_size: productWithRelations.model_wearing_size || '',
       is_gift_card: productWithRelations.is_gift_card || false,
       gift_card_amount_cents: productWithRelations.gift_card_amount_cents ?? undefined,
@@ -199,7 +211,7 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
       barcode: '',
       tags: [],
       seo_url: '',
-      tax_class_id: '',
+      tax_class_id: productWithRelations.tax_class_id || '',
       brand: '',
       color: '',
       material: '',
@@ -229,6 +241,7 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
           <ProductForm 
             initialData={formData}
             mode="edit"
+            tenantId={tenantId}
             categories={(categories || []).map(c => ({ 
               id: c.id as string, 
               name: c.name as string,

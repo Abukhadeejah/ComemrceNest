@@ -48,6 +48,7 @@ export function transformVariantOptions(dbVariantOptions: DbVariantOption[] | nu
       name: variantOption.name,
       displayName: variantOption.display_name,
       type: variantOption.type as 'color' | 'size' | 'material' | 'style',
+      required: false, // Default to false; can be overridden by component logic if needed
       values: variantOption.variant_option_values?.map((value): VariantValue => ({
         id: value.id,
         value: value.value,

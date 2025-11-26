@@ -26,6 +26,7 @@ interface ProductData {
   stock: number
   status: string
   category_id?: string
+  category_ids?: string[]
   meta_title?: string
   meta_description?: string
   sku?: string
@@ -177,6 +178,7 @@ export async function createProduct(formData: FormData) {
     gift_card_amount_cents: formData.get('gift_card_amount_cents') ? parseInt(formData.get('gift_card_amount_cents') as string) : null,
     gift_card_expiry_days: formData.get('gift_card_expiry_days') ? parseInt(formData.get('gift_card_expiry_days') as string) : null,
     category_id: formData.get('category_id') as string,
+    category_ids: formData.getAll('category_ids[]') as string[],
     status: (() => {
       const statusValue = (formData.get('status') as string)?.trim()
       return (statusValue && ['draft', 'published'].includes(statusValue)) ? statusValue : 'draft'
@@ -306,15 +308,22 @@ export async function createProduct(formData: FormData) {
     }
   }
 
-  // Handle category assignment
-  if (productData.category_id && productData.category_id.trim() !== '') {
+  // Handle category assignment - support multiple categories
+  const categoryIdsToAssign = productData.category_ids && productData.category_ids.length > 0
+    ? productData.category_ids
+    : productData.category_id && productData.category_id.trim() !== ''
+    ? [productData.category_id]
+    : []
+
+  if (categoryIdsToAssign.length > 0) {
+    const categoryInserts = categoryIdsToAssign.map(categoryId => ({
+      product_id: product.id,
+      category_id: categoryId,
+      tenant_id: tenantId!
+    }))
     await supabaseAdmin
       .from('product_categories')
-      .insert({
-        product_id: product.id,
-        category_id: productData.category_id,
-        tenant_id: tenantId
-      })
+      .insert(categoryInserts)
   }
 
   // Handle image uploads
@@ -554,7 +563,7 @@ export async function updateProduct(productId: string, formData: FormData) {
     gift_card_amount_cents: formData.get('gift_card_amount_cents') ? parseInt(formData.get('gift_card_amount_cents') as string) : null,
     gift_card_expiry_days: formData.get('gift_card_expiry_days') ? parseInt(formData.get('gift_card_expiry_days') as string) : null,
     category_id: formData.get('category_id') as string,
-    //category_ids: JSON.parse(formData.get('category_ids') as string || '[]'),
+    category_ids: formData.getAll('category_ids[]') as string[],
     status: formData.get('status') as string,
     tax_class_id: formData.get('tax_class_id') as string,
     images: formData.getAll('images') as string[],
@@ -663,23 +672,29 @@ export async function updateProduct(productId: string, formData: FormData) {
     throw new Error('Variants must be updated using the "Update Variants" button. The main Update does not accept variant arrays.')
   }
 
-  // Handle category assignment (using UPSERT to prevent duplicates)
-  if (productData.category_id && productData.category_id.trim() !== '') {
+  // Handle category assignment - support multiple categories
+  // First, remove all existing category assignments
+  await supabaseAdmin
+    .from('product_categories')
+    .delete()
+    .eq('product_id', productId)
+
+  // Then, insert new category assignments
+  const categoryIdsToAssign = productData.category_ids && productData.category_ids.length > 0
+    ? productData.category_ids
+    : productData.category_id && productData.category_id.trim() !== ''
+    ? [productData.category_id]
+    : []
+
+  if (categoryIdsToAssign.length > 0) {
+    const categoryInserts = categoryIdsToAssign.map(categoryId => ({
+      product_id: productId,
+      category_id: categoryId,
+      tenant_id: tenantId
+    }))
     await supabaseAdmin
       .from('product_categories')
-      .upsert({
-        product_id: productId,
-        category_id: productData.category_id,
-        tenant_id: tenantId
-      }, {
-        onConflict: 'product_id,category_id'
-      })
-  } else {
-    // Remove category assignment if none selected
-    await supabaseAdmin
-      .from('product_categories')
-      .delete()
-      .eq('product_id', productId)
+      .insert(categoryInserts)
   }
 
   // Handle image uploads (using UPSERT to prevent duplicates)

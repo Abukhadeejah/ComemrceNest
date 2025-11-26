@@ -200,6 +200,18 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
       meta_title: product.meta_title || '',
       meta_description: product.meta_description || '',
       category_id: categoryId,
+      // Extract all category IDs from the product_categories relationship
+      category_ids: Array.isArray(productWithRelations.categories) 
+        ? productWithRelations.categories
+            .map((pc: unknown) => {
+              if (pc && typeof pc === 'object' && 'category' in pc) {
+                const cat = (pc as { category?: { id?: unknown } }).category
+                if (cat && typeof cat.id === 'string') return cat.id
+              }
+              return null
+            })
+            .filter((id): id is string => id !== null)
+        : [],
       images: (productWithRelations.images?.map((img: Record<string, unknown>) => String(img.url)).filter(Boolean) as string[]) || [],
       has_variants: productWithRelations.has_variants === true, // Explicit boolean check
       variantOptions,
