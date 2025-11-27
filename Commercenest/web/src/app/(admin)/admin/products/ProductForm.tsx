@@ -304,8 +304,9 @@ export function ProductForm({
           if ('id' in result) {
             createdProductId = result.id
           } else {
-            console.error('Product creation failed:', result)
-            throw new Error(result.error || 'Failed to create product')
+            console.error('Product creation failed:', JSON.stringify(result, null, 2))
+            const errorMsg = (result as any)?.error || 'Failed to create product'
+            throw new Error(errorMsg)
           }
 
           const files = imageFiles.filter((i) => i instanceof File) as File[]
