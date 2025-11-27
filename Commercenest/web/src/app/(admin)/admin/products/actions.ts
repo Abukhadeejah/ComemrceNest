@@ -216,13 +216,8 @@ export async function createProduct(formData: FormData) {
   if (productData.stock != null && Number(productData.stock) < 0) creationProblems.push('Stock must be ≥ 0.')
   if (productData.low_stock_threshold != null && Number(productData.low_stock_threshold) < 0) creationProblems.push('Low stock threshold must be ≥ 0.')
 
-  // If variants are enabled at creation time, require at least one option and one combination
-  if (productData.has_variants) {
-    const opts = Array.isArray(productData.variantOptions) ? productData.variantOptions : []
-    const combos = Array.isArray(productData.variantCombinations) ? productData.variantCombinations : []
-    if (opts.length === 0) creationProblems.push('At least one variant option is required when variants are enabled.')
-    if (combos.length === 0) creationProblems.push('At least one variant combination is required when variants are enabled.')
-  }
+  // Variants can be enabled without options/combinations - they can be added later
+  // No validation needed here
 
   if (creationProblems.length > 0) {
     throw new Error(`Validation failed: ${creationProblems.join(' ')}`)
