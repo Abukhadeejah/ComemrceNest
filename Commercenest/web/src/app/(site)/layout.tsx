@@ -42,6 +42,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const cfg = getTenantConfig(tenantKey)
   const brand = cfg.brand?.name || tenantKey
   const tagline = cfg.brand?.tagline || 'Premium Fabrics & Design'
+  const favicon = cfg.brand?.favicon || '/icon.svg'
 
   return {
     title: {
@@ -49,9 +50,9 @@ export async function generateMetadata(): Promise<Metadata> {
       template: `%s | ${brand}`,
     },
     icons: {
-      icon: '/icon.svg',
-      shortcut: '/icon.svg',
-      apple: '/icon.svg'
+      icon: favicon,
+      shortcut: favicon,
+      apple: favicon
     },
     description: cfg.brand?.tagline || 'Premium multi-tenant storefront',
     openGraph: {

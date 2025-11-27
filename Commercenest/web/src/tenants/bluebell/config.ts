@@ -5,6 +5,7 @@ export const bluebellConfig: TenantConfig = {
   brand: {
     name: 'Bluebell Interiors Studio LLP',
     tagline: 'Creating beautiful interiors with premium fabrics since 1985',
+    favicon: '/favicon-bluebell.svg',
   },
   theme: {
     colors: {

@@ -30,18 +30,18 @@ export function PricingSection({ formData, errors, onInputChange }: PricingSecti
 
 
 
-  // Convert rupees to cents for storage
+  // Convert rupees to cents for storage (integers only)
   const rupeesToCents = (rupees: string): number => {
     if (!rupees || rupees.trim() === '') return 0
     
-    // Remove any non-numeric characters except decimal point
-    const cleanValue = rupees.replace(/[^\d.]/g, '')
-    const value = parseFloat(cleanValue)
+    // Remove any non-numeric characters (no decimals allowed)
+    const cleanValue = rupees.replace(/[^\d]/g, '')
+    const value = parseInt(cleanValue, 10)
     
     if (isNaN(value) || value < 0) return 0
     
-    // Handle large numbers properly - ensure precision for decimal values
-    const cents = Math.round(value * 100)
+    // Convert rupees to cents (multiply by 100)
+    const cents = value * 100
     
     // Validate the result is within reasonable bounds
     if (cents > Number.MAX_SAFE_INTEGER) {
@@ -124,7 +124,7 @@ export function PricingSection({ formData, errors, onInputChange }: PricingSecti
             value={inputValues.mrp}
             onChange={(e) => handlePriceInput('mrp', e.target.value)}
             placeholder="500"
-            step="0.01"
+            step="1"
             min="0"
             className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
           />
@@ -146,7 +146,7 @@ export function PricingSection({ formData, errors, onInputChange }: PricingSecti
             value={inputValues.salePrice}
             onChange={(e) => handlePriceInput('salePrice', e.target.value)}
             placeholder="480"
-            step="0.01"
+            step="1"
             min="0"
             className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
           />
@@ -168,7 +168,7 @@ export function PricingSection({ formData, errors, onInputChange }: PricingSecti
             value={inputValues.costPrice}
             onChange={(e) => handlePriceInput('costPrice', e.target.value)}
             placeholder="300"
-            step="0.01"
+            step="1"
             min="0"
             className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
           />

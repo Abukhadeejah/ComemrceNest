@@ -5,6 +5,7 @@ export const senlyshConfig: TenantConfig = {
   brand: {
     name: 'Senlysh',
     tagline: 'Your destination for fashion-forward clothing and accessories',
+    favicon: '/images/senlysh/logo.png',
   },
   theme: {
     colors: {

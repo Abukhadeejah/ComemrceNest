@@ -498,11 +498,11 @@ export function VariantsSection({
                                     type="number"
                                     value={combo.priceCents / 100}
                                     onChange={e =>
-                                      updateCombination(combo.id, 'priceCents', Math.round(parseFloat(e.target.value) * 100))
+                                      updateCombination(combo.id, 'priceCents', parseInt(e.target.value || '0') * 100)
                                     }
                                     className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-indigo-500 focus:border-indigo-500"
                                     min="0"
-                                    step="0.01"
+                                    step="1"
                                   />
                                 </td>
                                 <td className="px-4 py-4 whitespace-nowrap">

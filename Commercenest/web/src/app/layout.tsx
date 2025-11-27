@@ -10,9 +10,9 @@ export const metadata: Metadata = {
   title: 'CommerceNest - Multi-tenant Platform',
   description: 'Multi-tenant e-commerce platform',
   icons: {
-    icon: '/favicon.svg',
-    shortcut: '/favicon.svg',
-    apple: '/apple-touch-icon.svg',
+    icon: '/favicon.png',
+    shortcut: '/favicon.png',
+    apple: '/favicon.png',
   },
 }
 

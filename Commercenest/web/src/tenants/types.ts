@@ -5,6 +5,7 @@ export type TenantConfig = {
     name: string
     tagline?: string
     logo?: string
+    favicon?: string
   }
   // Theme configuration
   theme: {
