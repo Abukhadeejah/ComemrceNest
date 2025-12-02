@@ -17,7 +17,12 @@ export function useDraftAutoSave(
   const saveDraft = async () => {
     setIsSaving(true);
     
-    
+    // Clean up empty variant data before saving
+    const cleanedData = { ...debouncedFormData };
+    if (!cleanedData.has_variants) {
+      cleanedData.variantOptions = [];
+      cleanedData.variantCombinations = [];
+    }
     
     try {
       if (currentDraftId) {
@@ -25,13 +30,12 @@ export function useDraftAutoSave(
         const res = await fetch(`/api/admin/products/drafts/${currentDraftId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ draft_data: debouncedFormData }),
+          body: JSON.stringify({ draft_data: cleanedData }),
         });
         if (!res.ok) throw new Error('Failed to update draft');
       } else {
         // Create new draft
-        const bodyData = { tenant_id: tenantId, draft_data: debouncedFormData };
-        //console.log('Creating draft with body:', bodyData); // ADD THIS
+        const bodyData = { tenant_id: tenantId, draft_data: cleanedData };
         
         const res = await fetch('/api/admin/products/drafts', {
           method: 'POST',
