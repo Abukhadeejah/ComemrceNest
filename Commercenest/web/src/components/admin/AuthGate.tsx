@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabaseClient } from '@/lib/supabaseClient'
 
 export default function AuthGate({ children }: { children: React.ReactNode }) {
   const router = useRouter()
-  const supabase = createClientComponentClient()
+  const supabase = supabaseClient
   const [checking, setChecking] = useState(true)
   const [hasChecked, setHasChecked] = useState(false)
   const [error, setError] = useState<string | null>(null)

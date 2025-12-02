@@ -1494,7 +1494,7 @@ export async function updateProductVariants(
             tenant_id: tenantId,
             product_id: productId,
             name: variantName,
-            sku: combo.sku || '',
+            sku: combo.sku && combo.sku.trim() ? combo.sku : null, // Use null instead of empty string
             price_cents: combo.priceCents || 0,
             stock: combo.stock || 0,
             attributes: transformedAttributes

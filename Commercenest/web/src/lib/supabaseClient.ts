@@ -6,80 +6,37 @@ import { Database } from '@/types/supabase'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
+// One-time cleanup of legacy auth-helpers cookies
+if (typeof window !== 'undefined' && !sessionStorage.getItem('auth_migrated_to_ssr')) {
+  try {
+    // Clear all Supabase auth cookies from old auth-helpers package
+    document.cookie.split(';').forEach(cookie => {
+      const [name] = cookie.split('=')
+      const cookieName = name.trim()
+      if (cookieName.startsWith('sb-')) {
+        // Clear cookie for all paths and domains
+        document.cookie = `${cookieName}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`
+        document.cookie = `${cookieName}=; path=/; domain=${window.location.hostname}; expires=Thu, 01 Jan 1970 00:00:00 GMT`
+      }
+    })
+    sessionStorage.setItem('auth_migrated_to_ssr', 'true')
+    console.log('✅ Migrated from auth-helpers to SSR - old cookies cleared')
+  } catch (error) {
+    console.warn('Cookie cleanup failed:', error)
+  }
+}
+
 // Singleton instance to prevent multiple GoTrueClient instances
 let client: ReturnType<typeof createBrowserClient<Database>> | null = null
 
 export function getSupabaseClient() {
   if (client) return client
 
-  client = createBrowserClient<Database>(supabaseUrl, supabaseAnonKey, {
-    cookies: {
-      getAll() {
-        if (typeof document === 'undefined') return []
-        try {
-          const cookies = document.cookie.split(';')
-          return cookies
-            .filter(c => c.trim())
-            .map(c => {
-              const [name, ...valueParts] = c.split('=')
-              const value = valueParts.join('=')
-              return { name: name.trim(), value: value.trim() }
-            })
-            .filter(c => {
-              // Filter out corrupted cookies that start with invalid patterns
-              if (c.value.startsWith('base64-')) {
-                console.warn(`Removing corrupted cookie: ${c.name}`)
-                // Delete the corrupted cookie
-                document.cookie = `${c.name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`
-                return false
-              }
-              return true
-            })
-        } catch (error) {
-          console.error('Error parsing cookies:', error)
-          return []
-        }
-      },
-      setAll(cookiesToSet) {
-        if (typeof document === 'undefined') return
-        try {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            const cookieString = `${name}=${value}; path=${options?.path ?? '/'}; max-age=${options?.maxAge ?? 3600}; SameSite=Lax`
-            document.cookie = cookieString
-          })
-        } catch (error) {
-          console.error('Error setting cookies:', error)
-        }
-      },
-    },
-  })
+  // Use default Supabase SSR cookie handling
+  client = createBrowserClient<Database>(supabaseUrl, supabaseAnonKey)
 
   return client
 }
 
 // Export for backward compatibility
 export const supabaseClient = getSupabaseClient()
-
-// Utility to clear corrupted cookies
-export function clearCorruptedCookies() {
-  if (typeof document === 'undefined') return
-  
-  const cookies = document.cookie.split(';')
-  cookies.forEach(cookie => {
-    const [name, ...valueParts] = cookie.split('=')
-    const value = valueParts.join('=').trim()
-    
-    // Clear cookies with corrupted patterns
-    if (value.startsWith('base64-') || value.includes('\\x')) {
-      const cookieName = name.trim()
-      console.log(`Clearing corrupted cookie: ${cookieName}`)
-      document.cookie = `${cookieName}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`
-      document.cookie = `${cookieName}=; path=/; domain=${window.location.hostname}; expires=Thu, 01 Jan 1970 00:00:00 GMT`
-    }
-  })
-}
-
-// Auto-clear corrupted cookies on load
-if (typeof window !== 'undefined') {
-  clearCorruptedCookies()
-}

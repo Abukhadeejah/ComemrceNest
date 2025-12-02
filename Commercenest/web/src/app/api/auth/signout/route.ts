@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { cookies, headers } from 'next/headers'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { createServerClient } from '@supabase/ssr'
 
 async function getTenantKeyFromRequest(): Promise<string | null> {
   const h = await headers()
@@ -33,14 +33,35 @@ async function getTenantKeyFromRequest(): Promise<string | null> {
 }
 
 export async function POST(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies })
+  const cookieStore = await cookies()
+  
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value
+        },
+        set(name: string, value: string, options: any) {
+          cookieStore.set({ name, value, ...options })
+        },
+        remove(name: string, options: any) {
+          cookieStore.set({ name, value: '', ...options })
+        },
+      },
+    }
+  )
+  
   await supabase.auth.signOut()
   
-  // Get tenant context to redirect to correct login page
-  const tenantKey = await getTenantKeyFromRequest()
-  const redirectUrl = tenantKey 
-    ? `/${tenantKey}/login`
-    : '/login' // fallback to global login
+  // Check if the signout came from admin panel
+  const referer = (await headers()).get('referer') || ''
+  const isAdminSignout = referer.includes('/admin')
+  
+  // Admin users always go to /login (global admin login)
+  // Customer users go to /{tenant}/login (tenant customer login)
+  const redirectUrl = isAdminSignout ? '/login' : `/${await getTenantKeyFromRequest() || 'senlysh'}/login`
   
   // Get the origin from the request URL to ensure correct domain
   const requestUrl = new URL(request.url)
