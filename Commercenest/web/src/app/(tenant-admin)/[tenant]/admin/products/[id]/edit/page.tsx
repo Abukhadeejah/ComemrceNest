@@ -43,7 +43,7 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
         .eq('product_id', id)
         .order('sort_order'),
       
-      // Variant options
+      // Variant options - only load basic option info, values will be loaded separately
       supabaseAdmin
         .from('product_variant_options')
         .select(`
@@ -52,14 +52,7 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
             name,
             display_name,
             type,
-            required,
-            values:variant_option_values(
-              id,
-              value,
-              display_value,
-              color_hex,
-              image_url
-            )
+            required
           )
         `)
         .eq('product_id', id),
@@ -71,27 +64,67 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
         .eq('product_id', id)
     ])
 
-    // Transform variant options data to match expected structure
-    const transformedVariantOptions = (variantOptionsResult.data || []).map((item: unknown) => {
-      const typedItem = item as { option?: { id?: string; name?: string; display_name?: string; type?: string; required?: boolean | null; values?: Array<{ id?: string; value?: string; display_value?: string; color_hex?: string | null; image_url?: string | null; sort_order?: number | null; price_adjustment_cents?: number | null; cost_adjustment_cents?: number | null }> } }
-      const dbOptionId = typedItem.option?.id || ''
-      return {
-        id: `option_${dbOptionId}`,
-        name: typedItem.option?.name || '',
-        displayName: typedItem.option?.display_name || '',
-        type: typedItem.option?.type || 'text',
-        required: typedItem.option?.required || false,
-        values: (typedItem.option?.values || []).map((value: { id?: string; value?: string; display_value?: string; color_hex?: string | null; image_url?: string | null; sort_order?: number | null; price_adjustment_cents?: number | null; cost_adjustment_cents?: number | null }) => ({
-          id: `value_${value.id || ''}`,
-          value: value.value || '',
-          displayValue: value.display_value || '',
-          colorHex: value.color_hex || undefined,
-          imageUrl: value.image_url || undefined,
-          priceAdjustmentCents: value.price_adjustment_cents || 0,
-          costAdjustmentCents: value.cost_adjustment_cents || 0
-        }))
-      }
+    // First, extract used option-value pairs from variant combinations
+    const rawVariants = variantsResult.data || []
+    const usedOptionValues = new Map<string, Set<string>>() // optionId -> Set of valueIds
+    
+    rawVariants.forEach((variant: unknown) => {
+      const typedVariant = variant as { attributes?: unknown }
+      const attributes = (typedVariant.attributes as Record<string, string>) || {}
+      Object.entries(attributes).forEach(([optionId, valueId]) => {
+        if (!usedOptionValues.has(optionId)) {
+          usedOptionValues.set(optionId, new Set())
+        }
+        usedOptionValues.get(optionId)!.add(valueId)
+      })
     })
+    
+    // Transform variant options data to match expected structure - only load used values
+    const transformedVariantOptions = await Promise.all(
+      (variantOptionsResult.data || []).map(async (item: unknown) => {
+        const typedItem = item as { option?: { id?: string; name?: string; display_name?: string; type?: string; required?: boolean | null } }
+        const dbOptionId = typedItem.option?.id || ''
+        const usedValueIds = usedOptionValues.get(dbOptionId)
+        
+        let values: Array<{
+          id: string
+          value: string
+          displayValue: string
+          colorHex?: string
+          imageUrl?: string
+          priceAdjustmentCents?: number
+          costAdjustmentCents?: number
+        }> = []
+        
+        // Only fetch values if this option has used values
+        if (usedValueIds && usedValueIds.size > 0) {
+          const { data: optionValues } = await supabaseAdmin
+            .from('variant_option_values')
+            .select('id, value, display_value, color_hex, image_url, price_adjustment_cents, cost_adjustment_cents')
+            .eq('option_id', dbOptionId)
+            .in('id', Array.from(usedValueIds))
+          
+          values = (optionValues || []).map((value: Record<string, unknown>) => ({
+            id: `value_${value.id || ''}`,
+            value: (value.value as string) || '',
+            displayValue: (value.display_value as string) || '',
+            colorHex: (value.color_hex as string) || undefined,
+            imageUrl: (value.image_url as string) || undefined,
+            priceAdjustmentCents: (value.price_adjustment_cents as number) || 0,
+            costAdjustmentCents: (value.cost_adjustment_cents as number) || 0
+          }))
+        }
+        
+        return {
+          id: `option_${dbOptionId}`,
+          name: typedItem.option?.name || '',
+          displayName: typedItem.option?.display_name || '',
+          type: typedItem.option?.type || 'text',
+          required: typedItem.option?.required || false,
+          values
+        }
+      })
+    )
 
     // Build DB UUID -> client ID maps for options and values
     const optionDbToClient = new Map<string, string>()
@@ -105,8 +138,8 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
       }
     }
 
-    // Transform variant combinations data to match expected structure
-    const transformedVariants = (variantsResult.data || []).map((variant: unknown) => {
+    // Transform variant combinations data to match expected structure (rawVariants already defined above)
+    const transformedVariants = rawVariants.map((variant: unknown) => {
       const typedVariant = variant as { id?: string; attributes?: unknown; name?: string; sku?: string | null; price_cents?: number; stock?: number | null }
       return {
         id: `combo_${typedVariant.id || ''}`,

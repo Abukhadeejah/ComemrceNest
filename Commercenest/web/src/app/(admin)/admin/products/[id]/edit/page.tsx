@@ -45,7 +45,7 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
         .eq('product_id', id)
         .order('sort_order'),
       
-      // Variant options
+      // Variant options - only load values that are actually used by this product
       supabaseAdmin
         .from('product_variant_options')
         .select(`
@@ -54,14 +54,7 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
             name,
             display_name,
             type,
-            required,
-            values:variant_option_values(
-              id,
-              value,
-              display_value,
-              color_hex,
-              image_url
-            )
+            required
           )
         `)
         .eq('product_id', id),
@@ -105,37 +98,80 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
     const rawOptions = Array.isArray(productWithRelations.variant_options) ? productWithRelations.variant_options : []
     console.log('DEBUG: Raw variant options from DB:', rawOptions)
     
-    const variantOptions = rawOptions.map((pvo: Record<string, unknown>) => {
-      const option = (pvo.option || {}) as Record<string, unknown>
-      const values = Array.isArray((option as Record<string, unknown> & { values?: Record<string, unknown>[] }).values)
-        ? ((option as Record<string, unknown> & { values?: Record<string, unknown>[] }).values as Record<string, unknown>[]).map((value: Record<string, unknown>) => ({
+    // Get variant combinations first to extract the actual values used
+    const rawVariants = Array.isArray(productWithRelations.variants) ? productWithRelations.variants : []
+    
+    // Extract unique option-value pairs from variant combinations
+    const usedOptionValues = new Map<string, Set<string>>() // optionId -> Set of valueIds
+    
+    rawVariants.forEach((variant: Record<string, unknown>) => {
+      const attributes = (variant.attributes as Record<string, string>) || {}
+      Object.entries(attributes).forEach(([optionId, valueId]) => {
+        if (!usedOptionValues.has(optionId)) {
+          usedOptionValues.set(optionId, new Set())
+        }
+        usedOptionValues.get(optionId)!.add(valueId)
+      })
+    })
+    
+    console.log('DEBUG: Used option values from variants:', Object.fromEntries(
+      Array.from(usedOptionValues.entries()).map(([k, v]) => [k, Array.from(v)])
+    ))
+    
+    // Now fetch only the variant option values that are actually used
+    const variantOptionsWithValues = await Promise.all(
+      rawOptions.map(async (pvo: Record<string, unknown>) => {
+        const option = (pvo.option || {}) as Record<string, unknown>
+        const optionId = option.id as string
+        const usedValueIds = usedOptionValues.get(optionId)
+        
+        let values: Array<{
+          id: string
+          value: string
+          displayValue: string
+          colorHex?: string
+          imageUrl?: string
+        }> = []
+        
+        // Only fetch values if this option has used values
+        if (usedValueIds && usedValueIds.size > 0) {
+          const { data: optionValues } = await supabaseAdmin
+            .from('variant_option_values')
+            .select('id, value, display_value, color_hex, image_url')
+            .eq('option_id', optionId)
+            .in('id', Array.from(usedValueIds))
+          
+          values = (optionValues || []).map((value: Record<string, unknown>) => ({
             id: (value.id as string) || '',
             value: (value.value as string) || '',
             displayValue: (value.display_value as string) || '',
             colorHex: (value.color_hex as string) || undefined,
             imageUrl: (value.image_url as string) || undefined
           }))
-        : []
+        }
         
-      console.log('DEBUG: Transformed option:', {
-        id: option.id,
-        name: option.name,
-        displayName: option.display_name,
-        values_count: values.length
+        console.log('DEBUG: Transformed option:', {
+          id: option.id,
+          name: option.name,
+          displayName: option.display_name,
+          values_count: values.length,
+          value_ids: values.map(v => v.id)
+        })
+        
+        return {
+          id: (option.id as string) || '',
+          name: (option.name as string) || '',
+          displayName: (option.display_name as string) || '',
+          type: (option.type as string) || 'select',
+          required: Boolean(option.required),
+          values
+        }
       })
-      
-      return {
-        id: (option.id as string) || '',
-        name: (option.name as string) || '',
-        displayName: (option.display_name as string) || '',
-        type: (option.type as string) || 'select',
-        required: Boolean(option.required),
-        values
-      }
-    })
+    )
+    
+    const variantOptions = variantOptionsWithValues
 
-    // Transform variant combinations
-    const rawVariants = Array.isArray(productWithRelations.variants) ? productWithRelations.variants : []
+    // Transform variant combinations (rawVariants already defined above)
     const variantCombinations = rawVariants.map((variant: Record<string, unknown>) => ({
       id: (variant.id as string) || '',
       options: (variant.attributes as Record<string, string>) || {},
