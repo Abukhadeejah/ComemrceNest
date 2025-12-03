@@ -31,7 +31,10 @@ variant_option_values(
 
 This is why ghost variants appeared on individual product pages even after fixing the shop page.
 
-### **Problem 3: No Filtering Based on Actual Usage**
+### **Problem 3: HomeServer.tsx Bypassing All Fixes**
+The `HomeServer.tsx` component was loading products with a **direct Supabase query** that included ALL variant option values without any filtering. This was the main source of ghost variants on the home page, bypassing all my cleanup logic.
+
+### **Problem 4: No Filtering Based on Actual Usage**
 None of the functions checked which variant values are actually used by the product's variant combinations.
 
 ## 🛠️ **FIXES IMPLEMENTED**
@@ -59,7 +62,24 @@ Replaced the function to only load variant values that are actually used:
 3. **Load only used values** via separate queries
 4. **Return clean data** with no ghost variants
 
-### **Fix 3: Enhanced Ghost Variant Cleanup Logic**
+### **Fix 3: Fixed HomeServer.tsx Direct Query**
+Replaced the direct Supabase query in `HomeServer.tsx` with the cleaned `fetchPublishedProductsWithVariants()` function:
+
+```typescript
+// BEFORE (loading ALL variant values)
+supabaseAdmin.from('products').select(`
+  product_variant_options(
+    variant_options(
+      variant_option_values(...)  // ALL VALUES - GHOST VARIANTS!
+    )
+  )
+`)
+
+// AFTER (using cleaned function)
+fetchPublishedProductsWithVariants(tenantId)  // Only actual values
+```
+
+### **Fix 4: Enhanced Ghost Variant Cleanup Logic**
 The cleanup logic now:
 - Extracts used option-value pairs from variant combinations
 - Maps option IDs to sets of used value IDs
@@ -69,9 +89,14 @@ The cleanup logic now:
 ## 📁 **FILES MODIFIED**
 
 ### `src/server/modules/products/service.ts`
-1. **`fetchPublishedProductsWithVariants()`** - Added `variant_option_values` to SELECT query
-2. **`fetchPublishedProductsPagedWithVariants()`** - Added `variant_option_values` to SELECT query  
+1. **`fetchPublishedProductsWithVariants()`** - Added `variant_option_values` to SELECT query + ghost variant cleanup
+2. **`fetchPublishedProductsPagedWithVariants()`** - Added `variant_option_values` to SELECT query + ghost variant cleanup  
 3. **`fetchProductVariantOptions()`** - Complete rewrite with ghost variant filtering
+
+### `src/tenants/senlysh/components/HomeServer.tsx`
+4. **CRITICAL FIX** - Replaced direct Supabase query with `fetchPublishedProductsWithVariants()` function
+   - **This was the main source of ghost variants on the home page!**
+   - The component was bypassing all ghost variant cleanup with a direct database query
 
 ## 🎯 **IMPACT**
 

@@ -1,5 +1,6 @@
 import { resolveTenantIdFromRequest } from '@/server/tenant'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
+import { fetchPublishedProductsWithVariants } from '@/server/modules/products/service'
 import Home from './Home'
 import { adaptHeroSlides, adaptHeroSettings, adaptCategories } from '@/utils/typeAdapters'
 
@@ -18,25 +19,8 @@ export default async function HomeServer() {
     return <main className="p-6"><h1 className="text-xl font-semibold">Senlysh</h1><p className="text-sm text-neutral-600">Tenant not found.</p></main>
   }
 
-  const [{ data: products }, { data: categories }, { data: heroSlides }, { data: heroSettings }, { data: variantCombinations }] = await Promise.all([
-    supabaseAdmin
-      .from('products')
-      .select(`
-        id, name, slug, description, price_cents, compare_at_price_cents, stock, currency, hero_image_url, status, 
-        is_featured, is_bestseller, is_on_sale, is_new_arrival,
-        product_variant_options(
-          variant_options(
-            id, name, display_name, type,
-            variant_option_values(
-              id, value, display_value, color_hex, image_url, 
-              price_adjustment_cents, cost_adjustment_cents, sort_order
-            )
-          )
-        )
-      `)
-      .eq('tenant_id', tenantId)
-      .eq('status', 'published')
-      .order('updated_at', { ascending: false }),
+  const [productsResult, { data: categories }, { data: heroSlides }, { data: heroSettings }, { data: variantCombinations }] = await Promise.all([
+    fetchPublishedProductsWithVariants(tenantId),
     supabaseAdmin
       .from('categories')
       .select('id, name, slug, parent_id, image_url, image_alt')
@@ -61,7 +45,7 @@ export default async function HomeServer() {
   ])
 
   return <Home 
-    products={(products || []).map(p => ({
+    products={(productsResult.data || []).map(p => ({
       id: p.id,
       name: p.name,
       slug: p.slug,
