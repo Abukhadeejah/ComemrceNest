@@ -6,20 +6,7 @@ import Image from 'next/image';
 import { useCart } from '@/lib/cart';
 import { usePathname } from 'next/navigation';
 import { useCustomerAuth } from '@/hooks/useCustomerAuth';
-
-interface Category {
-  id: string;
-  name: string;
-  slug: string;
-  parent_id?: string;
-}
-
-interface CategoryTree {
-  id: string;
-  name: string;
-  slug: string;
-  children?: CategoryTree[];
-}
+import { Category, CategoryTree, buildCategoryTree, filterTestCategories } from '@/lib/categories';
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -49,43 +36,7 @@ export default function Header() {
       : `${baseClasses} pb-1`;
   };
 
-  const filterTestCategories = (categories: Category[]): Category[] => {
-    return categories.filter(cat => 
-      !cat.name.toLowerCase().includes('test') &&
-      cat.name !== 'Test' &&
-      cat.name !== 'Test Category - Regression Testing'
-    );
-  };
-
-  const buildCategoryTree = (categories: Category[]): CategoryTree[] => {
-    const categoryMap = new Map<string, CategoryTree>();
-    const rootCategories: CategoryTree[] = [];
-
-    categories.forEach(cat => {
-      categoryMap.set(cat.id, {
-        id: cat.id,
-        name: cat.name,
-        slug: cat.slug,
-        children: []
-      });
-    });
-
-    categories.forEach(cat => {
-      const node = categoryMap.get(cat.id);
-      if (!node) return;
-
-      if (cat.parent_id) {
-        const parent = categoryMap.get(cat.parent_id);
-        if (parent && parent.children) {
-          parent.children.push(node);
-        }
-      } else {
-        rootCategories.push(node);
-      }
-    });
-
-    return rootCategories;
-  };
+  // Removed: filterTestCategories and buildCategoryTree - now imported from lib/categories
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -160,7 +111,7 @@ export default function Header() {
                     categoryTree.map((rootCategory) => (
                       <div key={rootCategory.id} className="relative group/sub">
                         <Link 
-                          href={`/senlysh/products?category=${rootCategory.slug}`} 
+                          href={`/senlysh/products?categories[]=${rootCategory.slug}`} 
                           className="flex items-center justify-between px-4 py-2.5 text-sm font-semibold text-gray-800 hover:bg-purple-50 hover:text-purple-600 transition-colors"
                         >
                           <span>{rootCategory.name}</span>
@@ -176,7 +127,7 @@ export default function Header() {
                             {rootCategory.children.map((subCategory) => (
                               <Link 
                                 key={subCategory.id}
-                                href={`/senlysh/products?category=${subCategory.slug}`} 
+                                href={`/senlysh/products?categories[]=${subCategory.slug}`} 
                                 className="block px-4 py-2 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-600 transition-colors"
                               >
                                 {subCategory.name}
@@ -377,7 +328,7 @@ export default function Header() {
                       categoryTree.map((rootCategory) => (
                         <div key={rootCategory.id} className="space-y-1">
                           <Link 
-                            href={`/senlysh/products?category=${rootCategory.slug}`} 
+                            href={`/senlysh/products?categories[]=${rootCategory.slug}`} 
                             className="flex items-center py-2 px-3 text-xs font-medium text-gray-700 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all"
                             onClick={() => setIsMenuOpen(false)}
                           >
@@ -390,7 +341,7 @@ export default function Header() {
                               {rootCategory.children.map((subCategory) => (
                                 <Link 
                                   key={subCategory.id}
-                                  href={`/senlysh/products?category=${subCategory.slug}`} 
+                                  href={`/senlysh/products?categories[]=${subCategory.slug}`} 
                                   className="flex items-center py-1.5 px-3 text-[11px] text-gray-600 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all"
                                   onClick={() => setIsMenuOpen(false)}
                                 >

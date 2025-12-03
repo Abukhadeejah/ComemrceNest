@@ -15,6 +15,7 @@ interface ProductsPageProps {
   searchParams: Promise<{
     search?: string
     category?: string
+    'categories[]'?: string | string[]
     status?: string
     sort?: string
     page?: string
@@ -41,10 +42,26 @@ export default async function SenlyshProductsPage({ searchParams }: ProductsPage
     return <div>Tenant not found</div>
   }
 
+  // Handle both single category and multiple categories
+  const getCategories = () => {
+    const multipleCategories = params['categories[]']
+    if (Array.isArray(multipleCategories)) {
+      return multipleCategories
+    } else if (typeof multipleCategories === 'string') {
+      return [multipleCategories]
+    } else if (params.category) {
+      return [params.category]
+    }
+    return undefined
+  }
+
+  const categories = getCategories()
+
   const products = await getProducts({
     tenantId,
     search: params.search,
-    category: params.category,
+    categories, // Use new categories array parameter
+    category: params.category, // Keep for backward compatibility
     status: params.status,
     sort: params.sort,
     page: parseInt(params.page || '1'),

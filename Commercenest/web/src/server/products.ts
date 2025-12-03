@@ -4,6 +4,7 @@ export interface GetProductsParams {
   tenantId: string | null
   search?: string
   category?: string
+  categories?: string[] // New: support multiple categories
   status?: string
   sort?: string
   page?: number
@@ -51,6 +52,7 @@ export async function getProducts(params: GetProductsParams): Promise<ProductLis
     tenantId,
     search,
     category,
+    categories,
     sort = '',
     page = 1,
     limit = 12,
@@ -78,6 +80,10 @@ export async function getProducts(params: GetProductsParams): Promise<ProductLis
   const { sort: sortField, dir } = parseSortParameter(sort)
   
   console.log('[GET_PRODUCTS] Sort parameter:', sort, '→ Parsed:', { sort: sortField, dir })
+  console.log('[GET_PRODUCTS] Categories filter:', { category, categories })
+
+  // Determine which categories to filter by
+  const categoryFilter = categories && categories.length > 0 ? categories : (category ? [category] : undefined)
 
   // Map the parameters to match the service function
   const serviceParams = {
@@ -86,7 +92,8 @@ export async function getProducts(params: GetProductsParams): Promise<ProductLis
     dir,
     page,
     pageSize: limit,
-    categoryId: category,
+    categoryId: category, // Keep for backward compatibility
+    categorySlugs: categoryFilter, // New: multiple category slugs
     tag,
     tags,
     color,

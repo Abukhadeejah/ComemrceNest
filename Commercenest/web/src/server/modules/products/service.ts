@@ -64,6 +64,10 @@ export type ProductListParams = {
   minPriceCents?: number
   maxPriceCents?: number
   
+  // Category filters
+  categoryId?: string // Single category ID (legacy)
+  categorySlugs?: string[] // Multiple category slugs (new)
+  
   // Badge filters
   is_featured?: boolean
   is_bestseller?: boolean
@@ -424,7 +428,7 @@ export async function fetchPublishedProductsWithVariants(tenantId: string) {
 // Enhanced function to fetch paginated products with variant options for PLP
 export async function fetchPublishedProductsPagedWithVariants(
   tenantId: string,
-  params: ProductListParams & { categoryId?: string }
+  params: ProductListParams
 ) {
   const { 
     sort = 'updated_at', 
@@ -435,6 +439,7 @@ export async function fetchPublishedProductsPagedWithVariants(
     minPriceCents, 
     maxPriceCents, 
     categoryId,
+    categorySlugs,
     is_featured,
     is_bestseller,
     is_new_arrival,
@@ -465,8 +470,11 @@ export async function fetchPublishedProductsPagedWithVariants(
     )
   `
   
-  if (categoryId) {
-    selectCols += ', product_categories!inner(category_id)'
+  // Determine if we need category filtering
+  const needsCategoryFilter = categoryId || (categorySlugs && categorySlugs.length > 0)
+  
+  if (needsCategoryFilter) {
+    selectCols += ', product_categories!inner(category:categories!inner(id, slug))'
   }
   
   let query = supabaseAdmin
@@ -475,8 +483,13 @@ export async function fetchPublishedProductsPagedWithVariants(
     .eq('tenant_id', tenantId)
     .eq('status', 'published')
     
+  // Handle category filtering
   if (categoryId) {
+    // Legacy: filter by category ID
     query = query.eq('product_categories.category_id', categoryId)
+  } else if (categorySlugs && categorySlugs.length > 0) {
+    // New: filter by category slugs
+    query = query.in('product_categories.category.slug', categorySlugs)
   }
   
   if (q && q.trim()) {

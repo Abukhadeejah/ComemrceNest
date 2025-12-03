@@ -2,41 +2,53 @@
 
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useEffect } from 'react'
-import { FunnelIcon } from '@heroicons/react/24/outline'
-
-interface Category {
-  id: string
-  name: string
-  slug: string
-  parent_id?: string
-}
+import { FunnelIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline'
+import { CategoryTree } from './CategoryTree'
+import { Category, CategoryTree as CategoryTreeType, buildCategoryTree, filterTestCategories } from '@/lib/categories'
 
 export function ProductFilters() {
   const router = useRouter()
   const searchParams = useSearchParams()
   
-  const [category, setCategory] = useState(searchParams.get('category') || '')
+  // Parse categories from URL - support both single and multiple
+  const getInitialCategories = () => {
+    const singleCategory = searchParams.get('category')
+    const multipleCategories = searchParams.getAll('categories[]')
+    
+    if (multipleCategories.length > 0) {
+      return multipleCategories
+    } else if (singleCategory) {
+      return [singleCategory]
+    }
+    return []
+  }
+  
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(getInitialCategories())
   const [sortBy, setSortBy] = useState(searchParams.get('sort') || '')
   const [priceRange, setPriceRange] = useState(searchParams.get('price') || '')
   const [color, setColor] = useState(searchParams.get('color') || '')
   const [size, setSize] = useState(searchParams.get('size') || '')
   const [tag, setTag] = useState(searchParams.get('tag') || '')
   const [categories, setCategories] = useState<Category[]>([])
+  const [categoryTree, setCategoryTree] = useState<CategoryTreeType[]>([])
   const [availableTags, setAvailableTags] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
+  const [categoriesExpanded, setCategoriesExpanded] = useState(true)
 
   // Fetch categories and tags from API
   useEffect(() => {
     const fetchData = async () => {
       try {
         const [categoriesResponse, tagsResponse] = await Promise.all([
-          fetch('/api/site/categories'),
+          fetch('/api/site/categories?with_counts=true'),
           fetch('/api/site/tags')
         ])
         
         if (categoriesResponse.ok) {
           const categoriesData = await categoriesResponse.json()
-          setCategories(categoriesData.categories || [])
+          const filteredCategories = filterTestCategories(categoriesData.categories || [])
+          setCategories(filteredCategories)
+          setCategoryTree(buildCategoryTree(filteredCategories))
         }
         
         if (tagsResponse.ok) {
@@ -53,45 +65,42 @@ export function ProductFilters() {
     fetchData()
   }, [])
 
+  // Handle category selection
+  const handleCategoryToggle = (slug: string, checked: boolean) => {
+    const newSelected = checked
+      ? [...selectedCategories, slug]
+      : selectedCategories.filter(s => s !== slug)
+    
+    setSelectedCategories(newSelected)
+  }
+
   // Update URL when filters change
   useEffect(() => {
-    const params = new URLSearchParams(searchParams.toString())
+    const params = new URLSearchParams()
     
-    if (category) {
-      params.set('category', category)
-    } else {
-      params.delete('category')
-    }
+    // Handle multiple categories
+    selectedCategories.forEach(categorySlug => {
+      params.append('categories[]', categorySlug)
+    })
     
     if (sortBy) {
       params.set('sort', sortBy)
-    } else {
-      params.delete('sort')
     }
     
     if (priceRange) {
       params.set('price', priceRange)
-    } else {
-      params.delete('price')
     }
 
     if (color) {
       params.set('color', color)
-    } else {
-      params.delete('color')
     }
 
     if (size) {
       params.set('size', size)
-    } else {
-      params.delete('size')
     }
-
 
     if (tag) {
       params.set('tag', tag)
-    } else {
-      params.delete('tag')
     }
     
     // Reset to page 1 when filtering
@@ -99,10 +108,10 @@ export function ProductFilters() {
     
     const newUrl = params.toString() ? `?${params.toString()}` : window.location.pathname
     router.push(newUrl)
-  }, [category, sortBy, priceRange, color, size, tag, router, searchParams])
+  }, [selectedCategories, sortBy, priceRange, color, size, tag, router])
 
   const clearFilters = () => {
-    setCategory('')
+    setSelectedCategories([])
     setSortBy('')
     setPriceRange('')
     setColor('')
@@ -110,7 +119,7 @@ export function ProductFilters() {
     setTag('')
   }
 
-  const hasActiveFilters = category || sortBy || priceRange || color || size || tag
+  const hasActiveFilters = selectedCategories.length > 0 || sortBy || priceRange || color || size || tag
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -123,7 +132,7 @@ export function ProductFilters() {
           </div>
           {hasActiveFilters && (
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-              {[category, sortBy, priceRange, color, size, tag].filter(Boolean).length} active
+              {[...selectedCategories, sortBy, priceRange, color, size, tag].filter(Boolean).length} active
             </span>
           )}
         </div>
@@ -154,17 +163,20 @@ export function ProductFilters() {
             <div className="flex items-center space-x-2">
               <span className="text-sm font-medium text-gray-700">Active filters:</span>
               <div className="flex flex-wrap gap-2">
-                {category && (
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                    Category: {category}
-                    <button
-                      onClick={() => setCategory('')}
-                      className="ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full text-indigo-400 hover:bg-indigo-200 hover:text-indigo-600"
-                    >
-                      ×
-                    </button>
-                  </span>
-                )}
+                {selectedCategories.map(categorySlug => {
+                  const category = categories.find(c => c.slug === categorySlug)
+                  return category ? (
+                    <span key={categorySlug} className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                      Category: {category.name}
+                      <button
+                        onClick={() => handleCategoryToggle(categorySlug, false)}
+                        className="ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full text-indigo-400 hover:bg-indigo-200 hover:text-indigo-600"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ) : null
+                })}
                 {color && (
                   <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                     Color: {color}
@@ -234,24 +246,51 @@ export function ProductFilters() {
 
       {/* Filter Grid */}
       <div className="p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-          {/* Categories */}
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">Category</label>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e?.target?.value || '')}
-              className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
-              disabled={loading}
-            >
-              <option value="">All Categories</option>
-              {categories.map((cat, index) => (
-                <option key={`${cat.id}-${index}`} value={cat.slug}>
-                  {cat.name}
-                </option>
-              ))}
-            </select>
+        <div className="space-y-6">
+          {/* Categories - Nested Tree */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="block text-sm font-medium text-gray-700">
+                Categories {categoryTree.length > 0 && `(${categories.length})`}
+              </label>
+              <button
+                type="button"
+                onClick={() => setCategoriesExpanded(!categoriesExpanded)}
+                className="flex items-center text-sm text-gray-500 hover:text-gray-700"
+              >
+                {categoriesExpanded ? (
+                  <>
+                    <ChevronUpIcon className="h-4 w-4 mr-1" />
+                    Collapse
+                  </>
+                ) : (
+                  <>
+                    <ChevronDownIcon className="h-4 w-4 mr-1" />
+                    Expand
+                  </>
+                )}
+              </button>
+            </div>
+            
+            {categoriesExpanded && (
+              <div className="border border-gray-200 rounded-lg p-4 max-h-80 overflow-y-auto bg-white">
+                {loading ? (
+                  <div className="text-sm text-gray-500 text-center py-4">Loading categories...</div>
+                ) : categoryTree.length > 0 ? (
+                  <CategoryTree
+                    categories={categoryTree}
+                    selectedSlugs={selectedCategories}
+                    onToggle={handleCategoryToggle}
+                  />
+                ) : (
+                  <div className="text-sm text-gray-500 text-center py-4">No categories available</div>
+                )}
+              </div>
+            )}
           </div>
+
+          {/* Other Filters Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 
           {/* Color */}
           <div className="space-y-2">
@@ -338,6 +377,7 @@ export function ProductFilters() {
           </div>
 
 
+          </div>
         </div>
       </div>
 
