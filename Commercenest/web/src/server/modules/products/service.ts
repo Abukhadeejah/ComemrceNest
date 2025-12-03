@@ -287,6 +287,7 @@ export async function fetchProductImages(tenantId: string, productId: string) {
 }
 
 export async function fetchProductVariantOptions(tenantId: string, productId: string) {
+  // First get the variant options structure (without values)
   const { data, error } = await supabaseAdmin
     .from('product_variant_options')
     .select(`
@@ -295,16 +296,7 @@ export async function fetchProductVariantOptions(tenantId: string, productId: st
         name,
         display_name,
         type,
-        variant_option_values(
-          id,
-          value,
-          display_value,
-          color_hex,
-          image_url,
-          sort_order,
-          price_adjustment_cents,
-          cost_adjustment_cents
-        )
+        sort_order
       )
     `)
     .eq('tenant_id', tenantId)
@@ -316,30 +308,92 @@ export async function fetchProductVariantOptions(tenantId: string, productId: st
     return []
   }
 
-  // Transform the nested Supabase result to match component expectations
-  if (!data) return []
+  if (!data || data.length === 0) return []
 
-  return data.map(item => {
-    const variantOption = (item as unknown as { variant_options: { id: string; name: string; display_name: string; type: string; sort_order: number; variant_option_values?: Array<{ id: string; value: string; display_value: string; color_hex?: string | null; image_url?: string | null; sort_order: number; price_adjustment_cents?: number | null; cost_adjustment_cents?: number | null }>} }).variant_options
-    return {
-      variant_options: {
-        id: variantOption.id,
-        name: variantOption.name,
-        display_name: variantOption.display_name,
-        type: variantOption.type,
-        variant_option_values: variantOption.variant_option_values?.map((value: { id: string; value: string; display_value: string; color_hex?: string | null; image_url?: string | null; sort_order: number; price_adjustment_cents?: number | null; cost_adjustment_cents?: number | null }) => ({
-          id: value.id,
-          value: value.value,
-          display_value: value.display_value,
-          color_hex: value.color_hex,
-          image_url: value.image_url,
-          sort_order: value.sort_order,
-          price_adjustment_cents: value.price_adjustment_cents,
-          cost_adjustment_cents: value.cost_adjustment_cents
-        })) || []
+  // Get variant combinations for this product to see which values are actually used
+  const { data: variants } = await supabaseAdmin
+    .from('product_variants')
+    .select('attributes')
+    .eq('product_id', productId)
+    .eq('tenant_id', tenantId)
+
+  if (!variants || variants.length === 0) {
+    // No variants exist, so no values should be shown
+    return data.map(item => {
+      const variantOption = (item as any).variant_options
+      return {
+        variant_options: {
+          id: variantOption.id,
+          name: variantOption.name,
+          display_name: variantOption.display_name,
+          type: variantOption.type,
+          variant_option_values: []
+        }
       }
-    }
+    })
+  }
+
+  // Extract used option-value pairs from variant combinations
+  const usedOptionValues = new Map<string, Set<string>>()
+  variants.forEach((variant: any) => {
+    const attributes = variant.attributes || {}
+    Object.entries(attributes).forEach(([optionId, valueId]) => {
+      if (!usedOptionValues.has(optionId)) {
+        usedOptionValues.set(optionId, new Set())
+      }
+      usedOptionValues.get(optionId)!.add(valueId as string)
+    })
   })
+
+  // Load only the variant option values that are actually used
+  const cleanedOptions = await Promise.all(
+    data.map(async (item) => {
+      const variantOption = (item as any).variant_options
+      const usedValueIds = usedOptionValues.get(variantOption.id)
+
+      if (!usedValueIds || usedValueIds.size === 0) {
+        // No values used for this option
+        return {
+          variant_options: {
+            id: variantOption.id,
+            name: variantOption.name,
+            display_name: variantOption.display_name,
+            type: variantOption.type,
+            variant_option_values: []
+          }
+        }
+      }
+
+      // Fetch only the used values
+      const { data: optionValues } = await supabaseAdmin
+        .from('variant_option_values')
+        .select('id, value, display_value, color_hex, image_url, sort_order, price_adjustment_cents, cost_adjustment_cents')
+        .eq('option_id', variantOption.id)
+        .in('id', Array.from(usedValueIds))
+        .order('sort_order', { ascending: true })
+
+      return {
+        variant_options: {
+          id: variantOption.id,
+          name: variantOption.name,
+          display_name: variantOption.display_name,
+          type: variantOption.type,
+          variant_option_values: (optionValues || []).map((value: any) => ({
+            id: value.id,
+            value: value.value,
+            display_value: value.display_value,
+            color_hex: value.color_hex,
+            image_url: value.image_url,
+            sort_order: value.sort_order,
+            price_adjustment_cents: value.price_adjustment_cents,
+            cost_adjustment_cents: value.cost_adjustment_cents
+          }))
+        }
+      }
+    })
+  )
+
+  return cleanedOptions
 }
 
 export async function fetchProductVariants(tenantId: string, productId: string) {
@@ -407,8 +461,7 @@ export async function fetchPublishedProductsWithVariants(tenantId: string) {
         variant_options(
           id, name, display_name, type, sort_order,
           variant_option_values(
-            id, value, display_value, color_hex, image_url, sort_order,
-            price_adjustment_cents, cost_adjustment_cents
+            id, value, display_value, color_hex, image_url, sort_order, price_adjustment_cents, cost_adjustment_cents
           )
         )
       )
@@ -422,7 +475,86 @@ export async function fetchPublishedProductsWithVariants(tenantId: string) {
     return { data: [], error: productsError }
   }
 
-  return { data: products || [], error: null }
+  if (!products || products.length === 0) {
+    return { data: [], error: null }
+  }
+
+  // Fix ghost variants: Load only variant option values that are actually used
+  const productsWithCleanVariants = await Promise.all(
+    products.map(async (product: any) => {
+      if (!product.product_variant_options || product.product_variant_options.length === 0) {
+        return product
+      }
+
+      // Get variant combinations for this product
+      const { data: variants } = await supabaseAdmin
+        .from('product_variants')
+        .select('attributes')
+        .eq('product_id', product.id)
+        .eq('tenant_id', tenantId)
+
+      if (!variants || variants.length === 0) {
+        // No variants exist, so no values should be shown
+        const cleanedOptions = product.product_variant_options.map((pvo: any) => ({
+          ...pvo,
+          variant_options: {
+            ...pvo.variant_options,
+            variant_option_values: []
+          }
+        }))
+        return { ...product, product_variant_options: cleanedOptions }
+      }
+
+      // Extract used option-value pairs
+      const usedOptionValues = new Map<string, Set<string>>()
+      variants.forEach((variant: any) => {
+        const attributes = variant.attributes || {}
+        Object.entries(attributes).forEach(([optionId, valueId]) => {
+          if (!usedOptionValues.has(optionId)) {
+            usedOptionValues.set(optionId, new Set())
+          }
+          usedOptionValues.get(optionId)!.add(valueId as string)
+        })
+      })
+
+      // Load only used values
+      const cleanedOptions = await Promise.all(
+        product.product_variant_options.map(async (pvo: any) => {
+          const option = pvo.variant_options
+          const usedValueIds = usedOptionValues.get(option.id)
+
+          if (!usedValueIds || usedValueIds.size === 0) {
+            return {
+              ...pvo,
+              variant_options: {
+                ...option,
+                variant_option_values: []
+              }
+            }
+          }
+
+          const { data: optionValues } = await supabaseAdmin
+            .from('variant_option_values')
+            .select('id, value, display_value, color_hex, image_url, sort_order, price_adjustment_cents, cost_adjustment_cents')
+            .eq('option_id', option.id)
+            .in('id', Array.from(usedValueIds))
+            .order('sort_order', { ascending: true })
+
+          return {
+            ...pvo,
+            variant_options: {
+              ...option,
+              variant_option_values: optionValues || []
+            }
+          }
+        })
+      )
+
+      return { ...product, product_variant_options: cleanedOptions }
+    })
+  )
+
+  return { data: productsWithCleanVariants, error: null }
 }
 
 // Enhanced function to fetch paginated products with variant options for PLP
@@ -463,8 +595,7 @@ export async function fetchPublishedProductsPagedWithVariants(
       variant_options(
         id, name, display_name, type, sort_order,
         variant_option_values(
-          id, value, display_value, color_hex, image_url, sort_order,
-          price_adjustment_cents, cost_adjustment_cents
+          id, value, display_value, color_hex, image_url, sort_order, price_adjustment_cents, cost_adjustment_cents
         )
       )
     )
@@ -553,7 +684,88 @@ export async function fetchPublishedProductsPagedWithVariants(
   // Apply sorting and pagination
   query = query.order(sort, { ascending: dir === 'asc' }).range(from, to)
   
-  const { data, count, error } = await query
+  const { data: products, count, error } = await query
   
-  return { data, count, error }
+  if (error || !products) {
+    return { data: products, count, error }
+  }
+
+  // Fix ghost variants: Load only variant option values that are actually used
+  const productsWithCleanVariants = await Promise.all(
+    products.map(async (product: any) => {
+      if (!product.product_variant_options || product.product_variant_options.length === 0) {
+        return product
+      }
+
+      // Get variant combinations for this product to see which values are actually used
+      const { data: variants } = await supabaseAdmin
+        .from('product_variants')
+        .select('attributes')
+        .eq('product_id', product.id)
+        .eq('tenant_id', tenantId)
+
+      if (!variants || variants.length === 0) {
+        // No variants exist, so no values should be shown
+        const cleanedOptions = product.product_variant_options.map((pvo: any) => ({
+          ...pvo,
+          variant_options: {
+            ...pvo.variant_options,
+            variant_option_values: []
+          }
+        }))
+        return { ...product, product_variant_options: cleanedOptions }
+      }
+
+      // Extract used option-value pairs from variant combinations
+      const usedOptionValues = new Map<string, Set<string>>()
+      variants.forEach((variant: any) => {
+        const attributes = variant.attributes || {}
+        Object.entries(attributes).forEach(([optionId, valueId]) => {
+          if (!usedOptionValues.has(optionId)) {
+            usedOptionValues.set(optionId, new Set())
+          }
+          usedOptionValues.get(optionId)!.add(valueId as string)
+        })
+      })
+
+      // Load only the variant option values that are actually used
+      const cleanedOptions = await Promise.all(
+        product.product_variant_options.map(async (pvo: any) => {
+          const option = pvo.variant_options
+          const usedValueIds = usedOptionValues.get(option.id)
+
+          if (!usedValueIds || usedValueIds.size === 0) {
+            // No values used for this option
+            return {
+              ...pvo,
+              variant_options: {
+                ...option,
+                variant_option_values: []
+              }
+            }
+          }
+
+          // Fetch only the used values
+          const { data: optionValues } = await supabaseAdmin
+            .from('variant_option_values')
+            .select('id, value, display_value, color_hex, image_url, sort_order, price_adjustment_cents, cost_adjustment_cents')
+            .eq('option_id', option.id)
+            .in('id', Array.from(usedValueIds))
+            .order('sort_order', { ascending: true })
+
+          return {
+            ...pvo,
+            variant_options: {
+              ...option,
+              variant_option_values: optionValues || []
+            }
+          }
+        })
+      )
+
+      return { ...product, product_variant_options: cleanedOptions }
+    })
+  )
+  
+  return { data: productsWithCleanVariants, count, error }
 }
