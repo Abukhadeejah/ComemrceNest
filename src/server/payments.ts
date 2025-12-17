@@ -87,7 +87,7 @@ export async function resolvePhonePeCredentials(tenantId: string): Promise<Phone
   const env = (process.env.PHONEPE_ENV || 'test') as PaymentEnv
 
   if (merchantId && saltKey) {
-    const baseUrl = env === 'production' 
+    const baseUrl = env === 'live' 
       ? 'https://api.phonepe.com/apis/hermes' 
       : 'https://api-preprod.phonepe.com/apis/pg-sandbox'
     

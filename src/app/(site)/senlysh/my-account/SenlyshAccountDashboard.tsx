@@ -20,9 +20,10 @@ interface Order {
 
 interface CustomerProfile {
   id: string
-  full_name: string
+  first_name: string | null
+  last_name: string | null
   email: string
-  phone: string
+  phone: string | null
   created_at: string
 }
 
@@ -140,10 +141,10 @@ export default function SenlyshAccountDashboard({ customer }: SenlyshAccountDash
         <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 mb-8">
           <div className="flex items-center space-x-4">
             <div className="w-16 h-16 bg-gradient-to-r from-pink-600 to-purple-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
-              {customer.full_name?.charAt(0) || customer.email.charAt(0)}
+              {customer.first_name?.charAt(0) || customer.email.charAt(0)}
             </div>
             <div>
-              <h2 className="text-2xl font-semibold text-gray-900">{customer.full_name || 'Customer'}</h2>
+              <h2 className="text-2xl font-semibold text-gray-900">{`${customer.first_name || ''} ${customer.last_name || ''}`.trim() || 'Customer'}</h2>
               <p className="text-gray-600">{customer.email}</p>
               <p className="text-sm text-gray-500">Member since {formatDate(customer.created_at)}</p>
             </div>
@@ -363,9 +364,15 @@ export default function SenlyshAccountDashboard({ customer }: SenlyshAccountDash
                 <h3 className="text-lg font-semibold text-gray-900">Profile Information</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
                     <div className="p-3 bg-gray-50 rounded-lg border">
-                      {customer.full_name || 'Not provided'}
+                      {customer.first_name || 'Not provided'}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
+                    <div className="p-3 bg-gray-50 rounded-lg border">
+                      {customer.last_name || 'Not provided'}
                     </div>
                   </div>
                   <div>

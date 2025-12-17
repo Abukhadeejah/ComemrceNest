@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
     // Get customer ID
     const { data: customer } = await supabaseAdmin
       .from('customers')
-      .select('id, full_name, email, phone')
+      .select('id, first_name, last_name, email, phone')
       .eq('tenant_id', tenantId)
       .eq('user_id', user.id)
       .single()
@@ -130,34 +130,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create withdrawal request
-    const { data: withdrawal, error: withdrawalError } = await supabaseAdmin
-      .from('wallet_withdrawals')
-      .insert({
-        tenant_id: tenantId,
-        customer_id: customer.id,
-        account_id: walletAccount.id,
-        amount_cents: amount_cents,
-        status: 'pending',
-        bank_details: bank_details || {},
-        requested_at: new Date().toISOString(),
-        metadata: {
-          customer_name: customer.full_name,
-          customer_email: customer.email,
-          customer_phone: customer.phone
-        }
-      })
-      .select()
-      .single()
-
-    if (withdrawalError) {
-      console.error('Withdrawal creation error:', withdrawalError)
-      return NextResponse.json(
-        { error: 'Failed to create withdrawal request' },
-        { status: 500 }
-      )
-    }
-
+    // For now, just create a debit entry in wallet ledger (withdrawal table will be added later)
+    const withdrawalId = crypto.randomUUID()
+    
     // Create debit entry in wallet ledger
     const { error: ledgerError } = await supabaseAdmin
       .from('wallet_ledger')
@@ -167,21 +142,20 @@ export async function POST(request: NextRequest) {
         entry_type: 'debit',
         amount_cents: amount_cents,
         source_key: 'withdrawal_request',
-        reference_id: withdrawal.id,
+        reference_id: withdrawalId,
         metadata: {
-          withdrawal_id: withdrawal.id,
-          status: 'pending'
+          withdrawal_id: withdrawalId,
+          status: 'pending',
+          bank_details: bank_details,
+          customer_name: `${customer.first_name || ''} ${customer.last_name || ''}`.trim(),
+          customer_email: customer.email,
+          customer_phone: customer.phone,
+          requested_at: new Date().toISOString()
         }
       })
 
     if (ledgerError) {
       console.error('Ledger entry error:', ledgerError)
-      // Rollback withdrawal
-      await supabaseAdmin
-        .from('wallet_withdrawals')
-        .delete()
-        .eq('id', withdrawal.id)
-      
       return NextResponse.json(
         { error: 'Failed to process withdrawal' },
         { status: 500 }
@@ -191,11 +165,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       withdrawal: {
-        id: withdrawal.id,
-        amount_cents: withdrawal.amount_cents,
-        amount: withdrawal.amount_cents / 100,
-        status: withdrawal.status,
-        requested_at: withdrawal.requested_at
+        id: withdrawalId,
+        amount_cents: amount_cents,
+        amount: amount_cents / 100,
+        status: 'pending',
+        requested_at: new Date().toISOString()
       },
       message: 'Withdrawal request submitted successfully. It will be processed within 3-5 business days.'
     })

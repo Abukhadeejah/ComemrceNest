@@ -3,10 +3,10 @@ import { supabaseAdmin } from '@/server/supabaseAdmin';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { orderId: string } }
+  { params }: { params: Promise<{ orderId: string }> }
 ) {
   try {
-    const { orderId } = params;
+    const { orderId } = await params;
 
     const { data: order, error } = await supabaseAdmin
       .from('orders')
