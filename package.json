@@ -34,7 +34,7 @@
     "lodash.debounce": "^4.0.8",
     "lucide-react": "^0.537.0",
     "nanoid": "^5.1.6",
-    "next": "15.4.6",
+    "next": "15.4.10",
     "next-seo": "^6.8.0",
     "next-sitemap": "^4.2.3",
     "pg-sdk-node": "https://phonepe.mycloudrepo.io/public/repositories/phonepe-pg-sdk-node/releases/v2/phonepe-pg-sdk-node.tgz",
