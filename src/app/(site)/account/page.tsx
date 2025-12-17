@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Playfair_Display } from 'next/font/google';
 import Link from 'next/link';
 import { formatPrice } from '@/lib/cart';
@@ -19,15 +19,17 @@ interface Order {
 
 interface CustomerProfile {
   id: string;
-  full_name: string;
+  first_name: string | null;
+  last_name: string | null;
   email: string;
-  phone: string;
+  phone: string | null;
   created_at: string;
 }
 
 interface Address {
   id: string;
-  full_name: string;
+  first_name: string;
+  last_name: string | null;
   phone: string;
   email: string;
   address_line_1: string;
@@ -128,10 +130,10 @@ export default function AccountPage() {
           <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 mb-8">
             <div className="flex items-center space-x-4">
               <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
-                {profile.full_name?.charAt(0) || profile.email.charAt(0)}
+                {profile.first_name?.charAt(0) || profile.email.charAt(0)}
               </div>
               <div>
-                <h2 className="text-2xl font-semibold text-gray-900">{profile.full_name || 'Customer'}</h2>
+                <h2 className="text-2xl font-semibold text-gray-900">{`${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Customer'}</h2>
                 <p className="text-gray-600">{profile.email}</p>
                 <p className="text-sm text-gray-500">Member since {formatDate(profile.created_at)}</p>
               </div>
@@ -226,9 +228,15 @@ export default function AccountPage() {
                 {profile ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
                       <div className="p-3 bg-gray-50 rounded-lg border">
-                        {profile.full_name || 'Not provided'}
+                        {profile.first_name || 'Not provided'}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
+                      <div className="p-3 bg-gray-50 rounded-lg border">
+                        {profile.last_name || 'Not provided'}
                       </div>
                     </div>
                     <div>
@@ -283,7 +291,7 @@ export default function AccountPage() {
                           </span>
                         )}
                         <div className="space-y-2">
-                          <h4 className="font-semibold text-gray-900">{address.full_name}</h4>
+                          <h4 className="font-semibold text-gray-900">{`${address.first_name} ${address.last_name || ''}`.trim()}</h4>
                           <p className="text-gray-700">{address.address_line_1}</p>
                           {address.address_line_2 && (
                             <p className="text-gray-700">{address.address_line_2}</p>

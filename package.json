@@ -34,7 +34,7 @@
     "lodash.debounce": "^4.0.8",
     "lucide-react": "^0.537.0",
     "nanoid": "^5.1.6",
-    "next": "15.4.10",
+    "next": "^16.0.10",
     "next-seo": "^6.8.0",
     "next-sitemap": "^4.2.3",
     "pg-sdk-node": "https://phonepe.mycloudrepo.io/public/repositories/phonepe-pg-sdk-node/releases/v2/phonepe-pg-sdk-node.tgz",
@@ -49,7 +49,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@playwright/test": "^1.54.2",
-    "@sentry/nextjs": "^10.2.0",
+    "@sentry/nextjs": "^10.31.0",
     "@tailwindcss/forms": "^0.5.10",
     "@tailwindcss/postcss": "^4.1.16",
     "@testing-library/jest-dom": "^6.6.4",
@@ -59,12 +59,13 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "autoprefixer": "^10.4.21",
+    "baseline-browser-mapping": "^2.9.8",
     "eslint": "^9",
     "eslint-config-next": "15.4.6",
     "tailwind-merge": "^3.3.1",
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
-    "typescript": "^5",
+    "typescript": "5.9.3",
     "vitest": "^3.2.4"
   },
   "optionalDependencies": {
