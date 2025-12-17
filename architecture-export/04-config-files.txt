@@ -1,0 +1,11 @@
+﻿Configuration Files Found
+=====================================
+
+[+] package.json
+[+] next.config.ts
+[+] tsconfig.json
+[+] tailwind.config.ts
+[+] .env.local
+[+] vercel.json
+[+] .gitignore
+
