@@ -1,5 +1,13 @@
 import type { NextConfig } from "next";
 
+declare const process: {
+  env: {
+    [key: string]: string | undefined;
+    NODE_ENV: 'development' | 'production' | 'test';
+    NEXT_PUBLIC_SUPABASE_URL?: string;
+  };
+};
+
 const storageHostname = process.env.NEXT_PUBLIC_SUPABASE_URL
   ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname
   : undefined;
@@ -9,10 +17,7 @@ const nextConfig: NextConfig = {
     // Disable TypeScript errors during build to prevent Vercel failures
     ignoreBuildErrors: true,
   },
-  eslint: {
-    // Disable ESLint during builds
-    ignoreDuringBuilds: true,
-  },
+
   images: {
     remotePatterns: [
       ...(storageHostname
