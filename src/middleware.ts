@@ -55,13 +55,9 @@ export function middleware(request: NextRequest) {
     if (process.env.NODE_ENV === 'production') {
       // Redirect to tenant not found page in production for unmatched tenants
       console.warn('[Middleware] Tenant NOT found - redirecting to tenant-not-found:', pathname, host);
-      const tenantNotFoundUrl = new URL('/tenant-not-found', request.url);
-      const response = NextResponse.next();
-      headers.forEach((value, key) => {
-         response.headers.set(key, value);
-        });
-        return response;
-
+      const response = NextResponse.redirect(new URL('/tenant-not-found', request.url));
+      response.headers.set('x-pathname', pathname);
+      return response;
     } else {
       // In non-production, just log and allow
       console.warn('[Middleware] Tenant NOT found but allowing:', pathname, host);
