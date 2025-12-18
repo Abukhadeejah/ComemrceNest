@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PhonePe Standard Checkout handler
+// PhonePe Standard Checkout handler (using SDK)
 async function handlePhonePeCheckout(
   tenantId: string,
   amountPaise: number,
@@ -67,27 +67,26 @@ async function handlePhonePeCheckout(
   customerPhone: string,
   body: any
 ) {
-  const credentials = await resolvePhonePeCredentials(tenantId);
-  if (!credentials) {
-    return NextResponse.json({ error: 'phonepe_credentials_not_configured' }, { status: 500 });
+  // Check if SDK credentials are configured
+  const clientId = process.env.PHONEPE_CLIENT_ID;
+  const clientSecret = process.env.PHONEPE_CLIENT_SECRET;
+  
+  if (!clientId || !clientSecret || clientId.includes('TODO') || clientSecret.includes('TODO')) {
+    return NextResponse.json({ 
+      error: 'phonepe_sdk_credentials_not_configured',
+      message: 'Please configure PHONEPE_CLIENT_ID and PHONEPE_CLIENT_SECRET in environment variables'
+    }, { status: 500 });
   }
-
-  const config = {
-    merchantId: credentials.merchantId,
-    saltKey: credentials.saltKey,
-    saltIndex: credentials.saltIndex,
-    baseUrl: credentials.baseUrl,
-  };
 
   const orderId = `phonepe_${tenantId.replace(/-/g, '').slice(0, 8)}_${Date.now().toString().slice(-10)}`;
 
+  // Use SDK-based payment creation (no config needed, uses global phonepeConfig)
   const { redirectUrl } = await createPhonePePayment(
     tenantId,
     orderId,
     amountPaise,
     customerEmail,
-    customerPhone,
-    config
+    customerPhone
   );
 
   // Persist order items

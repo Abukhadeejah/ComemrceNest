@@ -1,6 +1,8 @@
-// PhonePe Payment Gateway - Latest API Implementation
+// PhonePe Payment Gateway - SDK Implementation
 import crypto from 'crypto';
 import { supabaseAdmin } from '@/server/supabaseAdmin';
+import { phonepeClient, phonepeConfig, legacyPhonepeConfig } from '@/config/phonepe';
+import { StandardCheckoutPayRequest } from 'pg-sdk-node';
 
 export interface PhonePeConfig {
   merchantId: string;
@@ -15,7 +17,7 @@ export async function createPhonePePayment(
   amountCents: number,
   customerEmail: string,
   customerPhone: string,
-  config: PhonePeConfig
+  config?: PhonePeConfig // Made optional since we now use SDK config
 ) {
   // 1. Create pending order in DB
   const { data: order, error } = await supabaseAdmin
@@ -35,84 +37,50 @@ export async function createPhonePePayment(
     throw new Error(`Order creation failed: ${error?.message}`);
   }
 
-  // 2. PhonePe Standard Checkout payload
-  const payload = {
-    merchantId: config.merchantId,
-    merchantTransactionId: orderId,
-    merchantUserId: `user_${Date.now()}`,
-    amount: amountCents, // Amount in paise
-    redirectUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/checkout/success?orderId=${orderId}`,
-    redirectMode: 'REDIRECT',
-    callbackUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/api/webhooks/phonepe`,
-    mobileNumber: customerPhone,
-    paymentInstrument: {
-      type: 'PAY_PAGE'
-    }
-  };
+  // 2. Create SDK payment request using builder pattern
+  const payRequest = StandardCheckoutPayRequest.builder()
+    .merchantOrderId(orderId)
+    .amount(amountCents) // Amount in paise
+    .redirectUrl(`${process.env.NEXT_PUBLIC_BASE_URL}/checkout/success?orderId=${orderId}`)
+    .build();
 
-  // 3. Generate checksum as per PhonePe documentation
-  const base64Body = Buffer.from(JSON.stringify(payload)).toString('base64');
-  const checksumString = base64Body + '/pg/v1/pay' + config.saltKey;
-  const sha256Hash = crypto
-    .createHash('sha256')
-    .update(checksumString)
-    .digest('hex');
-  const checksum = sha256Hash + '###' + config.saltIndex;
-
-  const payApiUrl = process.env.PHONEPE_PAY_API_URL || `${config.baseUrl}/pg/v1/pay`;
-  
-  console.log('PhonePe Payment Request:', {
-    url: payApiUrl,
-    merchantId: config.merchantId,
+  console.log('PhonePe SDK Payment Request:', {
+    merchantId: phonepeConfig.merchantId,
     orderId: orderId,
     amount: amountCents,
-    checksumPreview: checksum.substring(0, 20) + '...'
+    env: phonepeConfig.env
   });
 
-  // 4. Call PhonePe Standard Checkout API
-  const response = await fetch(payApiUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-VERIFY': checksum,
-    },
-    body: JSON.stringify({
-      request: base64Body
-    }),
-  });
+  // 3. Use SDK to create payment
+  try {
+    const response = await phonepeClient.pay(payRequest);
+    
+    console.log('PhonePe SDK Response:', {
+      orderId: response.orderId,
+      state: response.state,
+      redirectUrl: response.redirectUrl
+    });
 
-  const responseText = await response.text();
-  console.log('PhonePe API Response:', {
-    status: response.status,
-    body: responseText.substring(0, 300)
-  });
+    const redirectUrl = response.redirectUrl;
+    
+    if (!redirectUrl) {
+      console.error('PhonePe SDK Response Structure:', response);
+      throw new Error('No redirect URL in PhonePe SDK response');
+    }
 
-  if (!response.ok) {
-    throw new Error(`PhonePe payment failed: ${response.status} - ${responseText}`);
+    return {
+      redirectUrl,
+      orderId,
+    };
+  } catch (error: any) {
+    console.error('PhonePe SDK payment error:', error);
+    throw new Error(`PhonePe SDK payment failed: ${error.message}`);
   }
-
-  const data = JSON.parse(responseText);
-  
-  if (!data.success) {
-    throw new Error(`PhonePe error: ${data.message || 'Unknown error'}`);
-  }
-
-  const redirectUrl = data.data?.instrumentResponse?.redirectInfo?.url;
-  
-  if (!redirectUrl) {
-    console.error('PhonePe Response Structure:', data);
-    throw new Error('No redirect URL in PhonePe response');
-  }
-
-  return {
-    redirectUrl,
-    orderId,
-  };
 }
 
 export async function verifyPhonePeWebhook(
   webhookBody: any,
-  config: PhonePeConfig
+  config?: PhonePeConfig // Made optional, fallback to legacy for webhook verification
 ): Promise<any> {
   const receivedChecksum = webhookBody['X-VERIFY'];
   const base64Response = webhookBody.response;
@@ -121,12 +89,15 @@ export async function verifyPhonePeWebhook(
     throw new Error('Invalid webhook: missing checksum or response');
   }
 
+  // Use legacy config for webhook verification (manual checksum still needed)
+  const verifyConfig = config || legacyPhonepeConfig;
+  
   // Verify checksum
-  const checksumString = base64Response + '/pg/v1/status/' + config.merchantId + config.saltKey;
+  const checksumString = base64Response + '/pg/v1/status/' + verifyConfig.merchantId + verifyConfig.saltKey;
   const expectedChecksum = crypto
     .createHash('sha256')
     .update(checksumString)
-    .digest('hex') + '###' + config.saltIndex;
+    .digest('hex') + '###' + verifyConfig.saltIndex;
 
   if (receivedChecksum !== expectedChecksum) {
     throw new Error('Invalid webhook checksum');
@@ -139,43 +110,27 @@ export async function verifyPhonePeWebhook(
 
 export async function checkPhonePePaymentStatus(
   merchantTransactionId: string,
-  config: PhonePeConfig
+  config?: PhonePeConfig // Made optional since we now use SDK
 ): Promise<any> {
-  // Generate checksum for status check
-  const checksumString = `/pg/v1/status/${config.merchantId}/${merchantTransactionId}` + config.saltKey;
-  const sha256Hash = crypto
-    .createHash('sha256')
-    .update(checksumString)
-    .digest('hex');
-  const checksum = sha256Hash + '###' + config.saltIndex;
-
-  const statusApiUrl = process.env.PHONEPE_STATUS_API_URL || `${config.baseUrl}/pg/v1/status`;
-  const fullStatusUrl = `${statusApiUrl}/${config.merchantId}/${merchantTransactionId}`;
-
-  console.log('PhonePe Status Check:', {
-    url: fullStatusUrl,
+  console.log('PhonePe SDK Status Check:', {
+    merchantId: phonepeConfig.merchantId,
     merchantTransactionId,
+    env: phonepeConfig.env
   });
 
-  const response = await fetch(fullStatusUrl, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-VERIFY': checksum,
-      'X-MERCHANT-ID': config.merchantId,
-    },
-  });
+  try {
+    // Use SDK to check payment status
+    const response = await phonepeClient.getOrderStatus(merchantTransactionId);
 
-  const responseText = await response.text();
-  console.log('PhonePe Status Response:', {
-    status: response.status,
-    body: responseText.substring(0, 300)
-  });
+    console.log('PhonePe SDK Status Response:', {
+      orderId: response.orderId,
+      state: response.state,
+      amount: response.amount
+    });
 
-  if (!response.ok) {
-    throw new Error(`PhonePe status check failed: ${response.status} - ${responseText}`);
+    return response;
+  } catch (error: any) {
+    console.error('PhonePe SDK status check error:', error);
+    throw new Error(`PhonePe SDK status check failed: ${error.message}`);
   }
-
-  const data = JSON.parse(responseText);
-  return data;
 }

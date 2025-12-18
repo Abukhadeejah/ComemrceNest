@@ -1,6 +1,6 @@
-// Disable static optimization for debugging
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
+// Enable static optimization for better performance
+export const dynamic = 'auto'
+export const revalidate = 60 // Revalidate every 60 seconds
 
 import { Suspense } from 'react'
 import { ProductGrid } from '@/components/tenant/products/ProductGrid'
@@ -14,13 +14,9 @@ import { fetchVariantsForProducts } from '@/server/modules/products/service'
 interface ProductsPageProps {
   searchParams: Promise<{
     search?: string
-    category?: string
-    'categories[]'?: string | string[]
     status?: string
     sort?: string
     page?: string
-    tag?: string
-    tags?: string
     color?: string
     size?: string
     price?: string
@@ -42,32 +38,13 @@ export default async function SenlyshProductsPage({ searchParams }: ProductsPage
     return <div>Tenant not found</div>
   }
 
-  // Handle both single category and multiple categories
-  const getCategories = () => {
-    const multipleCategories = params['categories[]']
-    if (Array.isArray(multipleCategories)) {
-      return multipleCategories
-    } else if (typeof multipleCategories === 'string') {
-      return [multipleCategories]
-    } else if (params.category) {
-      return [params.category]
-    }
-    return undefined
-  }
-
-  const categories = getCategories()
-
   const products = await getProducts({
     tenantId,
     search: params.search,
-    categories, // Use new categories array parameter
-    category: params.category, // Keep for backward compatibility
     status: params.status,
     sort: params.sort,
     page: parseInt(params.page || '1'),
     limit: 12,
-    tag: params.tag,
-    tags: params.tags ? params.tags.split(',') : undefined,
     color: params.color,
     size: params.size,
     price: params.price,
@@ -87,7 +64,7 @@ export default async function SenlyshProductsPage({ searchParams }: ProductsPage
     tenantId,
     products.map(p => p.id)
   )
-  const variantCombinations = variantCombinationsRaw.map(vc => ({
+  const variantCombinations = variantCombinationsRaw.map((vc: any) => ({
     ...vc,
     product_id: String(vc.product_id),
     attributes: (vc.attributes ?? {}) as Record<string, string>
@@ -112,7 +89,7 @@ export default async function SenlyshProductsPage({ searchParams }: ProductsPage
 
         {/* Products Grid */}
         <Suspense fallback={<ProductGridSkeleton />}>
-          <ProductGrid key={tenantId} products={products as unknown as UIProductListItem[]} variantCombinations={variantCombinations} />
+          <ProductGrid products={products as unknown as UIProductListItem[]} variantCombinations={variantCombinations} />
         </Suspense>
       </div>
     </div>

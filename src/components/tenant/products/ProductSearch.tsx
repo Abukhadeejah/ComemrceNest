@@ -38,7 +38,7 @@ export function ProductSearch() {
       params.delete('page')
       
       const newUrl = params.toString() ? `?${params.toString()}` : window.location.pathname
-      router.push(newUrl)
+      router.replace(newUrl, { scroll: false })
     }, 300)
 
     return () => clearTimeout(timer)

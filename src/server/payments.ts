@@ -34,7 +34,7 @@ export async function resolveRazorpayCredentials(tenantId: string): Promise<Razo
     .eq('tenant_id', tenantId)
 
   // Prefer an enabled row that actually has credentials
-  const enabledWithCreds = rows?.find(r => {
+  const enabledWithCreds = rows?.find((r: any) => {
     const hasId = !!r.razorpay_key_id
     const hasSecret = !!decodeSecretHex(r.razorpay_key_secret || null)
     return r.enabled && hasId && hasSecret
@@ -84,7 +84,9 @@ export async function resolvePhonePeCredentials(tenantId: string): Promise<Phone
   const merchantId = process.env.PHONEPE_MERCHANT_ID
   const saltKey = process.env.PHONEPE_SALT_KEY
   const saltIndex = process.env.PHONEPE_SALT_INDEX || '1'
-  const env = (process.env.PHONEPE_ENV || 'test') as PaymentEnv
+  // Map old env values to new SDK format
+  const envValue = process.env.PHONEPE_ENV || 'SANDBOX'
+  const env = (envValue === 'PRODUCTION' || envValue === 'live') ? 'live' : 'test'
 
   if (merchantId && saltKey) {
     const baseUrl = env === 'live' 
@@ -95,6 +97,7 @@ export async function resolvePhonePeCredentials(tenantId: string): Promise<Phone
       tenantId,
       merchantId,
       env,
+      sdkEnv: envValue
     })
     
     return { merchantId, saltKey, saltIndex, baseUrl, env, source: 'platform' }

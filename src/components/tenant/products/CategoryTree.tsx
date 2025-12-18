@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { CategoryTree as CategoryTreeType } from '@/lib/categories'
-import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
+import { ChevronRightIcon, ChevronDownIcon } from '@heroicons/react/24/outline'
+import type { CategoryTree as CategoryTreeType } from '@/lib/categories'
 
 interface CategoryTreeProps {
   categories: CategoryTreeType[]
@@ -11,97 +11,82 @@ interface CategoryTreeProps {
   level?: number
 }
 
-export function CategoryTree({ 
-  categories, 
-  selectedSlugs, 
-  onToggle, 
-  level = 0 
-}: CategoryTreeProps) {
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
+export function CategoryTree({ categories, selectedSlugs, onToggle, level = 0 }: CategoryTreeProps) {
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
 
   const toggleExpanded = (categoryId: string) => {
-    const newExpanded = new Set(expandedIds)
+    const newExpanded = new Set(expandedCategories)
     if (newExpanded.has(categoryId)) {
       newExpanded.delete(categoryId)
     } else {
       newExpanded.add(categoryId)
     }
-    setExpandedIds(newExpanded)
+    setExpandedCategories(newExpanded)
   }
 
-  const isSelected = (slug: string) => selectedSlugs.includes(slug)
-  const hasChildren = (category: CategoryTreeType) => 
-    category.children && category.children.length > 0
+  const handleCheckboxChange = (slug: string, checked: boolean) => {
+    onToggle(slug, checked)
+  }
 
   return (
     <div className="space-y-1">
       {categories.map((category) => {
-        const expanded = expandedIds.has(category.id)
-        const selected = isSelected(category.slug)
-        const children = hasChildren(category)
+        const hasChildren = category.children && category.children.length > 0
+        const isExpanded = expandedCategories.has(category.id)
+        const isSelected = selectedSlugs.includes(category.slug)
+        const indentClass = level > 0 ? `ml-${level * 4}` : ''
 
         return (
           <div key={category.id} className="space-y-1">
             {/* Category Item */}
-            <div 
-              className={`flex items-center py-2 px-3 rounded-lg hover:bg-gray-50 transition-colors ${
-                level > 0 ? 'ml-4' : ''
-              }`}
-            >
+            <div className={`flex items-center space-x-2 py-1 px-2 rounded-md hover:bg-gray-50 transition-colors ${indentClass}`}>
               {/* Expand/Collapse Button */}
-              {children ? (
+              {hasChildren ? (
                 <button
-                  type="button"
                   onClick={() => toggleExpanded(category.id)}
-                  className="mr-2 p-1 hover:bg-gray-200 rounded transition-colors"
+                  className="flex-shrink-0 p-0.5 text-gray-400 hover:text-gray-600 transition-colors"
                 >
-                  {expanded ? (
-                    <ChevronDownIcon className="h-4 w-4 text-gray-500" />
+                  {isExpanded ? (
+                    <ChevronDownIcon className="h-4 w-4" />
                   ) : (
-                    <ChevronRightIcon className="h-4 w-4 text-gray-500" />
+                    <ChevronRightIcon className="h-4 w-4" />
                   )}
                 </button>
               ) : (
-                <div className="w-6 h-6 mr-2" /> // Spacer for alignment
+                <div className="w-5 h-5 flex-shrink-0" /> // Spacer for alignment
               )}
 
-              {/* Checkbox and Label */}
-              <label className="flex items-center flex-1 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={selected}
-                  onChange={(e) => onToggle(category.slug, e.target.checked)}
-                  className="mr-3 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-0"
-                />
-                <div className="flex items-center justify-between flex-1">
-                  <span className={`text-sm ${
-                    selected 
-                      ? 'font-medium text-indigo-600' 
-                      : level === 0 
-                        ? 'font-medium text-gray-900'
-                        : 'text-gray-700'
-                  }`}>
-                    {category.name}
+              {/* Checkbox */}
+              <input
+                type="checkbox"
+                id={`category-${category.id}`}
+                checked={isSelected}
+                onChange={(e) => handleCheckboxChange(category.slug, e.target.checked)}
+                className="flex-shrink-0 h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 focus:ring-2"
+              />
+
+              {/* Category Label */}
+              <label
+                htmlFor={`category-${category.id}`}
+                className="flex-1 flex items-center justify-between text-sm text-gray-700 cursor-pointer hover:text-gray-900 transition-colors"
+              >
+                <span className={isSelected ? 'font-medium text-indigo-700' : ''}>{category.name}</span>
+                {category.count !== undefined && (
+                  <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                    {category.count}
                   </span>
-                  {category.count !== undefined && category.count > 0 && (
-                    <span className="ml-2 px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">
-                      {category.count}
-                    </span>
-                  )}
-                </div>
+                )}
               </label>
             </div>
 
             {/* Children */}
-            {children && expanded && (
-              <div className="ml-2">
-                <CategoryTree
-                  categories={category.children!}
-                  selectedSlugs={selectedSlugs}
-                  onToggle={onToggle}
-                  level={level + 1}
-                />
-              </div>
+            {hasChildren && isExpanded && (
+              <CategoryTree
+                categories={category.children!}
+                selectedSlugs={selectedSlugs}
+                onToggle={onToggle}
+                level={level + 1}
+              />
             )}
           </div>
         )

@@ -5,26 +5,20 @@ import { supabaseAdmin } from '@/server/supabaseAdmin';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    
-    // PhonePe config
-    const config = {
-      merchantId: process.env.PHONEPE_MERCHANT_ID!,
-      saltKey: process.env.PHONEPE_SALT_KEY!,
-      saltIndex: process.env.PHONEPE_SALT_INDEX!,
-      baseUrl: process.env.PHONEPE_ENV === 'production' 
-        ? 'https://api.phonepe.com/apis/hermes' 
-        : 'https://api-preprod.phonepe.com/apis/pg-sandbox',
-    };
 
     console.log('PhonePe Webhook received:', {
       hasXVerify: !!body['X-VERIFY'],
       hasResponse: !!body.response,
     });
 
-    // Verify webhook signature
-    const webhookData = await verifyPhonePeWebhook(body, config);
+    // Verify webhook signature (uses legacy config internally for checksum verification)
+    const webhookData = await verifyPhonePeWebhook(body);
     
-    const { merchantTransactionId, transactionId, amount, state } = webhookData.data;
+    // Extract data from webhook payload
+    const merchantTransactionId = webhookData.data?.merchantTransactionId || webhookData.merchantTransactionId;
+    const transactionId = webhookData.data?.transactionId || webhookData.transactionId;
+    const amount = webhookData.data?.amount || webhookData.amount;
+    const state = webhookData.data?.state || webhookData.state;
     
     console.log('PhonePe Webhook data:', {
       merchantTransactionId,
