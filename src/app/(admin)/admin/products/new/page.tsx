@@ -1,6 +1,7 @@
 import { resolveTenantIdFromRequest } from '@/server/tenant'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
 import { ProductForm } from '../ProductForm'
+import { getProductAttributes } from '../attributes/actions'
 
 export default async function NewProductPage({
   searchParams,
@@ -8,17 +9,22 @@ export default async function NewProductPage({
   searchParams: Promise<{ draftId?: string }>
 }) {
   const tenantId = await resolveTenantIdFromRequest()
-  
+
   if (!tenantId) {
     throw new Error('Tenant not found')
   }
-  
+
   // Get categories for the form
   const { data: categories } = await supabaseAdmin
     .from('categories')
     .select('id, name, slug')
     .eq('tenant_id', tenantId)
     .order('name')
+
+  // Get attributes for the form
+  const attributes = await getProductAttributes()
+  console.log('🔍 Fetched attributes for new product form:', attributes)
+  console.log('🔍 Attributes count:', attributes?.length)
 
   // Load draft data if draftId is provided
   const params = await searchParams
@@ -30,7 +36,7 @@ export default async function NewProductPage({
       .eq('id', params.draftId)
       .eq('tenant_id', tenantId)
       .maybeSingle()
-    
+
     if (draft?.draft_data) {
       draftData = draft.draft_data as Record<string, unknown>
       console.log('📦 Loaded draft data:', draftData)
@@ -49,10 +55,10 @@ export default async function NewProductPage({
               {params.draftId ? 'Continue editing your draft product' : 'Add a new product to your catalog'}
             </p>
           </div>
-          
-          <ProductForm 
-            categories={(categories || []).map(c => ({ 
-              id: c.id as string, 
+
+          <ProductForm
+            categories={(categories || []).map(c => ({
+              id: c.id as string,
               name: c.name as string,
               slug: (c as Record<string, unknown>).slug as string || '',
               parent_id: (c as Record<string, unknown>).parent_id as string | null || null,
@@ -61,6 +67,7 @@ export default async function NewProductPage({
             mode="create"
             tenantId={tenantId}
             initialData={draftData}
+            attributes={attributes}
           />
         </div>
       </div>

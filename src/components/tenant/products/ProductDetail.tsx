@@ -69,7 +69,11 @@ interface ProductDetailProps {
     sku: string
     attributes: Record<string, string>
   }>
-
+  attributes?: Array<{
+    id: string
+    name: string
+    value: string
+  }>
 }
 
 export function ProductDetail({ 
@@ -77,7 +81,7 @@ export function ProductDetail({
   images, 
   variantOptions = [], 
   variantCombinations = [],
-
+  attributes = [],
 }: ProductDetailProps) {
   const { addItem } = useCart()
   const tenant = useTenant()
@@ -659,6 +663,16 @@ export function ProductDetail({
                         <td className="py-2 font-medium">Quantity</td>
                         <td className="py-2">{product.stock || 'N/A'}</td>
                       </tr>
+                      {attributes && attributes.length > 0 && (
+                        <>
+                          {attributes.map((attr) => (
+                            <tr key={attr.id} className="border-b">
+                              <td className="py-2 font-medium">{attr.name}</td>
+                              <td className="py-2">{attr.value}</td>
+                            </tr>
+                          ))}
+                        </>
+                      )}
                     </tbody>
                   </table>
                 </div>

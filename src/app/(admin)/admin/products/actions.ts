@@ -71,6 +71,8 @@ interface ProductData {
   badge_display_from?: string | null
   // Tags
   tags?: string[]
+  // Attributes (product attributes feature)
+  attributes?: Array<{ attributeId: string; valueId: string | null }>
 }
 
 function normalizeImageInputs(imageInputs: string[]): string[] {
@@ -202,7 +204,9 @@ export async function createProduct(formData: FormData) {
     badge_display_until: formData.get('badge_display_until') as string,
     badge_display_from: formData.get('badge_display_from') as string,
     // Tags
-    tags: formData.get('tags') ? JSON.parse(formData.get('tags') as string) : []
+    tags: formData.get('tags') ? JSON.parse(formData.get('tags') as string) : [],
+    // Attributes
+    attributes: formData.get('attributes') ? JSON.parse(formData.get('attributes') as string) : []
   }
 
   // Basic server-side validation for product creation
@@ -319,6 +323,38 @@ export async function createProduct(formData: FormData) {
     await supabaseAdmin
       .from('product_categories')
       .insert(categoryInserts)
+  }
+
+  // Handle product attributes
+  if (Array.isArray(productData.attributes) && productData.attributes.length > 0) {
+    // Filter out attributes without a valueId selected (single-value rule)
+    const attributesToSave = productData.attributes.filter(
+      (attr) => attr && attr.attributeId && attr.valueId
+    )
+
+    // Insert into product_attributes for each selected attribute
+    if (attributesToSave.length > 0) {
+      const productAttributeInserts = attributesToSave.map((attr) => ({
+        product_id: product.id,
+        attribute_id: attr.attributeId,
+        tenant_id: tenantId!
+      }))
+
+      await supabaseAdmin
+        .from('product_attributes')
+        .insert(productAttributeInserts)
+
+      // Insert into product_attribute_values for each selected value
+      const productAttributeValueInserts = attributesToSave.map((attr) => ({
+        product_id: product.id,
+        attribute_value_id: attr.valueId,
+        tenant_id: tenantId!
+      }))
+
+      await supabaseAdmin
+        .from('product_attribute_values')
+        .insert(productAttributeValueInserts)
+    }
   }
 
   // Handle image uploads
@@ -579,7 +615,9 @@ export async function updateProduct(productId: string, formData: FormData) {
     badge_display_until: formData.get('badge_display_until') as string,
     badge_display_from: formData.get('badge_display_from') as string,
     // Tags
-    tags: formData.get('tags') ? JSON.parse(formData.get('tags') as string) : []
+    tags: formData.get('tags') ? JSON.parse(formData.get('tags') as string) : [],
+    // Attributes
+    attributes: formData.get('attributes') ? JSON.parse(formData.get('attributes') as string) : []
   }
 
   // Process numeric fields - convert empty strings to null
@@ -690,6 +728,50 @@ export async function updateProduct(productId: string, formData: FormData) {
     await supabaseAdmin
       .from('product_categories')
       .insert(categoryInserts)
+  }
+
+  // Handle product attributes - sync with new selections
+  // First, remove all existing attribute assignments
+  await supabaseAdmin
+    .from('product_attribute_values')
+    .delete()
+    .eq('product_id', productId)
+
+  await supabaseAdmin
+    .from('product_attributes')
+    .delete()
+    .eq('product_id', productId)
+
+  // Then, insert new attribute assignments
+  if (Array.isArray(productData.attributes) && productData.attributes.length > 0) {
+    // Filter out attributes without a valueId selected (single-value rule)
+    const attributesToSave = productData.attributes.filter(
+      (attr) => attr && attr.attributeId && attr.valueId
+    )
+
+    if (attributesToSave.length > 0) {
+      // Insert into product_attributes for each selected attribute
+      const productAttributeInserts = attributesToSave.map((attr) => ({
+        product_id: productId,
+        attribute_id: attr.attributeId,
+        tenant_id: tenantId!
+      }))
+
+      await supabaseAdmin
+        .from('product_attributes')
+        .insert(productAttributeInserts)
+
+      // Insert into product_attribute_values for each selected value
+      const productAttributeValueInserts = attributesToSave.map((attr) => ({
+        product_id: productId,
+        attribute_value_id: attr.valueId,
+        tenant_id: tenantId!
+      }))
+
+      await supabaseAdmin
+        .from('product_attribute_values')
+        .insert(productAttributeValueInserts)
+    }
   }
 
   // Handle image uploads (using UPSERT to prevent duplicates)

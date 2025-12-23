@@ -1,6 +1,7 @@
 import { resolveTenantIdFromRequest } from '../../../../../../server/tenant'
 import { supabaseAdmin } from '../../../../../../server/supabaseAdmin'
 import { ProductForm } from '../../../../../(admin)/admin/products/ProductForm'
+import { getProductAttributes } from '@/app/(admin)/admin/products/attributes/actions'
 
 export default async function NewProductPage({
   searchParams,
@@ -19,6 +20,11 @@ export default async function NewProductPage({
     .select('id, name, slug')
     .eq('tenant_id', tenantId)
     .order('name')
+
+  // Get attributes for the form
+  const attributes = await getProductAttributes()
+  console.log('🔍 Fetched attributes for new product form (tenant-admin):', attributes)
+  console.log('🔍 Attributes count (tenant-admin):', attributes?.length)
 
   // Load draft data if draftId is provided
   const params = await searchParams
@@ -61,6 +67,7 @@ export default async function NewProductPage({
             mode="create"
             tenantId={tenantId}
             initialData={draftData}
+            attributes={attributes}
           />
         </div>
       </div>

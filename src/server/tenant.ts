@@ -125,7 +125,7 @@ export async function resolveTenantIdFromRequest(): Promise<string | null> {
 }
 
 // Helper function to resolve tenant ID from tenant key (name or slug)
-async function resolveTenantIdFromKey(tenantKey: string): Promise<string | null> {
+export async function resolveTenantIdFromKey(tenantKey: string): Promise<string | null> {
   // Try exact name match first
   const { data: tenantData } = await supabaseAdmin
     .from('tenants')

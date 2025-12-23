@@ -25,6 +25,7 @@ import { BadgeSection } from './components/BadgeSection'
 // Force refresh - reimport ProductStatusSection
 import { ProductStatusSection } from './components/ProductStatusSection'
 import { SizeGuideSection } from './components/SizeGuideSection'
+import { AttributesSection } from './components/AttributesSection'
 
 // Debug: Log all imported components to identify which is undefined
 console.log('🔍 Component Import Check:')
@@ -41,7 +42,7 @@ console.log('VariantsSection:', typeof VariantsSection, VariantsSection)
 console.log('BadgeSection:', typeof BadgeSection, BadgeSection)
 console.log('ProductStatusSection:', typeof ProductStatusSection, ProductStatusSection)
 console.log('SizeGuideSection:', typeof SizeGuideSection, SizeGuideSection)
-import { ProductFormData, VariantOption, CategoryTreeNode } from '@/types/product'
+import { ProductFormData, VariantOption, CategoryTreeNode, ProductAttributeDefinition } from '@/types/product'
 
 import { useForm, SubmitHandler } from 'react-hook-form'
 
@@ -76,7 +77,12 @@ export function ProductForm({
   initialData = {},
   categories,
   tenantId,
+  attributes = [],
 }: ProductFormProps) {
+  console.log('🎨 ProductForm attributes received:', attributes)
+  console.log('🎨 Attributes length:', attributes?.length)
+  console.log('🎨 Sample attribute:', attributes?.[0])
+
   const router = useRouter()
   const searchParams = useSearchParams()
   const initialDraftId = searchParams?.get('draftId')
@@ -92,6 +98,7 @@ export function ProductForm({
     setValue,
     watch,
     setError,
+    control,
     formState: { errors },
   } = useForm<ProductFormData>({
     mode: 'onChange',
@@ -153,6 +160,7 @@ export function ProductForm({
       badge_display_until: initialData.badge_display_until ?? '',
       badge_display_from: initialData.badge_display_from ?? '',
       tags: initialData.tags ?? [],
+      attributes: initialData.attributes ?? [],
     },
   })
 
@@ -168,11 +176,11 @@ export function ProductForm({
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/(^-|-$)/g, '')
         .toLowerCase() // Ensure it's lowercase
-      
+
       // Add a random 8-digit number to make it unique
       const uniqueId = Math.floor(10000000 + Math.random() * 90000000)
       const slug = `${baseSlug}-${uniqueId}`
-      
+
       setValue('slug', slug, { shouldValidate: true })
     }
   }, [debouncedName, setValue, mode, initialData.slug])
@@ -188,7 +196,7 @@ export function ProductForm({
 
   const [shouldAutoSave, setShouldAutoSave] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  
+
   const { draftId, isSaving, lastSaved, deleteDraft } = useDraftAutoSave(
     tenantId,
     mode === 'create' && shouldAutoSave && !isSubmitting ? watchedValues : null,
@@ -199,22 +207,22 @@ export function ProductForm({
     console.log('🚀 ========== FORM SUBMISSION STARTED ==========')
     console.log('🚀 Form submitted with data:', data)
     console.log('📝 Starting validation checks...')
-    
+
     setFormError('')
     setIsSubmitting(true)
-    
+
     // Enable auto-save for create mode
     if (mode === 'create') {
       setShouldAutoSave(true)
     }
-    
+
     // Validation 1: Product Name
     console.log('✓ Validation 1: Product Name')
     console.log('  - Value:', data.name)
     console.log('  - Type:', typeof data.name)
     console.log('  - Trimmed:', data.name?.trim())
     console.log('  - Is Valid:', !!data.name?.trim())
-    
+
     if (!data.name?.trim()) {
       const errorMsg = '❌ Product name is required'
       console.error('❌ VALIDATION FAILED: Product name is empty')
@@ -224,7 +232,7 @@ export function ProductForm({
       return
     }
     console.log('✅ Product name validation passed')
-    
+
     // Validation 2: Categories
     console.log('✓ Validation 2: Categories')
     console.log('  - Value:', data.category_ids)
@@ -232,7 +240,7 @@ export function ProductForm({
     console.log('  - Is Array:', Array.isArray(data.category_ids))
     console.log('  - Length:', data.category_ids?.length)
     console.log('  - Is Valid:', data.category_ids?.length > 0)
-    
+
     if (!data.category_ids || data.category_ids.length === 0) {
       const errorMsg = '❌ At least one category must be selected'
       console.error('❌ VALIDATION FAILED: No categories selected')
@@ -242,10 +250,10 @@ export function ProductForm({
       return
     }
     console.log('✅ Categories validation passed')
-    
+
     console.log('✅ ========== ALL VALIDATIONS PASSED ==========')
     console.log('📤 Proceeding with form submission...')
-    
+
     startTransition(async () => {
       try {
         let createdProductId: string | undefined
@@ -253,17 +261,17 @@ export function ProductForm({
 
         // Convert numeric fields to integers
         const numericFields = ['price_cents', 'compare_at_price_cents', 'cost_price_cents', 'stock', 'low_stock_threshold', 'gift_card_amount_cents', 'gift_card_expiry_days', 'badge_priority']
-        
+
         for (const [key, value] of Object.entries(data)) {
           if (key === 'variantOptions' || key === 'variantCombinations') continue
           if (key === 'category_ids' && Array.isArray(value) && value.length > 0) {
             value.forEach((cid) => form.append('category_ids[]', cid))
             continue
           }
-          
+
           // Map cost_price_cents to cost_per_item_cents for backend compatibility
           const formKey = key === 'cost_price_cents' ? 'cost_per_item_cents' : key
-          
+
           if (Array.isArray(value)) {
             if (value.length > 0) form.append(formKey, JSON.stringify(value))
           } else if (value !== null && value !== undefined) {
@@ -294,7 +302,7 @@ export function ProductForm({
             })
           }
 
-          fetch(`/api/product-drafts/${initialData.id}`, { method: 'DELETE' }).catch(() => {})
+          fetch(`/api/product-drafts/${initialData.id}`, { method: 'DELETE' }).catch(() => { })
         } else {
           console.log('Creating product with form data:', Object.fromEntries(form.entries())) // Debug log
           const result = await createProduct(form)
@@ -326,7 +334,7 @@ export function ProductForm({
         }
 
         await new Promise((resolve) => setTimeout(resolve, 100))
-        
+
         // Redirect to the created product's detail page if we have the ID
         if (createdProductId) {
           router.push(ADMIN_URLS.productDetail(createdProductId, tenantKey))
@@ -433,24 +441,24 @@ export function ProductForm({
             errors={errors}
             onInputChange={handleFieldChange}
           />
-          <PricingSection 
-            formData={watchedValues} 
-            errors={errors} 
+          <PricingSection
+            formData={watchedValues}
+            errors={errors}
             onInputChange={handleFieldChange}
           />
-          <InventorySection 
-            formData={watchedValues} 
-            errors={errors} 
+          <InventorySection
+            formData={watchedValues}
+            errors={errors}
             onInputChange={handleFieldChange}
           />
-          <ShippingSection 
-            formData={watchedValues} 
-            errors={errors} 
+          <ShippingSection
+            formData={watchedValues}
+            errors={errors}
             onInputChange={handleFieldChange}
           />
-          <TaxSection 
-            formData={watchedValues} 
-            errors={errors} 
+          <TaxSection
+            formData={watchedValues}
+            errors={errors}
             onInputChange={handleFieldChange}
             setValue={setValue}
           />
@@ -470,6 +478,11 @@ export function ProductForm({
             onUpdateVariants={undefined}
             productId={initialData?.id}
           />
+          <AttributesSection
+            control={control}
+            name="attributes"
+            attributes={attributes}
+          />
           <SizeGuideSection formData={watchedValues} errors={errors} setValue={setValue} />
           <MediaSection
             images={imageFiles}
@@ -480,19 +493,19 @@ export function ProductForm({
             }}
             productId={initialData?.id || ''}
           />
-          <BadgeSection 
-            formData={watchedValues} 
-            errors={errors} 
+          <BadgeSection
+            formData={watchedValues}
+            errors={errors}
             onInputChange={handleFieldChange}
           />
-          <SeoSection 
-            formData={watchedValues} 
-            errors={errors} 
+          <SeoSection
+            formData={watchedValues}
+            errors={errors}
             onInputChange={handleFieldChange}
           />
           <ProductStatusSection
-            formData={watchedValues} 
-            errors={errors} 
+            formData={watchedValues}
+            errors={errors}
             onInputChange={handleFieldChange}
           />
 
@@ -531,4 +544,5 @@ export interface ProductFormProps {
   initialData?: Partial<ProductFormData>
   categories: CategoryTreeNode[]
   tenantId: string
+  attributes?: ProductAttributeDefinition[]
 }

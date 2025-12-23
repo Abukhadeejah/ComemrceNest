@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
-import { fetchProductBySlug, fetchProductImages, fetchProductVariantOptions, fetchProductVariants } from '@/server/modules/products/service'
+import { fetchProductBySlug, fetchProductImages, fetchProductVariantOptions, fetchProductVariants, fetchProductAttributes } from '@/server/modules/products/service'
 import { ProductDetail } from '@/components/tenant/products/ProductDetail'
 
 interface SenlyshProductPageProps {
@@ -26,6 +26,7 @@ export default async function SenlyshProductPage({ params }: SenlyshProductPageP
   const images = await fetchProductImages(tenantId, product.id)
   const variantOptionsRaw = await fetchProductVariantOptions(tenantId, product.id)
   const variantCombinations = await fetchProductVariants(tenantId, product.id)
+  const productAttributes = await fetchProductAttributes(tenantId, product.id)
   
   // FIXED: Match ProductDetail exact interface naming
   const variantOptions = (variantOptionsRaw || []).map(item => ({
@@ -80,6 +81,7 @@ export default async function SenlyshProductPage({ params }: SenlyshProductPageP
         sku: vc.sku || '',
         attributes: vc.attributes as Record<string, string>
       }))}
+      attributes={productAttributes}
     />
   )
 }

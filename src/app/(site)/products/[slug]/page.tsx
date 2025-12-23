@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
-import { fetchProductBySlug, fetchProductImages } from '@/server/modules/products/service'
+import { fetchProductBySlug, fetchProductImages, fetchProductAttributes } from '@/server/modules/products/service'
 import { ProductDetail } from '@/components/tenant/products/ProductDetail'
 
 interface ProductPageProps {
@@ -22,11 +22,12 @@ export default async function ProductPage({ params }: ProductPageProps) {
   }
 
   const images = await fetchProductImages(tenantId, product.id)
+  const productAttributes = await fetchProductAttributes(tenantId, product.id)
 
   return (
     <div className="bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <ProductDetail product={product as unknown as Parameters<typeof ProductDetail>[0]['product']} images={images || []} />
+        <ProductDetail product={product as unknown as Parameters<typeof ProductDetail>[0]['product']} images={images || []} attributes={productAttributes} />
       </div>
     </div>
   )

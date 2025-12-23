@@ -2,6 +2,7 @@ import { resolveTenantIdFromRequest } from '@/server/tenant'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
 import { notFound } from 'next/navigation'
 import { ProductForm } from '../../ProductForm'
+import { getProductAttributes } from '../../attributes/actions'
 
 interface EditProductPageProps {
   params: Promise<{ id: string }>
@@ -9,10 +10,10 @@ interface EditProductPageProps {
 
 export default async function EditProductPage({ params }: EditProductPageProps) {
   const { id } = await params
-  
+
   try {
     const tenantId = await resolveTenantIdFromRequest()
-    
+
     if (!tenantId) {
       notFound()
     }
@@ -37,14 +38,14 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
         .from('product_categories')
         .select('category:categories(id, name, slug)')
         .eq('product_id', id),
-      
+
       // Images  
       supabaseAdmin
         .from('product_images')
         .select('url, alt, sort_order')
         .eq('product_id', id)
         .order('sort_order'),
-      
+
       // Variant options - only load values that are actually used by this product
       supabaseAdmin
         .from('product_variant_options')
@@ -58,7 +59,7 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
           )
         `)
         .eq('product_id', id),
-      
+
       // Product variants
       supabaseAdmin
         .from('product_variants')
@@ -90,6 +91,9 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
       .eq('tenant_id', tenantId)
       .order('name', { ascending: true })
 
+    // Get attributes for the form
+    const attributes = await getProductAttributes()
+
     if (categoriesError) {
       console.log('Error fetching categories:', categoriesError)
     }
@@ -97,13 +101,13 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
     // Transform variant options from database
     const rawOptions = Array.isArray(productWithRelations.variant_options) ? productWithRelations.variant_options : []
     console.log('DEBUG: Raw variant options from DB:', rawOptions)
-    
+
     // Get variant combinations first to extract the actual values used
     const rawVariants = Array.isArray(productWithRelations.variants) ? productWithRelations.variants : []
-    
+
     // Extract unique option-value pairs from variant combinations
     const usedOptionValues = new Map<string, Set<string>>() // optionId -> Set of valueIds
-    
+
     rawVariants.forEach((variant: Record<string, unknown>) => {
       const attributes = (variant.attributes as Record<string, string>) || {}
       Object.entries(attributes).forEach(([optionId, valueId]) => {
@@ -113,18 +117,18 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
         usedOptionValues.get(optionId)!.add(valueId)
       })
     })
-    
+
     console.log('DEBUG: Used option values from variants:', Object.fromEntries(
       Array.from(usedOptionValues.entries()).map(([k, v]) => [k, Array.from(v)])
     ))
-    
+
     // Now fetch only the variant option values that are actually used
     const variantOptionsWithValues = await Promise.all(
       rawOptions.map(async (pvo: Record<string, unknown>) => {
         const option = (pvo.option || {}) as Record<string, unknown>
         const optionId = option.id as string
         const usedValueIds = usedOptionValues.get(optionId)
-        
+
         let values: Array<{
           id: string
           value: string
@@ -132,7 +136,7 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
           colorHex?: string
           imageUrl?: string
         }> = []
-        
+
         // Only fetch values if this option has used values
         if (usedValueIds && usedValueIds.size > 0) {
           const { data: optionValues } = await supabaseAdmin
@@ -140,7 +144,7 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
             .select('id, value, display_value, color_hex, image_url')
             .eq('option_id', optionId)
             .in('id', Array.from(usedValueIds))
-          
+
           values = (optionValues || []).map((value: Record<string, unknown>) => ({
             id: (value.id as string) || '',
             value: (value.value as string) || '',
@@ -149,7 +153,7 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
             imageUrl: (value.image_url as string) || undefined
           }))
         }
-        
+
         console.log('DEBUG: Transformed option:', {
           id: option.id,
           name: option.name,
@@ -157,7 +161,7 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
           values_count: values.length,
           value_ids: values.map(v => v.id)
         })
-        
+
         return {
           id: (option.id as string) || '',
           name: (option.name as string) || '',
@@ -168,7 +172,7 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
         }
       })
     )
-    
+
     const variantOptions = variantOptionsWithValues
 
     // Transform variant combinations (rawVariants already defined above)
@@ -181,30 +185,30 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
       imageUrl: ''
     }))
 
-      // FALLBACK: If has_variants is undefined, fetch it directly
-      let hasVariants = product.has_variants
-      if (hasVariants === undefined || hasVariants === null) {
-        console.log('DEBUG: has_variants is undefined, fetching directly from database...')
-        const { data: directProduct } = await supabaseAdmin
-          .from('products')
-          .select('has_variants')
-          .eq('id', id)
-          .eq('tenant_id', tenantId)
-          .single()
-        
-        hasVariants = directProduct?.has_variants || false
-        console.log('DEBUG: Direct query result:', { has_variants: hasVariants })
-      }
+    // FALLBACK: If has_variants is undefined, fetch it directly
+    let hasVariants = product.has_variants
+    if (hasVariants === undefined || hasVariants === null) {
+      console.log('DEBUG: has_variants is undefined, fetching directly from database...')
+      const { data: directProduct } = await supabaseAdmin
+        .from('products')
+        .select('has_variants')
+        .eq('id', id)
+        .eq('tenant_id', tenantId)
+        .single()
 
-      // Transform product data to match ProductForm expectations
-      console.log('DEBUG: About to create formData, final has_variants:', {
-        original_value: product.has_variants,
-        final_value: hasVariants,
-        type: typeof hasVariants,
-        boolean_conversion: hasVariants === true
-      })
+      hasVariants = directProduct?.has_variants || false
+      console.log('DEBUG: Direct query result:', { has_variants: hasVariants })
+    }
 
-      const categoryId = (() => {
+    // Transform product data to match ProductForm expectations
+    console.log('DEBUG: About to create formData, final has_variants:', {
+      original_value: product.has_variants,
+      final_value: hasVariants,
+      type: typeof hasVariants,
+      boolean_conversion: hasVariants === true
+    })
+
+    const categoryId = (() => {
       const first = Array.isArray(productWithRelations.categories) ? productWithRelations.categories[0] as unknown : undefined
       if (first && typeof first === 'object' && 'category' in (first as Record<string, unknown>)) {
         const cat = (first as Record<string, unknown> & { category?: { id?: unknown } }).category
@@ -237,16 +241,16 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
       meta_description: product.meta_description || '',
       category_id: categoryId,
       // Extract all category IDs from the product_categories relationship
-      category_ids: Array.isArray(productWithRelations.categories) 
+      category_ids: Array.isArray(productWithRelations.categories)
         ? productWithRelations.categories
-            .map((pc: unknown) => {
-              if (pc && typeof pc === 'object' && 'category' in pc) {
-                const cat = (pc as { category?: { id?: unknown } }).category
-                if (cat && typeof cat.id === 'string') return cat.id
-              }
-              return null
-            })
-            .filter((id): id is string => id !== null)
+          .map((pc: unknown) => {
+            if (pc && typeof pc === 'object' && 'category' in pc) {
+              const cat = (pc as { category?: { id?: unknown } }).category
+              if (cat && typeof cat.id === 'string') return cat.id
+            }
+            return null
+          })
+          .filter((id): id is string => id !== null)
         : [],
       images: (productWithRelations.images?.map((img: Record<string, unknown>) => String(img.url)).filter(Boolean) as string[]) || [],
       has_variants: productWithRelations.has_variants === true, // Explicit boolean check
@@ -283,20 +287,19 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
             <h1 className="text-2xl font-bold text-gray-900">Edit Product</h1>
             <p className="text-gray-500">Update product information and settings</p>
           </div>
-          
-          <ProductForm 
+
+          <ProductForm
             initialData={formData}
             mode="edit"
-            categories={(categories || []).map(c => ({ 
-              id: c.id as string, 
+            categories={(categories || []).map(c => ({
+              id: c.id as string,
               name: c.name as string,
               slug: (c as Record<string, unknown>).slug as string || '',
               parent_id: (c as Record<string, unknown>).parent_id as string | null || null,
               created_at: (c as Record<string, unknown>).created_at as string || new Date().toISOString()
-            
             }))}
-           
             tenantId={tenantId}
+            attributes={attributes}
           />
         </div>
       </div>

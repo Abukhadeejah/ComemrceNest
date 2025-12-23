@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { resolveTenantIdFromRequest } from '@/server/tenant'
+import { resolveTenantIdFromKey } from '@/server/tenant'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -19,10 +19,11 @@ export default async function ProductViewPage({ params }: ProductViewPageProps) 
   const { id, tenant } = await params
   
   try {
-    const tenantId = await resolveTenantIdFromRequest()
+    // Resolve tenant ID from the tenant key in the URL params
+    const tenantId = await resolveTenantIdFromKey(tenant)
     
     if (!tenantId) {
-      console.log('No tenant ID found')
+      console.log('No tenant ID found for tenant key:', tenant)
       notFound()
     }
 

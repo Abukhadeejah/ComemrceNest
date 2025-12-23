@@ -13,7 +13,7 @@ export function getAdminUrl(path: string, tenant?: string): string {
   if (tenant) {
     return `/${tenant}/admin${path}`;
   }
-  
+
   // If no tenant provided, we can't generate a valid URL
   // This should be handled by the calling component
   console.warn('getAdminUrl called without tenant parameter');
@@ -39,6 +39,9 @@ export const ADMIN_URLS = {
   portfolio: (tenant?: string) => getAdminUrl('/portfolio', tenant),
   hero: (tenant?: string) => getAdminUrl('/hero', tenant),
   tutorial: (tenant?: string) => getAdminUrl('/tutorial', tenant),
+  attributes: (tenant?: string) => getAdminUrl('/products/attributes', tenant),
+  attributesNew: (tenant?: string) => getAdminUrl('/products/attributes/new', tenant),
+  attributeEdit: (id: string, tenant?: string) => getAdminUrl(`/products/attributes/${id}/edit`, tenant),
 }
 
 

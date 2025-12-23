@@ -2,6 +2,7 @@ import { resolveTenantIdFromRequest } from '../../../../../../../server/tenant'
 import { supabaseAdmin } from '../../../../../../../server/supabaseAdmin'
 import { notFound } from 'next/navigation'
 import { ProductForm } from '../../../../../../(admin)/admin/products/ProductForm'
+import { getProductAttributes } from '@/app/(admin)/admin/products/attributes/actions'
 
 interface EditProductPageProps {
   params: Promise<{ id: string }>
@@ -179,6 +180,11 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
       console.log('Error fetching categories:', categoriesError)
     }
 
+    // Get attributes for the form
+    const attributes = await getProductAttributes()
+    console.log('🔍 Fetched attributes for edit product form (tenant-admin):', attributes)
+    console.log('🔍 Attributes count (tenant-admin):', attributes?.length)
+
     // Transform product data to match ProductForm expectations
     const categoryId = (() => {
       const first = Array.isArray(productWithRelations.categories) ? productWithRelations.categories[0] as unknown : undefined
@@ -282,6 +288,7 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
               parent_id: (c as Record<string, unknown>).parent_id as string | null || null,
               created_at: (c as Record<string, unknown>).created_at as string || new Date().toISOString()
             }))}
+            attributes={attributes}
           />
         </div>
       </div>

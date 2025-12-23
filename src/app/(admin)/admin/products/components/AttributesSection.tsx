@@ -1,0 +1,119 @@
+'use client'
+
+import { useController, Control, FieldValues, Path } from 'react-hook-form'
+import { ProductAttributeDefinition, AttributeSelection } from '@/types/product'
+
+interface AttributesSectionProps<T extends FieldValues> {
+	control: Control<T>
+	name: Path<T>
+	attributes: ProductAttributeDefinition[]
+}
+
+export function AttributesSection<T extends FieldValues>({
+	control,
+	name,
+	attributes,
+}: AttributesSectionProps<T>) {
+	const { field } = useController({
+		control,
+		name,
+		defaultValue: (attributes.map((attr) => ({
+			attributeId: attr.id,
+			valueId: null,
+		})) as unknown) as T[Path<T>],
+	})
+
+	const handleValueChange = (attributeId: string, valueId: string | null) => {
+		const currentValue = (field.value || []) as AttributeSelection[]
+		const updated = currentValue.map((item) =>
+			item.attributeId === attributeId
+				? { attributeId, valueId }
+				: item
+		)
+		// Ensure all attributes are represented
+		const missingAttrs = attributes.filter(
+			(attr) =>
+				!updated.some((item) => item.attributeId === attr.id)
+		)
+		const finalValue = [
+			...updated,
+			...missingAttrs.map((attr) => ({
+				attributeId: attr.id,
+				valueId: null,
+			})),
+		]
+		field.onChange(finalValue)
+	}
+
+	if (attributes.length === 0) {
+		return (
+			<div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
+				<p className="text-gray-500">
+					No attributes available for this tenant. Create attributes in the{' '}
+					<a href="/admin/products/attributes" className="text-blue-600 underline">
+						Attributes Manager
+					</a>
+				</p>
+			</div>
+		)
+	}
+
+	const currentSelections = (field.value || []) as AttributeSelection[]
+
+	return (
+		<div className="bg-white border border-gray-200 rounded-lg p-6 space-y-6">
+			<div>
+				<h3 className="text-lg font-semibold text-gray-900 mb-4">
+					Product Attributes
+				</h3>
+				<p className="text-sm text-gray-600 mb-4">
+					Select a value for each product attribute
+				</p>
+			</div>
+
+			<div className="space-y-4">
+				{attributes.map((attribute) => {
+					const selection = currentSelections.find(
+						(s) => s.attributeId === attribute.id
+					)
+					const selectedValueId = selection?.valueId || null
+
+					return (
+						<div key={attribute.id} className="border-b border-gray-200 pb-4 last:border-b-0">
+							<label className="block text-sm font-medium text-gray-900 mb-2">
+								{attribute.name}
+							</label>
+							<div className="flex flex-wrap gap-2">
+								<button
+									type="button"
+									onClick={() => handleValueChange(attribute.id, null)}
+									className={`px-3 py-2 rounded-md border text-sm font-medium transition ${
+										selectedValueId === null
+											? 'border-blue-500 bg-blue-50 text-blue-700'
+											: 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+									}`}
+								>
+									None
+								</button>
+								{attribute.values.map((value) => (
+									<button
+										key={value.id}
+										type="button"
+										onClick={() => handleValueChange(attribute.id, value.id)}
+										className={`px-3 py-2 rounded-md border text-sm font-medium transition ${
+											selectedValueId === value.id
+												? 'border-blue-500 bg-blue-50 text-blue-700'
+												: 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+										}`}
+									>
+										{value.value}
+									</button>
+								))}
+							</div>
+						</div>
+					)
+				})}
+			</div>
+		</div>
+	)
+}

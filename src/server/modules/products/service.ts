@@ -286,6 +286,44 @@ export async function fetchProductImages(tenantId: string, productId: string) {
   return transformed
 }
 
+export async function fetchProductAttributes(tenantId: string, productId: string) {
+  const { data, error } = await supabaseAdmin
+    .from('product_attribute_values')
+    .select(`
+      attribute_values(
+        id,
+        value,
+        attribute_id,
+        attributes(
+          id,
+          name
+        )
+      )
+    `)
+    .eq('tenant_id', tenantId)
+    .eq('product_id', productId)
+
+  if (error || !data) {
+    console.error('[fetchProductAttributes] query error', error)
+    return []
+  }
+
+  // Transform the data into a simpler structure
+  return data
+    .map((row: any) => {
+      const av = row.attribute_values
+      const attr = av?.attributes
+      if (!av || !attr) return null
+      return {
+        id: attr.id,
+        name: attr.name,
+        valueId: av.id,
+        value: av.value,
+      }
+    })
+    .filter((item: any) => item !== null)
+}
+
 export async function fetchProductVariantOptions(tenantId: string, productId: string) {
   // First get the variant options structure (without values)
   const { data, error } = await supabaseAdmin

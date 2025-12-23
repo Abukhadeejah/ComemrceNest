@@ -23,13 +23,18 @@ export function SeoSection({ formData, onInputChange, errors }: SeoSectionProps)
       return
     }
     
-    // Create a more natural meta title
-    const title = formData.name.length <= 50 
-      ? `${formData.name} | Your Store`
-      : formData.name
-    
-    onInputChange?.('meta_title', title.substring(0, 60))
-    setCharCounts(prev => ({ ...prev, title: title.substring(0, 60).length }))
+    // Create a creative, benefit-led meta title but keep it concise
+    const base = formData.name.trim()
+    const suffix = '— Premium Quality'
+    let title = `${base} ${suffix}`
+    if (title.length > 60) {
+      // Try a shorter variant with a pipe separator
+      title = `${base} | Your Store`
+    }
+
+    const final = title.substring(0, 60)
+    onInputChange?.('meta_title', final)
+    setCharCounts(prev => ({ ...prev, title: final.length }))
   }
 
   const generateMetaDescription = () => {
@@ -38,16 +43,19 @@ export function SeoSection({ formData, onInputChange, errors }: SeoSectionProps)
       return
     }
     
-    // Extract first 155 characters and clean it up
+    // Build a marketing-first description: first sentence + CTA
     const cleaned = formData.description
       .replace(/\n/g, ' ')
       .replace(/\s+/g, ' ')
       .trim()
-    
-    const description = cleaned.length <= 155 
-      ? cleaned 
-      : cleaned.substring(0, 152) + '...'
-    
+
+    // Take up to the first 140 chars of the first sentence, then add a short CTA
+    const firstSentenceMatch = cleaned.match(/([^\.\!\?]+[\.\!\?])/) || [cleaned]
+    let snippet = String(firstSentenceMatch[0]).trim()
+    if (snippet.length > 140) snippet = snippet.substring(0, 137).trim() + '...'
+    const cta = ' Shop now.'
+    let description = (snippet + cta).substring(0, 155)
+
     onInputChange?.('meta_description', description)
     setCharCounts(prev => ({ ...prev, description: description.length }))
   }
@@ -64,7 +72,7 @@ export function SeoSection({ formData, onInputChange, errors }: SeoSectionProps)
 
   return (
     <div>
-      <h3 className="text-lg font-medium text-gray-900 mb-4">SEO</h3>
+      <h3 className="text-lg font-medium text-gray-900 mb-4">SEO & Search Preview</h3>
       
       <div className="space-y-6">
         {/* Meta Title */}
@@ -95,7 +103,7 @@ export function SeoSection({ formData, onInputChange, errors }: SeoSectionProps)
             </button>
           </div>
           <p className="mt-1 text-sm text-gray-500">
-            Appears in search engine results. Keep it under 60 characters.
+            Write a catchy, benefit-focused title that entices clicks — keep it under 60 characters.
           </p>
         </div>
 
@@ -127,17 +135,18 @@ export function SeoSection({ formData, onInputChange, errors }: SeoSectionProps)
             </button>
           </div>
           <p className="mt-1 text-sm text-gray-500">
-            Shown below the title in search results. Optimal length: 150-160 characters.
+            A compelling one-liner that highlights benefits and includes a subtle call-to-action. Aim for 150–160 characters.
           </p>
         </div>
 
         {/* URL Preview */}
-        {formData.slug && (
+        {/* Always show a preview, use example URL when slug is missing */}
+        {(
           <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
             <h4 className="text-xs font-medium text-gray-500 uppercase mb-2">Search Result Preview</h4>
             <div className="space-y-1">
               <div className="text-sm text-blue-600 truncate">
-                yourstore.com/products/{formData.slug}
+                {`yourstore.com/products/${formData.slug || 'example-product'}`}
               </div>
               <div className="text-base text-blue-800 font-medium">
                 {formData.meta_title || formData.name || 'Product Title'}

@@ -184,6 +184,8 @@ export interface ProductFormData {
 
   sizeGuides: unknown[]
   sizeGuideId: string
+
+  attributes: AttributeSelection[]
 }
 
 // Props for ProductForm component
@@ -220,6 +222,23 @@ export interface TaxClass {
 // Variant aliases for compatibility
 export type VariantValue = UIOptionValue
 export type VariantOption = UIOption
+
+// Attributes feature types
+export interface AttributeValue {
+  id: string
+  value: string
+}
+
+export interface ProductAttributeDefinition {
+  id: string
+  name: string
+  values: AttributeValue[]
+}
+
+export interface AttributeSelection {
+  attributeId: string
+  valueId: string | null
+}
 
 // Product list item used across UI (kept compatible with server/service.ts)
 export type ProductListItem = {

@@ -13,7 +13,8 @@ import {
   Cog6ToothIcon,
   PhotoIcon,
   AcademicCapIcon,
-  CalculatorIcon
+  CalculatorIcon,
+  AdjustmentsHorizontalIcon
 } from '@heroicons/react/24/outline'
 import { ADMIN_URLS } from '@/utils/admin-urls'
 import { useAdminBranding, useAdminTenantKey } from '@/components/admin/AdminBrandingWrapper'
@@ -23,6 +24,7 @@ function buildNavigation(tenant?: string, enabledModules?: Set<string>) {
   const base = [
     { key: 'dashboard', name: 'Dashboard', href: ADMIN_URLS.dashboard(tenant), icon: HomeIcon },
     { key: 'products', name: 'Products', href: ADMIN_URLS.products(tenant), icon: CubeIcon },
+    { key: 'attributes', name: 'Attributes', href: ADMIN_URLS.attributes(tenant), icon: AdjustmentsHorizontalIcon },
     { key: 'categories', name: 'Categories', href: ADMIN_URLS.categories(tenant), icon: TagIcon },
     { key: 'tax-classes', name: 'Tax Classes', href: ADMIN_URLS.taxClasses(tenant), icon: CalculatorIcon },
     { key: 'orders', name: 'Orders', href: ADMIN_URLS.orders(tenant), icon: ShoppingCartIcon },
