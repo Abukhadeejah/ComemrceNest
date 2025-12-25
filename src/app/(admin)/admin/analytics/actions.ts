@@ -44,7 +44,7 @@ export async function getAnalytics() {
     const publishedProducts = products?.filter(product => product.status === 'published').length || 0
 
     // Generate real sales data for the last 7 days
-    const salesData = []
+    const salesData: { date: string; revenue: number; orders: number }[] = []
     for (let i = 6; i >= 0; i--) {
       const date = new Date()
       date.setDate(date.getDate() - i)

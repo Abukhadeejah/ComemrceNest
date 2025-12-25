@@ -75,7 +75,7 @@ export async function createTaxClass(formData: FormData): Promise<TaxClass> {
       throw new Error(`Failed to create tax class: ${error.message}`)
     }
 
-    revalidateTag(`tax-classes-${tenantId}`)
+    revalidateTag(`tax-classes-${tenantId}`, 'default')
     return taxClass
   } catch (error) {
     console.error('Error creating tax class:', error)
@@ -128,7 +128,7 @@ export async function updateTaxClass(id: string, formData: FormData): Promise<Ta
       throw new Error(`Failed to update tax class: ${error.message}`)
     }
 
-    revalidateTag(`tax-classes-${tenantId}`)
+    revalidateTag(`tax-classes-${tenantId}`, 'default')
     return taxClass
   } catch (error) {
     console.error('Error updating tax class:', error)
@@ -175,7 +175,7 @@ export async function deleteTaxClass(id: string): Promise<void> {
       throw new Error(`Failed to delete tax class: ${error.message}`)
     }
 
-    revalidateTag(`tax-classes-${tenantId}`)
+    revalidateTag(`tax-classes-${tenantId}`, 'default')
   } catch (error) {
     console.error('Error deleting tax class:', error)
     throw error
@@ -212,7 +212,7 @@ export async function setDefaultTaxClass(id: string): Promise<void> {
       throw new Error(`Failed to set default tax class: ${error.message}`)
     }
 
-    revalidateTag(`tax-classes-${tenantId}`)
+    revalidateTag(`tax-classes-${tenantId}`, 'default')
   } catch (error) {
     console.error('Error setting default tax class:', error)
     throw error

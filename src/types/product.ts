@@ -237,7 +237,7 @@ export interface ProductAttributeDefinition {
 
 export interface AttributeSelection {
   attributeId: string
-  valueId: string | null
+  valueIds: string[] | null
 }
 
 // Product list item used across UI (kept compatible with server/service.ts)

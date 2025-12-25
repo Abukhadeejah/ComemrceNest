@@ -53,8 +53,8 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     }
 
     // Invalidate relevant caches
-    revalidateTag(tenantOrdersTag(tenantId))
-    revalidateTag(tenantProductsTag(tenantId))
+    revalidateTag(tenantOrdersTag(tenantId), 'default')
+    revalidateTag(tenantProductsTag(tenantId), 'default')
 
     console.log(`Order ${id} deleted successfully for tenant ${tenantId}`)
 

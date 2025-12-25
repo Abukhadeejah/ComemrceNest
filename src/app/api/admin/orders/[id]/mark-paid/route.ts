@@ -20,7 +20,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
   
   // Invalidate cache after successful update
-  revalidateTag(tenantProductsTag(tenantId))
+  revalidateTag(tenantProductsTag(tenantId), 'default')
   
   return NextResponse.json({ ok: true })
 }

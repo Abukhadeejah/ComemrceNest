@@ -8,10 +8,10 @@ import { tenantProductsTag } from './cacheTags'
 export async function invalidateProductCaches(tenantId: string) {
   try {
     // Invalidate all product-related caches
-    revalidateTag(tenantProductsTag(tenantId))
-    revalidateTag('products')
-    revalidateTag(`admin-products-${tenantId}`)
-    revalidateTag(`tenant-${tenantId}`)
+    revalidateTag(tenantProductsTag(tenantId), 'default')
+    revalidateTag('products', 'default')
+    revalidateTag(`admin-products-${tenantId}`, 'default')
+    revalidateTag(`tenant-${tenantId}`, 'default')
     
     console.log(`Cache invalidated for tenant ${tenantId}`)
   } catch (error) {

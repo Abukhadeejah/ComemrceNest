@@ -74,7 +74,7 @@ export function ProductGrid({ products, variantCombinations = [], tenantKey, col
           key={product.id}
           product={product}
           onQuickView={handleQuickView}
-          tenantKey={tenantKey}
+          tenantKey={tenantKey ?? null}
           variantCombinations={variantCombinations}
         />
         ))}

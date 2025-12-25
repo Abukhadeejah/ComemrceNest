@@ -340,7 +340,7 @@ export async function testAdvancedBreakAttempts() {
   console.log('🧪 Advanced Attempt 1: Race condition exploitation')
   try {
     // Try to exploit potential race conditions in tenant validation
-    const promises = []
+    const promises: Promise<any>[] = []
     for (let i = 0; i < 10; i++) {
       promises.push(validateTenantContext(`race-condition-test-${i}`))
     }

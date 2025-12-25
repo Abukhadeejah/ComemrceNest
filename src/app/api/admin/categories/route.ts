@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
       }
   
       // Invalidate cache after successful creation
-      revalidateTag(tenantProductsTag(tenantId))
+      revalidateTag(tenantProductsTag(tenantId), 'default')
   
       return NextResponse.json({ data }, { status: 201 });
     } catch (err: unknown) {
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
       }
   
       // Invalidate cache after successful update
-      revalidateTag(tenantProductsTag(tenantId))
+      revalidateTag(tenantProductsTag(tenantId), 'default')
   
       return NextResponse.json({ data });
     } catch (err: unknown) {
@@ -179,7 +179,7 @@ export async function POST(request: NextRequest) {
       }
   
       // Invalidate cache after successful deletion
-      revalidateTag(tenantProductsTag(tenantId))
+      revalidateTag(tenantProductsTag(tenantId), 'default')
   
       // Children auto-set parent_id = null via FK ON DELETE SET NULL (ensure constraint exists)
       return NextResponse.json({ success: true });

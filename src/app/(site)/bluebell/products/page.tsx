@@ -42,7 +42,6 @@ export default async function BluebellProductsPage({ searchParams }: ProductsPag
   const products = await getProducts({
     tenantId,
     search: params.search,
-    category: params.category,
     status: params.status,
     sort: params.sort,
     page: parseInt(params.page || '1'),

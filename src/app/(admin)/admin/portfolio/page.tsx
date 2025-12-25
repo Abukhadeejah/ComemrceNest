@@ -180,7 +180,7 @@ async function createProject(formData: FormData) {
   const location = String(formData.get('location') || '')
   const description = String(formData.get('description') || '')
   await supabaseAdmin.from('portfolio_projects').insert({ tenant_id: tenantId, title, slug, status: 'draft', featured: false, location: location || null, description: description || null })
-  revalidateTag(tenantPortfolioTag(tenantId))
+  revalidateTag(tenantPortfolioTag(tenantId), 'default')
 }
 
 async function publishProject(formData: FormData) {
@@ -190,7 +190,7 @@ async function publishProject(formData: FormData) {
   await assertTenantAdmin(tenantId)
   const id = String(formData.get('id') || '')
   await supabaseAdmin.from('portfolio_projects').update({ status: 'published' }).eq('id', id).eq('tenant_id', tenantId)
-  revalidateTag(tenantPortfolioTag(tenantId))
+  revalidateTag(tenantPortfolioTag(tenantId), 'default')
 }
 
 async function updateProject(formData: FormData) {
@@ -209,7 +209,7 @@ async function updateProject(formData: FormData) {
     .update({ title, slug, location: location || null, description: description || null })
     .eq('id', id)
     .eq('tenant_id', tenantId)
-  revalidateTag(tenantPortfolioTag(tenantId))
+  revalidateTag(tenantPortfolioTag(tenantId), 'default')
 }
 
 async function deleteProject(formData: FormData) {
@@ -222,7 +222,7 @@ async function deleteProject(formData: FormData) {
   // Delete images first (safety), then project
   await supabaseAdmin.from('portfolio_images').delete().eq('tenant_id', tenantId as unknown as string).eq('project_id', id)
   await supabaseAdmin.from('portfolio_projects').delete().eq('tenant_id', tenantId).eq('id', id)
-  revalidateTag(tenantPortfolioTag(tenantId))
+  revalidateTag(tenantPortfolioTag(tenantId), 'default')
 }
 
 async function reorderImage(formData: FormData) {
@@ -256,7 +256,7 @@ async function reorderImage(formData: FormData) {
   await supabaseAdmin.from('portfolio_images').update({ sort_order: other.sort_order }).eq('id', current.id)
   await supabaseAdmin.from('portfolio_images').update({ sort_order: current.sort_order }).eq('id', other.id)
 
-  revalidateTag(tenantPortfolioTag(tenantId))
+  revalidateTag(tenantPortfolioTag(tenantId), 'default')
 }
 
 async function uploadProjectImage(formData: FormData) {
@@ -276,7 +276,7 @@ async function uploadProjectImage(formData: FormData) {
   const url = data.publicUrl
   await supabaseAdmin.from('portfolio_images').insert({ tenant_id: tenantId as unknown as string, project_id: projectId as unknown as string, url, alt: keySafeName, sort_order: 0 })
   await supabaseAdmin.from('portfolio_projects').update({ hero_image_url: url }).eq('id', projectId).eq('tenant_id', tenantId).is('hero_image_url', null)
-  revalidateTag(tenantPortfolioTag(tenantId))
+  revalidateTag(tenantPortfolioTag(tenantId), 'default')
 }
 
 

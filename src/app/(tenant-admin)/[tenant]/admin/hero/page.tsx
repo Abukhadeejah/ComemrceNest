@@ -47,7 +47,7 @@ export default async function HeroPage() {
         initialSlides={adaptHeroSlides(heroSlides || [])} 
         initialSettings={heroSettings ? adaptHeroSettings(heroSettings) : null}
         tenantId={tenantId}
-        availableTags={availableTags}
+        availableTags={availableTags as string[]}
       />
     </div>
   )

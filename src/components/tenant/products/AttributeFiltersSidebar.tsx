@@ -89,7 +89,17 @@ export function AttributeFiltersSidebar({
 
   return (
     <div className="w-64 shrink-0 bg-white rounded-lg shadow-sm p-6 h-fit sticky top-8">
-      <h2 className="text-lg font-semibold text-gray-900 mb-6">Filters</h2>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-lg font-semibold text-gray-900">Filters</h2>
+        {Object.keys(selected).length > 0 && (
+          <button
+            onClick={() => onChange({})}
+            className="text-xs font-medium text-indigo-600 hover:text-indigo-700 hover:underline transition-colors"
+          >
+            Clear
+          </button>
+        )}
+      </div>
 
       <div className="space-y-6">
         {attributes.map((attribute) => (

@@ -67,7 +67,6 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
     const platformProducts = await getProducts({
       tenantId: null, // This will get products from all tenants for platform showcase
       search: params.search,
-      category: params.category,
       status: 'published', // Only show published products on platform
       sort: params.sort,
       page: parseInt(params.page || '1'),
@@ -152,7 +151,6 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   const products = await getProducts({
     tenantId,
     search: params.search,
-    category: params.category,
     status: params.status,
     sort: params.sort,
     page: parseInt(params.page || '1'),

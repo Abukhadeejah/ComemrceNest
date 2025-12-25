@@ -22,7 +22,7 @@ export default async function TenantAdminLayout({
   params,
 }: {
   children: React.ReactNode
-  params: Promise<{ tenant: string }>  // ← Changed to Promise
+  params: Promise<any>
 }) {
   // Await params (Next.js 15 requirement)
   const { tenant } = await params

@@ -71,8 +71,8 @@ interface ProductData {
   badge_display_from?: string | null
   // Tags
   tags?: string[]
-  // Attributes (product attributes feature)
-  attributes?: Array<{ attributeId: string; valueId: string | null }>
+  // Attributes (product attributes feature) - support multiple selected values per attribute
+  attributes?: Array<{ attributeId: string; valueIds?: string[] }>
 }
 
 function normalizeImageInputs(imageInputs: string[]): string[] {
@@ -325,12 +325,12 @@ export async function createProduct(formData: FormData) {
       .insert(categoryInserts)
   }
 
-  // Handle product attributes
+  // Handle product attributes (support multiple selected values per attribute)
   if (Array.isArray(productData.attributes) && productData.attributes.length > 0) {
-    // Filter out attributes without a valueId selected (single-value rule)
+    // Keep attributes that have one or more selected valueIds
     const attributesToSave = productData.attributes.filter(
-      (attr) => attr && attr.attributeId && attr.valueId
-    )
+      (attr) => attr && attr.attributeId && Array.isArray((attr as any).valueIds) && (attr as any).valueIds.length > 0
+    ) as Array<{ attributeId: string; valueIds: string[] }>
 
     // Insert into product_attributes for each selected attribute
     if (attributesToSave.length > 0) {
@@ -344,16 +344,20 @@ export async function createProduct(formData: FormData) {
         .from('product_attributes')
         .insert(productAttributeInserts)
 
-      // Insert into product_attribute_values for each selected value
-      const productAttributeValueInserts = attributesToSave.map((attr) => ({
-        product_id: product.id,
-        attribute_value_id: attr.valueId,
-        tenant_id: tenantId!
-      }))
+      // Insert into product_attribute_values for each selected value (flatten multiple values)
+      const productAttributeValueInserts = attributesToSave.flatMap((attr) =>
+        (attr.valueIds || []).map((vid) => ({
+          product_id: product.id,
+          attribute_value_id: vid,
+          tenant_id: tenantId!
+        }))
+      )
 
-      await supabaseAdmin
-        .from('product_attribute_values')
-        .insert(productAttributeValueInserts)
+      if (productAttributeValueInserts.length > 0) {
+        await supabaseAdmin
+          .from('product_attribute_values')
+          .insert(productAttributeValueInserts)
+      }
     }
   }
 
@@ -524,11 +528,9 @@ export async function createProduct(formData: FormData) {
   }
 
       // GUARDRAIL: Success logging and cache invalidation
-      revalidateTag(tenantProductsTag(tenantId))
-      // Also invalidate the general products cache
-      revalidateTag('products')
-      // Force revalidation of the admin products page
-      revalidateTag(`admin-products-${tenantId}`)
+        revalidateTag(tenantProductsTag(tenantId), 'default')
+        revalidateTag('products', 'default')
+        revalidateTag(`admin-products-${tenantId}`, 'default')
 
       await logSecurityEvent('product_created_success', {
         productId: product.id,
@@ -744,10 +746,10 @@ export async function updateProduct(productId: string, formData: FormData) {
 
   // Then, insert new attribute assignments
   if (Array.isArray(productData.attributes) && productData.attributes.length > 0) {
-    // Filter out attributes without a valueId selected (single-value rule)
+    // Keep attributes that have one or more selected valueIds
     const attributesToSave = productData.attributes.filter(
-      (attr) => attr && attr.attributeId && attr.valueId
-    )
+      (attr) => attr && attr.attributeId && Array.isArray((attr as any).valueIds) && (attr as any).valueIds.length > 0
+    ) as Array<{ attributeId: string; valueIds: string[] }>
 
     if (attributesToSave.length > 0) {
       // Insert into product_attributes for each selected attribute
@@ -761,16 +763,20 @@ export async function updateProduct(productId: string, formData: FormData) {
         .from('product_attributes')
         .insert(productAttributeInserts)
 
-      // Insert into product_attribute_values for each selected value
-      const productAttributeValueInserts = attributesToSave.map((attr) => ({
-        product_id: productId,
-        attribute_value_id: attr.valueId,
-        tenant_id: tenantId!
-      }))
+      // Insert into product_attribute_values for each selected value (flatten multiple values)
+      const productAttributeValueInserts = attributesToSave.flatMap((attr) =>
+        (attr.valueIds || []).map((vid) => ({
+          product_id: productId,
+          attribute_value_id: vid,
+          tenant_id: tenantId!
+        }))
+      )
 
-      await supabaseAdmin
-        .from('product_attribute_values')
-        .insert(productAttributeValueInserts)
+      if (productAttributeValueInserts.length > 0) {
+        await supabaseAdmin
+          .from('product_attribute_values')
+          .insert(productAttributeValueInserts)
+      }
     }
   }
 
@@ -875,11 +881,9 @@ export async function updateProduct(productId: string, formData: FormData) {
       .eq('product_id', productId)
   }
 
-  revalidateTag(tenantProductsTag(tenantId))
-  // Also invalidate the general products cache
-  revalidateTag('products')
-  // Force revalidation of the admin products page
-  revalidateTag(`admin-products-${tenantId}`)
+    revalidateTag(tenantProductsTag(tenantId), 'default')
+    revalidateTag('products', 'default')
+    revalidateTag(`admin-products-${tenantId}`, 'default')
   return product
 }
 
@@ -980,7 +984,7 @@ export async function bulkUpdateProductStatus(productIds: string[], status: stri
     throw new Error(`Failed to update product status: ${error.message}`)
   }
 
-  revalidateTag(tenantProductsTag(tenantId))
+  revalidateTag(tenantProductsTag(tenantId), 'default')
   return { success: true }
 }
 
@@ -1109,7 +1113,7 @@ export async function uploadProductImage(file: File, productId: string) {
     }
   }
 
-  revalidateTag(tenantProductsTag(tenantId))
+  revalidateTag(tenantProductsTag(tenantId), 'default')
   return urlData.publicUrl
 }
 

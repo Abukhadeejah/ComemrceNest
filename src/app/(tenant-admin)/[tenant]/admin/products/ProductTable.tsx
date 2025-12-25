@@ -79,7 +79,7 @@ export function ProductTable({ products }: ProductTableProps) {
         console.log(`Cleaned up ${result.deletedOrderItems} order items, ${result.deletedImages} images, and ${result.deletedCategories} category links`)
 
         // Show detailed success message
-        const details = []
+        const details: string[] = []
         if (result.deletedOrderItems > 0) details.push(`${result.deletedOrderItems} order item(s)`)
         if (result.deletedImages > 0) details.push(`${result.deletedImages} image(s)`)
         if (result.deletedCategories > 0) details.push(`${result.deletedCategories} category link(s)`)

@@ -2,6 +2,7 @@
 
 import { AttributeFiltersSidebar } from './AttributeFiltersSidebar'
 import type { AvailableAttributeFilter } from '@/server/attributes'
+import { useSearchParams } from 'next/navigation'
 
 interface AttributeFiltersSidebarWrapperProps {
   attributes: AvailableAttributeFilter[]
@@ -16,12 +17,15 @@ export function AttributeFiltersSidebarWrapper({
   attributes,
   selected,
 }: AttributeFiltersSidebarWrapperProps) {
+  const searchParams = useSearchParams()
+
   // Temporary client-side debug: confirm attributes length arrives at client
   // (remove or minimise logs after verification)
   try {
     // eslint-disable-next-line no-console
     console.log('[AttributeFiltersSidebarWrapper] attributes.length=', Array.isArray(attributes) ? attributes.length : String(attributes))
   } catch {}
+
   return (
     <AttributeFiltersSidebar
       attributes={attributes}
@@ -33,7 +37,7 @@ export function AttributeFiltersSidebarWrapper({
         if (encodedFilters) {
           params.set('attr_value_ids', encodedFilters)
         }
-        
+
         // Preserve other search params
         const currentParams = new URLSearchParams(window.location.search)
         currentParams.forEach((value, key) => {
@@ -41,10 +45,20 @@ export function AttributeFiltersSidebarWrapper({
             params.set(key, value)
           }
         })
-        
-        // Reset page to 1 when filters change
+
+        // Build new URL
         const newUrl = params.toString() ? `?${params.toString()}` : window.location.pathname
-        window.location.href = newUrl
+        const fullUrl = `${window.location.pathname}${newUrl === window.location.pathname ? '' : newUrl}`
+
+        // Trigger client-side refetch via global function if available
+        if (typeof window !== 'undefined' && (window as any).__refetchProducts) {
+          ;(window as any).__refetchProducts(`/api/products/paginate${newUrl}`)
+          // Also update the URL without reload for bookmarkability
+          window.history.pushState({}, '', fullUrl)
+        } else {
+          // Fallback to page reload if component not yet hydrated
+          window.location.href = fullUrl
+        }
       }}
     />
   )

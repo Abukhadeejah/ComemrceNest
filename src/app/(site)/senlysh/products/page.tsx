@@ -12,6 +12,7 @@ import { resolveTenantIdFromRequest } from '@/server/tenant'
 import { fetchVariantsForProducts } from '@/server/modules/products/service'
 import { fetchAvailableAttributeFilters } from '@/server/attributes'
 import { AttributeFiltersSidebarWrapper } from '@/components/tenant/products/AttributeFiltersSidebarWrapper'
+import { InfiniteScrollProductGrid } from '@/components/tenant/products/InfiniteScrollProductGrid'
 
 interface ProductsPageProps {
   searchParams: Promise<{
@@ -48,9 +49,9 @@ export default async function SenlyshProductsPage({ searchParams }: ProductsPage
     tenantId,
     search: params.search,
     status: params.status,
-    sort: params.sort,
+    sort: params.sort || 'updated_at',
     page: parseInt(params.page || '1'),
-    limit: 12,
+    limit: 24,
     color: params.color,
     size: params.size,
     price: params.price,
@@ -111,9 +112,31 @@ export default async function SenlyshProductsPage({ searchParams }: ProductsPage
 
           {/* Products Grid */}
           <div className="flex-1">
-            <Suspense fallback={<ProductGridSkeleton />}>
-              <ProductGrid products={products as unknown as UIProductListItem[]} variantCombinations={variantCombinations} tenantKey="senlysh" columns={3} />
-            </Suspense>
+            <InfiniteScrollProductGrid
+              initialProducts={products as unknown as UIProductListItem[]}
+              variantCombinations={variantCombinations}
+              tenantKey="senlysh"
+              columns={3}
+              hasMore={products.length === 24}
+              nextPageUrl={`/api/products/paginate?${new URLSearchParams({
+                tenantId,
+                page: String(parseInt(params.page || '1') + 1),
+                limit: '24',
+                ...(params.search && { search: params.search }),
+                ...(params.attr_value_ids && { attr_value_ids: params.attr_value_ids }),
+                ...(params.color && { color: params.color }),
+                ...(params.size && { size: params.size }),
+                ...(params.price && { price: params.price }),
+                ...(params.fabric && { fabric: params.fabric }),
+                ...(params.is_new_arrival && { is_new_arrival: params.is_new_arrival }),
+                ...(params.is_featured && { is_featured: params.is_featured }),
+                ...(params.is_bestseller && { is_bestseller: params.is_bestseller }),
+                ...(params.is_on_sale && { is_on_sale: params.is_on_sale }),
+                ...(params.is_limited_edition && { is_limited_edition: params.is_limited_edition }),
+                ...(params.is_sold_out && { is_sold_out: params.is_sold_out }),
+                sort: params.sort || 'updated_at',
+              })}`}
+            />
           </div>
         </div>
       </div>

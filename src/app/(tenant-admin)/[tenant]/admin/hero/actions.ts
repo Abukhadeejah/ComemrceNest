@@ -55,7 +55,7 @@ export async function createHeroSlide(data: HeroSlideData) {
     throw new Error(`Failed to create hero slide: ${error.message}`)
   }
 
-  revalidateTag('hero-slides')
+    revalidateTag('hero-slides', 'default')
   return slide
 }
 
@@ -83,7 +83,7 @@ export async function updateHeroSlide(id: string, data: HeroSlideData) {
     throw new Error(`Failed to update hero slide: ${error.message}`)
   }
 
-  revalidateTag('hero-slides')
+    revalidateTag('hero-slides', 'default')
   return slide
 }
 
@@ -103,7 +103,7 @@ export async function deleteHeroSlide(id: string) {
     throw new Error(`Failed to delete hero slide: ${error.message}`)
   }
 
-  revalidateTag('hero-slides')
+    revalidateTag('hero-slides', 'default')
 }
 
 export async function reorderHeroSlides(slideIds: string[]) {
@@ -128,7 +128,7 @@ export async function reorderHeroSlides(slideIds: string[]) {
     }
   }
 
-  revalidateTag('hero-slides')
+    revalidateTag('hero-slides', 'default')
 }
 
 export async function updateHeroSettings(data: HeroSettingsData) {
@@ -150,7 +150,7 @@ export async function updateHeroSettings(data: HeroSettingsData) {
     throw new Error(`Failed to update hero settings: ${error.message}`)
   }
 
-  revalidateTag('hero-settings')
+    revalidateTag('hero-settings', 'default')
   return settings
 }
 

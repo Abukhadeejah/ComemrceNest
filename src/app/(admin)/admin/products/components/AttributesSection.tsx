@@ -18,18 +18,23 @@ export function AttributesSection<T extends FieldValues>({
 		control,
 		name,
 		defaultValue: (attributes.map((attr) => ({
-			attributeId: attr.id,
-			valueId: null,
-		})) as unknown) as T[Path<T>],
+				attributeId: attr.id,
+				valueIds: [],
+			})) as unknown) as T[Path<T>],
 	})
 
 	const handleValueChange = (attributeId: string, valueId: string | null) => {
 		const currentValue = (field.value || []) as AttributeSelection[]
-		const updated = currentValue.map((item) =>
-			item.attributeId === attributeId
-				? { attributeId, valueId }
-				: item
-		)
+		const updated = currentValue.map((item) => {
+			if (item.attributeId !== attributeId) return item
+			const currentIds = item.valueIds || []
+			if (valueId === null) {
+				return { attributeId, valueIds: [] }
+			}
+			const exists = currentIds.includes(valueId)
+			const newIds = exists ? currentIds.filter((id) => id !== valueId) : [...currentIds, valueId]
+			return { attributeId, valueIds: newIds }
+		})
 		// Ensure all attributes are represented
 		const missingAttrs = attributes.filter(
 			(attr) =>
@@ -39,7 +44,7 @@ export function AttributesSection<T extends FieldValues>({
 			...updated,
 			...missingAttrs.map((attr) => ({
 				attributeId: attr.id,
-				valueId: null,
+				valueIds: [],
 			})),
 		]
 		field.onChange(finalValue)
@@ -76,7 +81,7 @@ export function AttributesSection<T extends FieldValues>({
 					const selection = currentSelections.find(
 						(s) => s.attributeId === attribute.id
 					)
-					const selectedValueId = selection?.valueId || null
+					const selectedValueIds = selection?.valueIds || []
 
 					return (
 						<div key={attribute.id} className="border-b border-gray-200 pb-4 last:border-b-0">
@@ -88,7 +93,7 @@ export function AttributesSection<T extends FieldValues>({
 									type="button"
 									onClick={() => handleValueChange(attribute.id, null)}
 									className={`px-3 py-2 rounded-md border text-sm font-medium transition ${
-										selectedValueId === null
+										selectedValueIds.length === 0
 											? 'border-blue-500 bg-blue-50 text-blue-700'
 											: 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
 									}`}
@@ -101,7 +106,7 @@ export function AttributesSection<T extends FieldValues>({
 										type="button"
 										onClick={() => handleValueChange(attribute.id, value.id)}
 										className={`px-3 py-2 rounded-md border text-sm font-medium transition ${
-											selectedValueId === value.id
+											selectedValueIds.includes(value.id)
 												? 'border-blue-500 bg-blue-50 text-blue-700'
 												: 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
 										}`}
