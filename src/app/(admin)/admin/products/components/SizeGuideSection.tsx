@@ -48,7 +48,8 @@ export function SizeGuideSection({
       })
 
       if (!response.ok) {
-        throw new Error('Upload failed')
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `Upload failed with status ${response.status}`)
       }
 
       const data = await response.json()
@@ -60,7 +61,8 @@ export function SizeGuideSection({
       }
     } catch (error) {
       console.error('Upload error:', error)
-      alert('Failed to upload image')
+      const message = error instanceof Error ? error.message : 'Failed to upload image'
+      alert(`Upload Error: ${message}`)
     } finally {
       setIsUploading(false)
     }

@@ -68,6 +68,9 @@ export type ProductListParams = {
   categoryId?: string // Single category ID (legacy)
   categorySlugs?: string[] // Multiple category slugs (new)
   
+  // Attribute filters
+  attributeValueIds?: string[] // IDs of attribute values to filter by
+  
   // Badge filters
   is_featured?: boolean
   is_bestseller?: boolean
@@ -191,11 +194,12 @@ export async function fetchPublishedProductsPaged(
 }
 
 export async function fetchProductBySlug(tenantId: string, slug: string) {
-  return supabaseAdmin
+  const { data, error } = await supabaseAdmin
     .from('products')
     .select(`
       id, name, slug, description, price_cents, compare_at_price_cents, currency, hero_image_url, meta_title, meta_description,
       product_size_guides(
+        size_guide_id,
         size_guides(
           id, name, category, gender, measurements
         )
@@ -204,6 +208,13 @@ export async function fetchProductBySlug(tenantId: string, slug: string) {
     .eq('tenant_id', tenantId)
     .eq('slug', slug)
     .maybeSingle()
+
+  if (error) {
+    console.error('[fetchProductBySlug] query error:', error)
+    return { data: null, error }
+  }
+
+  return { data, error: null }
 }
 
 export async function fetchProductImages(tenantId: string, productId: string) {
@@ -610,6 +621,7 @@ export async function fetchPublishedProductsPagedWithVariants(
     maxPriceCents, 
     categoryId,
     categorySlugs,
+    attributeValueIds,
     is_featured,
     is_bestseller,
     is_new_arrival,
@@ -646,6 +658,13 @@ export async function fetchPublishedProductsPagedWithVariants(
     selectCols += ', product_categories!inner(category:categories!inner(id, slug))'
   }
   
+  // If attribute filtering is needed, we'll need to join with product_attribute_values
+  const needsAttributeFilter = attributeValueIds && attributeValueIds.length > 0
+  
+  if (needsAttributeFilter) {
+    selectCols += ', product_attribute_values!inner(attribute_value_id)'
+  }
+  
   let query = supabaseAdmin
     .from('products')
     .select(selectCols, { count: 'exact' })
@@ -659,6 +678,11 @@ export async function fetchPublishedProductsPagedWithVariants(
   } else if (categorySlugs && categorySlugs.length > 0) {
     // New: filter by category slugs
     query = query.in('product_categories.category.slug', categorySlugs)
+  }
+  
+  // Handle attribute filtering
+  if (needsAttributeFilter) {
+    query = query.in('product_attribute_values.attribute_value_id', attributeValueIds)
   }
   
   if (q && q.trim()) {

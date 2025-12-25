@@ -11,6 +11,7 @@ export interface GetProductsParams {
   size?: string
   price?: string
   fabric?: string
+  attributeValueIds?: string[]
   is_new_arrival?: boolean
   is_featured?: boolean
   is_bestseller?: boolean
@@ -54,6 +55,7 @@ export async function getProducts(params: GetProductsParams): Promise<ProductLis
     size,
     price,
     fabric,
+    attributeValueIds,
     is_new_arrival,
     is_featured,
     is_bestseller,
@@ -84,6 +86,7 @@ export async function getProducts(params: GetProductsParams): Promise<ProductLis
     size,
     price,
     fabric,
+    attributeValueIds,
     is_new_arrival,
     is_featured,
     is_bestseller,

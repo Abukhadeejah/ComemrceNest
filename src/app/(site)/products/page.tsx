@@ -11,6 +11,8 @@ import { resolveTenantIdFromRequest, resolveTenantKeyFromId } from '@/server/ten
 import { getRegistryEntry } from '@/registry/tenantRegistry'
 import { SparklesIcon, StarIcon } from '@heroicons/react/24/outline'
 import type { Metadata } from 'next'
+import { fetchAvailableAttributeFilters } from '@/server/attributes'
+import { AttributeFiltersSidebarWrapper } from '@/components/tenant/products/AttributeFiltersSidebarWrapper'
 
 interface ProductsPageProps {
   searchParams: Promise<{
@@ -19,6 +21,7 @@ interface ProductsPageProps {
     status?: string
     sort?: string
     page?: string
+    attr_value_ids?: string
   }>
 }
 
@@ -71,6 +74,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
       limit: 12
     })
 
+    // Platform branch: no tenant; show platform products with 3 columns
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -120,7 +124,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                 Showing <span className="font-medium">{platformProducts.length}</span> products
               </p>
             </div>
-            <ProductGrid products={platformProducts as unknown as UIProductListItem[]} />
+            <ProductGrid products={platformProducts as unknown as UIProductListItem[]} columns={3} />
           </div>
 
           {/* Platform Newsletter */}
@@ -152,10 +156,15 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
     status: params.status,
     sort: params.sort,
     page: parseInt(params.page || '1'),
-    limit: 12
+    limit: 12,
+    attributeValueIds: flattenAttributeFilters(parseAttributeFiltersFromUrl(params.attr_value_ids || ''))
   })
 
   console.log('[PRODUCTS_PAGE] Fetched products for tenant:', tenantId, 'Count:', products.length)
+
+  // Fetch available attribute filters for this tenant
+  const attributeDefinitions = await fetchAvailableAttributeFilters(tenantId)
+  console.log('[PRODUCTS_PAGE] attributeDefinitions length:', Array.isArray(attributeDefinitions) ? attributeDefinitions.length : 'unknown')
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
@@ -199,14 +208,25 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
           <ProductFilters />
         </div>
 
-        {/* Products Grid */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-sm text-gray-600">
-              Showing <span className="font-medium">{products.length}</span> products
-            </p>
+        {/* Main Layout with Sidebar */}
+        <div className="flex gap-6 mb-8">
+          {/* Sidebar with Attribute Filters */}
+          <div className="w-64 shrink-0">
+            <AttributeFiltersSidebarWrapper
+              attributes={attributeDefinitions}
+              selected={parseAttributeFiltersFromUrl(params.attr_value_ids || '')}
+            />
           </div>
-          <ProductGrid products={products as unknown as UIProductListItem[]} />
+
+          {/* Products Grid */}
+          <div className="flex-1">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm text-gray-600">
+                Showing <span className="font-medium">{products.length}</span> products
+              </p>
+            </div>
+            <ProductGrid products={products as unknown as UIProductListItem[]} tenantKey={null} />
+          </div>
         </div>
 
         {/* Newsletter */}
@@ -229,6 +249,42 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
       </div>
     </div>
   )
+}
+
+/**
+ * Parse attribute filters from URL param format: "attrId1:valId1,valId2|attrId2:valId3"
+ */
+function parseAttributeFiltersFromUrl(encoded: string): Record<string, string[]> {
+  if (!encoded) return {}
+
+  const filters: Record<string, string[]> = {}
+  const parts = encoded.split('|')
+
+  parts.forEach((part) => {
+    const [attrId, valueIds] = part.split(':')
+    if (attrId && valueIds) {
+      filters[attrId] = valueIds.split(',').filter(Boolean)
+    }
+  })
+
+  return filters
+}
+
+/**
+ * Encode attribute filters for URL: "attrId1:valId1,valId2|attrId2:valId3"
+ */
+function encodeAttributeFiltersForUrl(filters: Record<string, string[]>): string {
+  return Object.entries(filters)
+    .filter(([, values]) => values.length > 0)
+    .map(([attrId, valueIds]) => `${attrId}:${valueIds.join(',')}`)
+    .join('|')
+}
+
+/**
+ * Flatten attribute filters to a flat list of value IDs for the product query.
+ */
+function flattenAttributeFilters(filters: Record<string, string[]>): string[] {
+  return Object.values(filters).flat()
 }
 
 

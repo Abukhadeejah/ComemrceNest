@@ -11,6 +11,8 @@ import { resolveTenantIdFromRequest } from '@/server/tenant'
 import { getRegistryEntry } from '@/registry/tenantRegistry'
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { fetchAvailableAttributeFilters } from '@/server/attributes'
+import { AttributeFiltersSidebar } from '@/components/tenant/products/AttributeFiltersSidebar'
 
 interface ProductsPageProps {
   searchParams: Promise<{
@@ -19,6 +21,7 @@ interface ProductsPageProps {
     status?: string
     sort?: string
     page?: string
+    attr_value_ids?: string
   }>
 }
 
@@ -43,10 +46,14 @@ export default async function BluebellProductsPage({ searchParams }: ProductsPag
     status: params.status,
     sort: params.sort,
     page: parseInt(params.page || '1'),
-    limit: 12
+    limit: 12,
+    attributeValueIds: flattenAttributeFilters(parseAttributeFiltersFromUrl(params.attr_value_ids || ''))
   })
 
   console.log('[BLUEBELL_PRODUCTS_PAGE] Fetched products for tenant:', tenantId, 'Count:', products.length)
+
+  // Fetch available attribute filters for this tenant
+  const attributeDefinitions = await fetchAvailableAttributeFilters(tenantId)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -81,7 +88,7 @@ export default async function BluebellProductsPage({ searchParams }: ProductsPag
 
         {/* Main Content with Filters and Products */}
         <div className="flex flex-col lg:flex-row gap-12">
-          {/* Filters Sidebar */}
+          {/* Filters Sidebar - Only show Bluebell's custom filter, not attribute sidebar for now */}
           <BluebellProductFilters products={products} />
           
           {/* Products Grid */}
@@ -166,4 +173,30 @@ function Pagination({ currentPage, hasNext }: { currentPage: number; hasNext: bo
       </div>
     </div>
   )
+}
+
+/**
+ * Parse attribute filters from URL param format: "attrId1:valId1,valId2|attrId2:valId3"
+ */
+function parseAttributeFiltersFromUrl(encoded: string): Record<string, string[]> {
+  if (!encoded) return {}
+
+  const filters: Record<string, string[]> = {}
+  const parts = encoded.split('|')
+
+  parts.forEach((part) => {
+    const [attrId, valueIds] = part.split(':')
+    if (attrId && valueIds) {
+      filters[attrId] = valueIds.split(',').filter(Boolean)
+    }
+  })
+
+  return filters
+}
+
+/**
+ * Flatten attribute filters to a flat list of value IDs for the product query.
+ */
+function flattenAttributeFilters(filters: Record<string, string[]>): string[] {
+  return Object.values(filters).flat()
 }

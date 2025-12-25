@@ -24,24 +24,16 @@ interface VariantCombination {
 interface ProductGridProps {
   products: ProductListItem[]
   variantCombinations?: VariantCombination[]
+  tenantKey?: string | null
+  columns?: number
 }
 
-export function ProductGrid({ products, variantCombinations = [] }: ProductGridProps) {
+export function ProductGrid({ products, variantCombinations = [], tenantKey, columns = 4 }: ProductGridProps) {
   const [quickViewProduct, setQuickViewProduct] = useState<ProductListItem | null>(null)
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false)
 
-  // Get tenant key from URL path (most reliable approach)
-  const getTenantKey = (): string | null => {
-    if (typeof window !== 'undefined') {
-      const pathSegments = window.location.pathname.split('/').filter(Boolean)
-      if (pathSegments.length > 0 && (pathSegments[0] === 'bluebell' || pathSegments[0] === 'senlysh')) {
-        return pathSegments[0]
-      }
-    }
-    return null
-  }
-
-  const tenantKey = getTenantKey()
+  // Get tenant key from props (passed from server component)
+  // This prevents hydration mismatch from using window.location.pathname
 
   if (products.length === 0) {
     return (
@@ -70,9 +62,13 @@ export function ProductGrid({ products, variantCombinations = [] }: ProductGridP
     setQuickViewProduct(null)
   }
 
+  const gridClass = columns === 3
+    ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch'
+    : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 items-stretch'
+
   return (
     <>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 items-stretch">
+      <div className={gridClass}>
         {products.map((product) => (
         <ProductCard
           key={product.id}

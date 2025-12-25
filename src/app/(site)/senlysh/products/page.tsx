@@ -10,6 +10,8 @@ import { ProductSearch } from '@/components/tenant/products/ProductSearch'
 import { getProducts } from '@/server/products'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
 import { fetchVariantsForProducts } from '@/server/modules/products/service'
+import { fetchAvailableAttributeFilters } from '@/server/attributes'
+import { AttributeFiltersSidebarWrapper } from '@/components/tenant/products/AttributeFiltersSidebarWrapper'
 
 interface ProductsPageProps {
   searchParams: Promise<{
@@ -27,6 +29,7 @@ interface ProductsPageProps {
     is_on_sale?: string
     is_limited_edition?: string
     is_sold_out?: string
+    attr_value_ids?: string
   }>
 }
 
@@ -37,6 +40,9 @@ export default async function SenlyshProductsPage({ searchParams }: ProductsPage
   if (!tenantId) {
     return <div>Tenant not found</div>
   }
+
+  // Parse attribute filters from URL params (format: "attrId1:valId1,valId2|attrId2:valId3")
+  const attributeFilters = parseAttributeFiltersFromUrl(params.attr_value_ids || '')
 
   const products = await getProducts({
     tenantId,
@@ -49,6 +55,7 @@ export default async function SenlyshProductsPage({ searchParams }: ProductsPage
     size: params.size,
     price: params.price,
     fabric: params.fabric,
+    attributeValueIds: flattenAttributeFilters(attributeFilters),
     is_new_arrival: params.is_new_arrival === 'true' ? true : params.is_new_arrival === 'false' ? false : undefined,
     is_featured: params.is_featured === 'true' ? true : params.is_featured === 'false' ? false : undefined,
     is_bestseller: params.is_bestseller === 'true' ? true : params.is_bestseller === 'false' ? false : undefined,
@@ -58,6 +65,11 @@ export default async function SenlyshProductsPage({ searchParams }: ProductsPage
   })
 
   console.log('[SENLYSH_PRODUCTS_PAGE] Fetched products for tenant:', tenantId, 'Count:', products.length)
+
+  // Fetch available attribute filters for this tenant
+  const attributeDefinitions = await fetchAvailableAttributeFilters(tenantId)
+
+  console.log('[SENLYSH_PRODUCTS_PAGE] Available attribute filters:', attributeDefinitions)
 
   // Bulk fetch variant combinations for all products (faster, ensures availability)
   const variantCombinationsRaw = await fetchVariantsForProducts(
@@ -87,10 +99,23 @@ export default async function SenlyshProductsPage({ searchParams }: ProductsPage
           <ProductFilters />
         </div>
 
-        {/* Products Grid */}
-        <Suspense fallback={<ProductGridSkeleton />}>
-          <ProductGrid products={products as unknown as UIProductListItem[]} variantCombinations={variantCombinations} />
-        </Suspense>
+        {/* Main Layout with Sidebar */}
+        <div className="flex gap-6">
+          {/* Sidebar with Attribute Filters */}
+          <div className="w-64 shrink-0">
+            <AttributeFiltersSidebarWrapper
+              attributes={attributeDefinitions}
+              selected={attributeFilters}
+            />
+          </div>
+
+          {/* Products Grid */}
+          <div className="flex-1">
+            <Suspense fallback={<ProductGridSkeleton />}>
+              <ProductGrid products={products as unknown as UIProductListItem[]} variantCombinations={variantCombinations} tenantKey="senlysh" columns={3} />
+            </Suspense>
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -112,6 +137,43 @@ function ProductGridSkeleton() {
     </div>
   )
 }
+
+/**
+ * Parse attribute filters from URL param format: "attrId1:valId1,valId2|attrId2:valId3"
+ */
+function parseAttributeFiltersFromUrl(encoded: string): Record<string, string[]> {
+  if (!encoded) return {}
+
+  const filters: Record<string, string[]> = {}
+  const parts = encoded.split('|')
+
+  parts.forEach((part) => {
+    const [attrId, valueIds] = part.split(':')
+    if (attrId && valueIds) {
+      filters[attrId] = valueIds.split(',').filter(Boolean)
+    }
+  })
+
+  return filters
+}
+
+/**
+ * Encode attribute filters for URL: "attrId1:valId1,valId2|attrId2:valId3"
+ */
+function encodeAttributeFiltersForUrl(filters: Record<string, string[]>): string {
+  return Object.entries(filters)
+    .filter(([, values]) => values.length > 0)
+    .map(([attrId, valueIds]) => `${attrId}:${valueIds.join(',')}`)
+    .join('|')
+}
+
+/**
+ * Flatten attribute filters to a flat list of value IDs for the product query.
+ */
+function flattenAttributeFilters(filters: Record<string, string[]>): string[] {
+  return Object.values(filters).flat()
+}
+
 
 
 

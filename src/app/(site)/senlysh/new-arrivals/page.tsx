@@ -58,7 +58,7 @@ export default async function SenlyshNewArrivalsPage({ searchParams }: NewArriva
         </div>
 
         <Suspense fallback={<ProductGridSkeleton />}> 
-          <ProductGrid products={products as unknown as UIProductListItem[]} variantCombinations={variantCombinations} />
+          <ProductGrid products={products as unknown as UIProductListItem[]} variantCombinations={variantCombinations} tenantKey="senlysh" />
         </Suspense>
       </div>
     </div>

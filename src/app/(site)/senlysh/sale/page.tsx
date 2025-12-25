@@ -49,7 +49,7 @@ export default async function SenlyshSalePage({ searchParams }: SalePageProps) {
           <p className="mt-2 text-gray-600">Discover limited-time offers and discounts</p>
         </div>
         <Suspense fallback={<ProductGridSkeleton />}> 
-  <ProductGrid products={products as unknown as UIProductListItem[]} variantCombinations={variantCombinations} />
+  <ProductGrid products={products as unknown as UIProductListItem[]} variantCombinations={variantCombinations} tenantKey="senlysh" />
         </Suspense>
       </div>
     </div>

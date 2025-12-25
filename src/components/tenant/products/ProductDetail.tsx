@@ -94,6 +94,14 @@ export function ProductDetail({
   const [showSizeGuide, setShowSizeGuide] = useState(false)
   const [showDeliveryReturns, setShowDeliveryReturns] = useState(false)
   const [showAskQuestion, setShowAskQuestion] = useState(false)
+  const [sizeGuideImageUrl, setSizeGuideImageUrl] = useState<string | null>(() => {
+    // Extract size_guide_id from product_size_guides relationship
+    if (product.product_size_guides && Array.isArray(product.product_size_guides) && product.product_size_guides.length > 0) {
+      const firstGuide = product.product_size_guides[0] as unknown as { size_guide_id?: string }
+      return firstGuide?.size_guide_id || null
+    }
+    return null
+  })
   const [peopleViewing, setPeopleViewing] = useState(29)
 
 
@@ -528,6 +536,22 @@ export function ProductDetail({
 
               {/* Quick Links */}
               <div className="flex space-x-4">
+                {sizeGuideImageUrl && (
+                  <button
+                    onClick={() => setShowSizeGuide(true)}
+                    title="View Size Guide"
+                    className="flex items-center justify-center w-8 h-8 rounded-full border border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                  >
+                    <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                  </button>
+                )}
                 <button
                   onClick={() => setShowSizeGuide(true)}
                   className="flex items-center space-x-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
@@ -708,23 +732,14 @@ export function ProductDetail({
           </div>
         </div>
 
-        {/* Modals */}
         {/* Size Guide Modal */}
         {showSizeGuide && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-8 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-6">
-                <div className="flex items-center">
-                  <h3 className="text-2xl font-serif mr-4">
-                    {product.productsizeguides && product.productsizeguides.length > 0
-                      ? product.productsizeguides[0].sizeguides.name
-                      : 'Size Chart'}
-                  </h3>
-                  <div className="flex-1 h-px bg-gray-300"></div>
-                  <span className="ml-4 text-sm font-script text-gray-600">
-                    {(tenant as TenantConfigWithExtras)?.name || 'Store'}
-                  </span>
-                </div>
+                <h3 className="text-2xl font-serif">
+                  Size Guide
+                </h3>
                 <button
                   onClick={() => setShowSizeGuide(false)}
                   className="text-gray-500 hover:text-gray-700 ml-4"
@@ -735,8 +750,20 @@ export function ProductDetail({
                 </button>
               </div>
 
-              {/* Dynamic Size Guide Table */}
-              {product.productsizeguides && product.productsizeguides.length > 0 ? (
+              {/* Show uploaded size guide image if available */}
+              {sizeGuideImageUrl ? (
+                <div className="space-y-4">
+                  <img
+                    src={sizeGuideImageUrl}
+                    alt="Size Guide"
+                    className="w-full max-w-2xl mx-auto rounded-lg border border-gray-200"
+                  />
+                  <p className="text-center text-sm text-gray-600">
+                    {(tenant as TenantConfigWithExtras)?.name || 'Store'} Size Guide
+                  </p>
+                </div>
+              ) : product.productsizeguides && product.productsizeguides.length > 0 ? (
+                /* Fallback to dynamic size guide table if available */
                 <div className="overflow-hidden">
                   {product.productsizeguides.map((productSizeGuide, index) => {
                     const sizeGuide = productSizeGuide.sizeguides
@@ -787,7 +814,7 @@ export function ProductDetail({
                   })}
                 </div>
               ) : (
-                /* Fallback to static size guide if no dynamic guides */
+                /* Fallback to static size guide if no image or dynamic guides */
                 <div className="overflow-hidden">
                   <table className="w-full">
                     <thead>
