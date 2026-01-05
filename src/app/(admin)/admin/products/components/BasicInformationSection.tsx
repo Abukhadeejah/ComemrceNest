@@ -111,7 +111,23 @@ export function BasicInformationSection({ formData, errors, onInputChange }: Bas
             <p className="mt-1 text-sm text-red-600">{errors?.description?.message}</p>
           )}
         </div>
-      </div>
+
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Short Description <span className="text-gray-400 text-xs">({(formData.short_description || '').length}/500)</span>
+          </label>
+          <textarea
+            rows={2}
+            value={formData.short_description || ''}
+            onChange={(e) => onInputChange('short_description', e.target.value)}
+            placeholder="Brief product summary shown in listings (50-150 characters recommended)"
+            maxLength={500}
+            className="block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-3 py-2"
+          />
+          {errors?.short_description && (
+            <p className="mt-1 text-sm text-red-600">{errors?.short_description?.message}</p>
+          )}
+        </div>      </div>
     </div>
   )
 }

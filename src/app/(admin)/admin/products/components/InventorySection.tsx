@@ -66,6 +66,26 @@ export function InventorySection({ formData, errors, onInputChange }: InventoryS
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
+            Barcode <span className="text-gray-400 text-xs">({(formData.barcode || '').length}/100)</span>
+          </label>
+          <input
+            type="text"
+            value={formData.barcode || ''}
+            onChange={(e) => onInputChange?.('barcode', e.target.value)}
+            maxLength={100}
+            className="block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-3 py-2"
+            placeholder="EAN-13, UPC, or other barcode"
+          />
+          {errors?.barcode && (
+            <p className="mt-1 text-sm text-red-600">{errors?.barcode?.message}</p>
+          )}
+          <p className="mt-1 text-sm text-gray-500">
+            Product barcode (EAN-13, UPC, ISBN, etc.)
+          </p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
             Low Stock Threshold
           </label>
           <input

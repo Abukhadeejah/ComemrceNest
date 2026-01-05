@@ -277,7 +277,11 @@ export function ProductForm({
           } else if (value !== null && value !== undefined) {
             // Convert numeric fields to integers
             if (numericFields.includes(key) && typeof value === 'number') {
-              form.append(formKey, String(Math.round(value)))
+              const rounded = Math.round(value)
+              if (['price_cents', 'compare_at_price_cents', 'cost_price_cents'].includes(key)) {
+                console.log(`💰 FormData ${key}: ${value} -> ${rounded}`)
+              }
+              form.append(formKey, String(rounded))
             } else {
               form.append(formKey, String(value))
             }

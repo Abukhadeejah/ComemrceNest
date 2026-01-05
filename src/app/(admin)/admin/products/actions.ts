@@ -155,12 +155,26 @@ export async function createProduct(formData: FormData) {
     name: formData.get('name') as string,
     slug: formData.get('slug') as string,
     description: formData.get('description') as string,
-    price_cents: parseInt(formData.get('price_cents') as string) || 0,
-    compare_at_price_cents: formData.get('compare_at_price_cents') ? parseInt(formData.get('compare_at_price_cents') as string) : null,
-    cost_per_item_cents: formData.get('cost_per_item_cents') ? parseInt(formData.get('cost_per_item_cents') as string) : null,
-    currency: 'INR',
-    stock: parseInt(formData.get('stock') as string) || 0,
+    short_description: formData.get('short_description') as string,
+    price_cents: (() => {
+      const val = formData.get('price_cents') ? parseInt(formData.get('price_cents') as string) : 0
+      console.log(`💰 Backend price_cents received: "${formData.get('price_cents')}" -> ${val}`)
+      return val
+    })(),
+    compare_at_price_cents: (() => {
+      const val = formData.get('compare_at_price_cents') ? parseInt(formData.get('compare_at_price_cents') as string) : null
+      console.log(`💰 Backend compare_at_price_cents received: "${formData.get('compare_at_price_cents')}" -> ${val}`)
+      return val
+    })(),
+    cost_per_item_cents: (() => {
+      const val = formData.get('cost_per_item_cents') ? parseInt(formData.get('cost_per_item_cents') as string) : null
+      console.log(`💰 Backend cost_per_item_cents received: "${formData.get('cost_per_item_cents')}" -> ${val}`)
+      return val
+    })(),
+    currency: formData.get('currency') as string || 'INR',
+    stock: formData.get('stock') ? parseInt(formData.get('stock') as string) : 0,
     sku: formData.get('sku') as string,
+    barcode: formData.get('barcode') as string,
     weight: formData.get('weight') as string,
     dimensions: formData.get('dimensions') as string,
     has_variants: formData.get('has_variants') === 'true',
@@ -218,6 +232,11 @@ export async function createProduct(formData: FormData) {
 
   // Basic server-side validation for product creation
   const creationProblems: string[] = []
+  
+  // Log incoming values for debugging
+  console.log('💵 FormData cost_per_item_cents:', formData.get('cost_per_item_cents'))
+  console.log('💵 ParsedData cost_per_item_cents:', productData.cost_per_item_cents)
+  
   if (!productData.name || !String(productData.name).trim()) creationProblems.push('Product name is required.')
   if (!productData.slug || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(String(productData.slug))) creationProblems.push('Slug must be kebab-case, lowercase letters, numbers and hyphens only.')
   if (!productData.status || !['draft', 'published'].includes(String(productData.status))) creationProblems.push('Invalid status. Use draft or published.')
@@ -306,6 +325,7 @@ export async function createProduct(formData: FormData) {
 
   console.log('✅ All field length validations passed')
   console.log('📝 Attempting to insert product into database...')
+  console.log('💰 Cost per item cents value:', productData.cost_per_item_cents, 'Type:', typeof productData.cost_per_item_cents)
 
   let product, error
   try {
@@ -719,12 +739,14 @@ export async function updateProduct(productId: string, formData: FormData) {
     name: formData.get('name') as string,
     slug: formData.get('slug') as string,
     description: formData.get('description') as string,
-    price_cents: parseInt(formData.get('price_cents') as string) || 0,
+    short_description: formData.get('short_description') as string,
+    price_cents: formData.get('price_cents') ? parseInt(formData.get('price_cents') as string) : 0,
     compare_at_price_cents: formData.get('compare_at_price_cents') ? parseInt(formData.get('compare_at_price_cents') as string) : null,
     cost_per_item_cents: formData.get('cost_per_item_cents') ? parseInt(formData.get('cost_per_item_cents') as string) : null,
-    currency: 'INR',
-    stock: parseInt(formData.get('stock') as string) || 0,
+    currency: formData.get('currency') as string || 'INR',
+    stock: formData.get('stock') ? parseInt(formData.get('stock') as string) : 0,
     sku: formData.get('sku') as string,
+    barcode: formData.get('barcode') as string,
     weight: formData.get('weight') as string,
     dimensions: formData.get('dimensions') as string,
     has_variants: formData.get('has_variants') === 'true',
