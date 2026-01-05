@@ -42,6 +42,9 @@ interface ProductData {
   hs_code?: string
   seo_url?: string
   // Fashion-specific fields
+  brand?: string | null
+  color?: string | null
+  material?: string | null
   material_composition?: string | null
   care_instructions?: string | null
   fit_type?: string | null
@@ -191,6 +194,10 @@ export async function createProduct(formData: FormData) {
     variantCombinations: JSON.parse(formData.get('variantCombinations') as string || '[]'),
     sizeGuides: JSON.parse(formData.get('sizeGuides') as string || '[]'),
     sizeGuideId: formData.get('sizeGuideId') as string,
+    // Product Details
+    brand: formData.get('brand') as string,
+    color: formData.get('color') as string,
+    material: formData.get('material') as string,
     // Badge System
     is_featured: formData.get('is_featured') === 'true',
     is_bestseller: formData.get('is_bestseller') === 'true',
@@ -297,9 +304,14 @@ export async function createProduct(formData: FormData) {
     throw new Error(`Validation failed - Field length exceeded:\n${lengthErrors.join('\n')}`)
   }
 
-  const { data: product, error } = await supabaseAdmin
-    .from('products')
-    .insert({
+  console.log('✅ All field length validations passed')
+  console.log('📝 Attempting to insert product into database...')
+
+  let product, error
+  try {
+    const insertResult = await supabaseAdmin
+      .from('products')
+      .insert({
       tenant_id: tenantId!,
       name: productData.name,
       slug: productData.slug,
@@ -348,12 +360,27 @@ export async function createProduct(formData: FormData) {
       // Tags
       tags: productData.tags || []
     })
-    .select()
-    .single()
+      .select()
+      .single()
+
+    product = insertResult.data
+    error = insertResult.error
+  } catch (insertError: any) {
+    console.error('❌ Product insert failed with error:', insertError)
+    throw new Error(`Failed to create product: ${insertError.message || String(insertError)}`)
+  }
 
   if (error) {
+    console.error('❌ Database error:', error)
+    console.error('❌ Error details:', JSON.stringify(error, null, 2))
+    
     if (error.message.includes('duplicate key value violates unique constraint "products_tenant_id_slug_key"')) {
       throw new Error(`A product with the slug "${productData.slug}" already exists. Please choose a different slug.`)
+    } else if (error.message.includes('value too long for type character varying')) {
+      // Extract which column from error if possible
+      const match = error.message.match(/column "([^"]+)"/)
+      const columnName = match ? match[1] : 'unknown'
+      throw new Error(`Field "${columnName}" exceeds database limit. ${error.message}`)
     } else {
       throw new Error(`Failed to create product: ${error.message}`)
     }
