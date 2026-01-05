@@ -309,10 +309,13 @@ export function ProductForm({
           console.log('Create product result:', result) // Debug log
           if ('id' in result) {
             createdProductId = result.id
-          } else {
+          } else if ('error' in result) {
             console.error('Product creation failed:', JSON.stringify(result, null, 2))
-            const errorMsg = (result as any)?.error || 'Failed to create product'
+            const errorMsg = (result as any).error || (result as any).message || 'Failed to create product'
             throw new Error(errorMsg)
+          } else {
+            console.error('Unexpected product creation response:', result)
+            throw new Error('Failed to create product - unexpected response from server')
           }
 
           const files = imageFiles.filter((i) => i instanceof File) as File[]
@@ -343,23 +346,27 @@ export function ProductForm({
         }
         router.refresh()
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'An error occurred'
-        if (
-          errorMessage.includes('duplicate key value violates unique constraint "products_tenant_id_slug_key"')
-        ) {
+        const errorMessage = error instanceof Error ? error.message : String(error)
+        console.error('[ProductForm] Error during submission:', errorMessage, error)
+        
+        if (errorMessage.includes('duplicate key value violates unique constraint "products_tenant_id_slug_key"')) {
           setError('slug', {
             type: 'manual',
             message: 'A product with this slug already exists. Please choose a different slug.',
           })
-          setFormError('A product with this slug already exists.')
+          setFormError('❌ A product with this slug already exists. Please choose a different slug.')
         } else if (errorMessage.includes('slug')) {
           setError('slug', {
             type: 'manual',
             message: 'Invalid slug format. Use only lowercase letters, numbers, and hyphens.',
           })
-          setFormError('Invalid slug format.')
+          setFormError('❌ Invalid slug format. Use only lowercase letters, numbers, and hyphens.')
+        } else if (errorMessage.includes('tenant')) {
+          setFormError('❌ Tenant not found. Please refresh and try again.')
+        } else if (errorMessage.includes('category')) {
+          setFormError('❌ Category error: ' + errorMessage)
         } else {
-          setFormError('An unexpected error occurred. Please try again or contact support.')
+          setFormError('❌ ' + (errorMessage || 'An unexpected error occurred. Please try again or contact support.'))
         }
         setIsSubmitting(false)
       }

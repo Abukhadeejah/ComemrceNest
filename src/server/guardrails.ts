@@ -429,20 +429,38 @@ export function logSecurityEvent(eventType: string, details: unknown) {
 
 /**
  * GUARDRAIL: Safe error response generator
+ * Returns user-friendly errors while logging detailed info for debugging
  */
 export function createSafeErrorResponse(error: unknown, operation: string) {
-  // Log the error securely
+  const errorMessage = error instanceof Error ? error.message : String(error)
+  
+  // Log the error securely for debugging
   logSecurityEvent('application_error', {
     operation,
-    error: error instanceof Error ? error.message : String(error),
+    error: errorMessage,
     stack: error instanceof Error ? error.stack?.substring(0, 500) : undefined, // Limit stack trace length
     timestamp: new Date().toISOString()
   })
 
-  // Return generic error to client (don't leak internal details)
+  // Extract user-friendly error message while sanitizing sensitive info
+  let userMessage = 'An unexpected error occurred. Please try again or contact support.'
+  
+  // Pass through specific error messages (safe ones)
+  if (errorMessage.includes('duplicate key value violates unique constraint')) {
+    userMessage = 'A product with this slug already exists. Please choose a different slug.'
+  } else if (errorMessage.includes('Tenant not found')) {
+    userMessage = 'Tenant not found. Please refresh the page and try again.'
+  } else if (errorMessage.includes('Failed to create product')) {
+    userMessage = errorMessage // Already user-friendly
+  } else if (errorMessage.includes('Validation failed')) {
+    userMessage = errorMessage // Already descriptive
+  } else if (errorMessage.includes('not found') || errorMessage.includes('does not exist')) {
+    userMessage = 'One of the referenced items (category, tax class, etc.) was not found. Please refresh and try again.'
+  }
+
   return {
     success: false,
-    error: 'An unexpected error occurred. Please try again or contact support.',
+    error: userMessage,
     operation
   }
 }
