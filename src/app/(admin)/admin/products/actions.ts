@@ -266,7 +266,22 @@ export async function createProduct(formData: FormData) {
     seo_url: 255,
     material_composition: 255,
     care_instructions: 1000,
-    currency: 3
+    currency: 3,
+    brand: 100,
+    color: 50,
+    material: 100,
+    status: 20,
+    tax_class_id: 255,
+    category_id: 255
+  }
+
+  // Log all string fields for debugging
+  console.log('🔍 Validating field lengths for product creation:')
+  for (const [field, limit] of Object.entries(fieldLimits)) {
+    const value = (productData as Record<string, unknown>)[field]
+    if (typeof value === 'string' && value.length > 0) {
+      console.log(`  ${field}: ${value.length}/${limit} chars`)
+    }
   }
 
   // Check for field length violations
@@ -713,7 +728,13 @@ export async function updateProduct(productId: string, formData: FormData) {
     seo_url: 255,
     material_composition: 255,
     care_instructions: 1000,
-    currency: 3
+    currency: 3,
+    brand: 100,
+    color: 50,
+    material: 100,
+    status: 20,
+    tax_class_id: 255,
+    category_id: 255
   }
 
   // Check for field length violations
