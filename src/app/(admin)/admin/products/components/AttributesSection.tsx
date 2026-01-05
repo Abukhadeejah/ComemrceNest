@@ -23,7 +23,7 @@ export function AttributesSection<T extends FieldValues>({
 			})) as unknown) as T[Path<T>],
 	})
 
-	const handleValueChange = (attributeId: string, valueId: string | null) => {
+	const handleValueToggle = (attributeId: string, valueId: string | null) => {
 		const currentValue = (field.value || []) as AttributeSelection[]
 		const updated = currentValue.map((item) => {
 			if (item.attributeId !== attributeId) return item
@@ -36,10 +36,7 @@ export function AttributesSection<T extends FieldValues>({
 			return { attributeId, valueIds: newIds }
 		})
 		// Ensure all attributes are represented
-		const missingAttrs = attributes.filter(
-			(attr) =>
-				!updated.some((item) => item.attributeId === attr.id)
-		)
+		const missingAttrs = attributes.filter((attr) => !updated.some((item) => item.attributeId === attr.id))
 		const finalValue = [
 			...updated,
 			...missingAttrs.map((attr) => ({
@@ -72,47 +69,40 @@ export function AttributesSection<T extends FieldValues>({
 					Product Attributes
 				</h3>
 				<p className="text-sm text-gray-600 mb-4">
-					Select a value for each product attribute
+					Select one or more values for each attribute
 				</p>
 			</div>
 
 			<div className="space-y-4">
 				{attributes.map((attribute) => {
-					const selection = currentSelections.find(
-						(s) => s.attributeId === attribute.id
-					)
+					const selection = currentSelections.find((s) => s.attributeId === attribute.id)
 					const selectedValueIds = selection?.valueIds || []
 
 					return (
 						<div key={attribute.id} className="border-b border-gray-200 pb-4 last:border-b-0">
-							<label className="block text-sm font-medium text-gray-900 mb-2">
+							<label className="block text-sm font-medium text-gray-900 mb-3">
 								{attribute.name}
 							</label>
-							<div className="flex flex-wrap gap-2">
-								<button
-									type="button"
-									onClick={() => handleValueChange(attribute.id, null)}
-									className={`px-3 py-2 rounded-md border text-sm font-medium transition ${
-										selectedValueIds.length === 0
-											? 'border-blue-500 bg-blue-50 text-blue-700'
-											: 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
-									}`}
-								>
-									None
-								</button>
+							<div className="space-y-2">
+								<label className="flex items-center gap-2 text-sm text-gray-700">
+									<input
+										type="checkbox"
+										checked={selectedValueIds.length === 0}
+										onChange={() => handleValueToggle(attribute.id, null)}
+										className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+									/>
+									<span>None</span>
+								</label>
 								{attribute.values.map((value) => (
-									<button
-										key={value.id}
-										type="button"
-										onClick={() => handleValueChange(attribute.id, value.id)}
-										className={`px-3 py-2 rounded-md border text-sm font-medium transition ${
-											selectedValueIds.includes(value.id)
-												? 'border-blue-500 bg-blue-50 text-blue-700'
-												: 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
-										}`}
-									>
-										{value.value}
-									</button>
+									<label key={value.id} className="flex items-center gap-2 text-sm text-gray-700">
+										<input
+											type="checkbox"
+											checked={selectedValueIds.includes(value.id)}
+											onChange={() => handleValueToggle(attribute.id, value.id)}
+											className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+										/>
+										<span>{value.value}</span>
+									</label>
 								))}
 							</div>
 						</div>

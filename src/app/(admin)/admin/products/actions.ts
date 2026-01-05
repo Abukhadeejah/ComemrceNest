@@ -246,6 +246,29 @@ export async function createProduct(formData: FormData) {
   if (productData.badge_display_until === '') productData.badge_display_until = null
   if (productData.badge_display_from === '') productData.badge_display_from = null
 
+  // Truncate fields to match database constraints
+  if (productData.slug && productData.slug.length > 255) {
+    productData.slug = productData.slug.substring(0, 255)
+  }
+  if (productData.sku && productData.sku.length > 100) {
+    productData.sku = productData.sku.substring(0, 100)
+  }
+  if (productData.fit_type && productData.fit_type.length > 50) {
+    productData.fit_type = productData.fit_type.substring(0, 50)
+  }
+  if (productData.model_wearing_size && productData.model_wearing_size.length > 50) {
+    productData.model_wearing_size = productData.model_wearing_size.substring(0, 50)
+  }
+  if (productData.custom_badge_text && productData.custom_badge_text.length > 100) {
+    productData.custom_badge_text = productData.custom_badge_text.substring(0, 100)
+  }
+  if (productData.badge_color && productData.badge_color.length > 50) {
+    productData.badge_color = productData.badge_color.substring(0, 50)
+  }
+  if (productData.hs_code && productData.hs_code.length > 50) {
+    productData.hs_code = productData.hs_code.substring(0, 50)
+  }
+
   const { data: product, error } = await supabaseAdmin
     .from('products')
     .insert({
@@ -293,6 +316,7 @@ export async function createProduct(formData: FormData) {
       badge_priority: productData.badge_priority,
       badge_display_until: productData.badge_display_until,
       badge_display_from: productData.badge_display_from,
+      size_guide_type: productData.sizeGuideId || null,
       // Tags
       tags: productData.tags || []
     })
@@ -542,7 +566,9 @@ export async function createProduct(formData: FormData) {
 
     } catch (error) {
       // GUARDRAIL: Comprehensive error handling
-      console.error('Product creation failed:', error)
+      console.error('Product creation failed - Full error:', error)
+      console.error('Error message:', error instanceof Error ? error.message : String(error))
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace')
 
       await logSecurityEvent('product_creation_failed', {
         tenantId: tenantId || 'unknown',
@@ -552,6 +578,16 @@ export async function createProduct(formData: FormData) {
           slug: formData.get('slug') as string || 'unknown'
         }
       })
+
+      // In development, return detailed error; in production, return safe error
+      if (process.env.NODE_ENV === 'development') {
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+          operation: 'createProduct',
+          details: error instanceof Error ? error.stack : undefined
+        }
+      }
 
       // GUARDRAIL: Return safe error response
       return createSafeErrorResponse(error, 'createProduct')
@@ -641,6 +677,29 @@ export async function updateProduct(productId: string, formData: FormData) {
   if (productData.badge_display_until === '') productData.badge_display_until = null
   if (productData.badge_display_from === '') productData.badge_display_from = null
 
+  // Truncate fields to match database constraints
+  if (productData.slug && productData.slug.length > 255) {
+    productData.slug = productData.slug.substring(0, 255)
+  }
+  if (productData.sku && productData.sku.length > 100) {
+    productData.sku = productData.sku.substring(0, 100)
+  }
+  if (productData.fit_type && productData.fit_type.length > 50) {
+    productData.fit_type = productData.fit_type.substring(0, 50)
+  }
+  if (productData.model_wearing_size && productData.model_wearing_size.length > 50) {
+    productData.model_wearing_size = productData.model_wearing_size.substring(0, 50)
+  }
+  if (productData.custom_badge_text && productData.custom_badge_text.length > 100) {
+    productData.custom_badge_text = productData.custom_badge_text.substring(0, 100)
+  }
+  if (productData.badge_color && productData.badge_color.length > 50) {
+    productData.badge_color = productData.badge_color.substring(0, 50)
+  }
+  if (productData.hs_code && productData.hs_code.length > 50) {
+    productData.hs_code = productData.hs_code.substring(0, 50)
+  }
+
   const { data: product, error } = await supabaseAdmin
     .from('products')
     .update({
@@ -687,6 +746,7 @@ export async function updateProduct(productId: string, formData: FormData) {
       badge_priority: productData.badge_priority,
       badge_display_until: productData.badge_display_until,
       badge_display_from: productData.badge_display_from,
+      size_guide_type: productData.sizeGuideId || null,
       // Tags
       tags: productData.tags || []
     })

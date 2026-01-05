@@ -61,6 +61,7 @@ export default async function SenlyshProductPage({ params }: SenlyshProductPageP
         pricecents: product.price_cents,  // Transform price_cents to pricecents
         currency: product.currency,
         compare_at_price_cents: product.compare_at_price_cents,
+        size_guide_type: product.size_guide_type,
         productsizeguides: product.product_size_guides?.map(psg => ({
           sizeguides: {
             id: psg.size_guides.id,

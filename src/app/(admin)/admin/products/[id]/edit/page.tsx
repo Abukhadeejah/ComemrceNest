@@ -32,7 +32,7 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
     }
 
     // Get related data separately to avoid query corruption
-    const [categoriesResult, imagesResult, variantOptionsResult, variantsResult] = await Promise.all([
+    const [categoriesResult, imagesResult, variantOptionsResult, variantsResult, attributeSelectionsResult] = await Promise.all([
       // Categories
       supabaseAdmin
         .from('product_categories')
@@ -64,7 +64,14 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
       supabaseAdmin
         .from('product_variants')
         .select('id, name, sku, price_cents, stock, attributes')
+        .eq('product_id', id),
+
+      // Attribute selections (multiple values per attribute)
+      supabaseAdmin
+        .from('product_attribute_values')
+        .select('attribute_value_id, attribute_values(attribute_id)')
         .eq('product_id', id)
+        .eq('tenant_id', tenantId)
     ])
 
     // Attach the related data to product object
@@ -185,6 +192,20 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
       imageUrl: ''
     }))
 
+    // Gather attribute selections grouped by attribute
+    const attributeSelectionMap = new Map<string, string[]>()
+    ;(attributeSelectionsResult.data || []).forEach((row: any) => {
+      const attributeId = row?.attribute_values?.attribute_id as string | undefined
+      const valueId = row?.attribute_value_id as string | undefined
+      if (!attributeId || !valueId) return
+      const existing = attributeSelectionMap.get(attributeId) || []
+      attributeSelectionMap.set(attributeId, existing.concat(valueId))
+    })
+    const attributeSelections = Array.from(attributeSelectionMap.entries()).map(([attributeId, valueIds]) => ({
+      attributeId,
+      valueIds
+    }))
+
     // FALLBACK: If has_variants is undefined, fetch it directly
     let hasVariants = product.has_variants
     if (hasVariants === undefined || hasVariants === null) {
@@ -277,7 +298,9 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
       badge_color: product.badge_color || '#ef4444',
       badge_priority: product.badge_priority || 0,
       badge_display_until: product.badge_display_until || '',
-      badge_display_from: product.badge_display_from || ''
+      badge_display_from: product.badge_display_from || '',
+      attributes: attributeSelections,
+      sizeGuideId: product.size_guide_type || ''
     }
 
     return (

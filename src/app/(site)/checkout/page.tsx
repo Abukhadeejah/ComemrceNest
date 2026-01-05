@@ -64,6 +64,8 @@ export default function CheckoutPage() {
   const tenant = useTenant()
   const [hydrated, setHydrated] = useState(false)
   const [tenantKey, setTenantKey] = useState<string | null>(null)
+  const [priceSummary, setPriceSummary] = useState({ subtotal: 0, tax: 0, total: 0 })
+  const grandTotal = priceSummary.total > 0 ? priceSummary.total : cart.total
 
   // Get tenant key from URL path or cookies (avoid hydration mismatch)
   useEffect(() => {
@@ -118,10 +120,6 @@ export default function CheckoutPage() {
   const [showNewAddressForm, setShowNewAddressForm] = useState(false)
   const [saveAsDefault, setSaveAsDefault] = useState(false)
 
-  // GST rate from tenant config (default 0)
-  const gstRatePercent = tenant.pricing?.gstRatePercent ?? 0
-  const gstAmount = Math.round(cart.total * (gstRatePercent / 100))
-  const grandTotal = cart.total + gstAmount
 
   // Load existing addresses and user profile
   useEffect(() => {
@@ -214,6 +212,55 @@ export default function CheckoutPage() {
     }
   }, [tenant])
 
+  // Keep price summary in sync with cart items with server-side tax
+  useEffect(() => {
+    if (!hydrated) return
+    if (!cart.items.length) {
+      setPriceSummary({ subtotal: 0, tax: 0, total: 0 })
+      return
+    }
+
+    const controller = new AbortController()
+    const loadQuote = async () => {
+      try {
+        const response = await fetch('/api/checkout', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            mode: 'quote',
+            tenantKey: tenantKey || tenant.key,
+            items: cart.items.map((item) => ({
+              productId: item.productId,
+              quantity: item.quantity,
+              unitPriceCents: item.price,
+            })),
+          }),
+          signal: controller.signal,
+        })
+
+        if (!response.ok) {
+          setPriceSummary({ subtotal: cart.total, tax: 0, total: cart.total })
+          return
+        }
+
+        const json = await response.json()
+        const totals = json?.totals || {}
+        setPriceSummary({
+          subtotal: Number(totals.subtotalCents) || cart.total,
+          tax: Number(totals.taxCents) || 0,
+          total: Number(totals.totalCents) || cart.total,
+        })
+      } catch (error) {
+        if (controller.signal.aborted) return
+        console.error('Failed to load tax quote', error)
+        setPriceSummary({ subtotal: cart.total, tax: 0, total: cart.total })
+      }
+    }
+
+    loadQuote()
+    return () => controller.abort()
+  }, [cart.items, cart.total, hydrated])
+
   const handleAddressSelection = (addressId: string) => {
     setSelectedAddressId(addressId)
     setShowNewAddressForm(false)
@@ -289,6 +336,7 @@ export default function CheckoutPage() {
         body: JSON.stringify({ 
           amountPaise, 
           mode: 'test', 
+          tenantKey: tenantKey || tenant.key,
           customer,
           items: validItems.map(it => ({
             productId: it.productId,
@@ -421,16 +469,16 @@ export default function CheckoutPage() {
               <div className="bg-blue-50 rounded-xl p-6 space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Subtotal</span>
-                  <span className="font-semibold text-gray-900">{formatPrice(cart.total)}</span>
+                  <span className="font-semibold text-gray-900">{formatPrice(priceSummary.subtotal)}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600">GST ({gstRatePercent}%)</span>
-                  <span className="font-semibold text-gray-900">{formatPrice(gstAmount)}</span>
+                  <span className="text-gray-600">Tax</span>
+                  <span className="font-semibold text-gray-900">{formatPrice(priceSummary.tax)}</span>
                 </div>
                 <div className="border-t border-blue-200 pt-3">
                   <div className="flex justify-between items-center">
                     <span className="text-xl font-bold text-gray-900">Total</span>
-                    <span className="text-2xl font-bold text-blue-600">{formatPrice(grandTotal)}</span>
+                    <span className="text-2xl font-bold text-blue-600">{formatPrice(priceSummary.total)}</span>
                   </div>
                 </div>
               </div>
@@ -612,7 +660,7 @@ export default function CheckoutPage() {
 
           <div className="space-y-4">
             <button 
-              disabled={busy || !scriptLoaded || cart.total <= 0} 
+              disabled={busy || !scriptLoaded || grandTotal <= 0} 
               onClick={() => handlePayment(grandTotal)}
               className={`w-full text-white py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none ${
                 paymentProvider === 'phonepe' 

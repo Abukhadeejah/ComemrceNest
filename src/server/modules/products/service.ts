@@ -197,7 +197,7 @@ export async function fetchProductBySlug(tenantId: string, slug: string) {
   const { data, error } = await supabaseAdmin
     .from('products')
     .select(`
-      id, name, slug, description, price_cents, compare_at_price_cents, currency, hero_image_url, meta_title, meta_description,
+      id, name, slug, description, price_cents, compare_at_price_cents, currency, hero_image_url, meta_title, meta_description, size_guide_type,
       product_size_guides(
         size_guide_id,
         size_guides(
@@ -319,20 +319,19 @@ export async function fetchProductAttributes(tenantId: string, productId: string
     return []
   }
 
-  // Transform the data into a simpler structure
-  return data
-    .map((row: any) => {
-      const av = row.attribute_values
-      const attr = av?.attributes
-      if (!av || !attr) return null
-      return {
-        id: attr.id,
-        name: attr.name,
-        valueId: av.id,
-        value: av.value,
-      }
-    })
-    .filter((item: any) => item !== null)
+  const byAttribute = new Map<string, { id: string; name: string; values: { id: string; value: string }[] }>()
+
+  data.forEach((row: any) => {
+    const av = row.attribute_values
+    const attr = av?.attributes
+    if (!av || !attr) return
+
+    const existing = byAttribute.get(attr.id) || { id: attr.id, name: attr.name, values: [] }
+    existing.values.push({ id: av.id, value: av.value })
+    byAttribute.set(attr.id, existing)
+  })
+
+  return Array.from(byAttribute.values())
 }
 
 export async function fetchProductVariantOptions(tenantId: string, productId: string) {

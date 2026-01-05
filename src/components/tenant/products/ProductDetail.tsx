@@ -16,6 +16,7 @@ type ProductServerResponse = Partial<Product> & {
   name: string
   pricecents: number
   currency?: string
+  size_guide_type?: string | null
   productsizeguides?: {
     sizeguides: {
       id: string
@@ -72,7 +73,7 @@ interface ProductDetailProps {
   attributes?: Array<{
     id: string
     name: string
-    value: string
+    values: Array<{ id: string; value: string }>
   }>
 }
 
@@ -95,13 +96,15 @@ export function ProductDetail({
   const [showDeliveryReturns, setShowDeliveryReturns] = useState(false)
   const [showAskQuestion, setShowAskQuestion] = useState(false)
   const [sizeGuideImageUrl, setSizeGuideImageUrl] = useState<string | null>(() => {
-    // Extract size_guide_id from product_size_guides relationship
+    const uploadedUrl = (product as Record<string, unknown>)?.size_guide_type as string | undefined
+    if (uploadedUrl && uploadedUrl.trim().length > 0) return uploadedUrl
     if (product.product_size_guides && Array.isArray(product.product_size_guides) && product.product_size_guides.length > 0) {
       const firstGuide = product.product_size_guides[0] as unknown as { size_guide_id?: string }
       return firstGuide?.size_guide_id || null
     }
     return null
   })
+  const hasSizeGuide = Boolean(sizeGuideImageUrl) || Boolean(product.product_size_guides?.length) || Boolean(product.productsizeguides?.length)
   const [peopleViewing, setPeopleViewing] = useState(29)
 
 
@@ -536,36 +539,53 @@ export function ProductDetail({
 
               {/* Quick Links */}
               <div className="flex space-x-4">
-                {sizeGuideImageUrl && (
-                  <button
-                    onClick={() => setShowSizeGuide(true)}
-                    title="View Size Guide"
-                    className="flex items-center justify-center w-8 h-8 rounded-full border border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-colors"
-                  >
-                    <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {hasSizeGuide && (
+                  <>
+                    {sizeGuideImageUrl && (
+                      <button
+                        onClick={() => setShowSizeGuide(true)}
+                        title="View Size Guide"
+                        className="flex items-center justify-center w-8 h-8 rounded-full border border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                      >
+                        <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setShowSizeGuide(true)}
+                      className="flex items-center space-x-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                        />
+                      </svg>
+                      <span>Size Guide</span>
+                    </button>
+                  </>
+                )}
+                {!hasSizeGuide && (
+                  <div className="flex items-center space-x-2 text-sm text-gray-400">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         strokeWidth={2}
-                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
                       />
                     </svg>
-                  </button>
+                    <span>Size guide unavailable</span>
+                  </div>
                 )}
-                <button
-                  onClick={() => setShowSizeGuide(true)}
-                  className="flex items-center space-x-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                    />
-                  </svg>
-                  <span>Size Guide</span>
-                </button>
                 <button
                   onClick={() => setShowDeliveryReturns(true)}
                   className="flex items-center space-x-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
@@ -692,7 +712,7 @@ export function ProductDetail({
                           {attributes.map((attr) => (
                             <tr key={attr.id} className="border-b">
                               <td className="py-2 font-medium">{attr.name}</td>
-                              <td className="py-2">{attr.value}</td>
+                              <td className="py-2">{attr.values.map((v) => v.value).join(', ')}</td>
                             </tr>
                           ))}
                         </>

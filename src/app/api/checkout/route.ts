@@ -1,18 +1,83 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPhonePePayment } from '@/lib/payments/phonepe';
 import { supabaseAdmin } from '@/server/supabaseAdmin';
-import { resolveTenantIdFromRequest } from '@/server/tenant';
-import { getPaymentProvider, resolveRazorpayCredentials, resolvePhonePeCredentials } from '@/server/payments';
+import { resolveTenantIdFromRequest, resolveTenantIdFromKey } from '@/server/tenant';
+import { getPaymentProvider, resolveRazorpayCredentials } from '@/server/payments';
 import Razorpay from 'razorpay';
+
+interface CheckoutItem {
+  productId: string;
+  quantity: number;
+  unitPriceCents?: number;
+}
+
+async function calculateCartTotals(tenantId: string, items: CheckoutItem[]) {
+  if (!Array.isArray(items) || items.length === 0) {
+    return { subtotalCents: 0, taxCents: 0, totalCents: 0 };
+  }
+
+  const productIds = items.map((it) => it.productId);
+  const { data: products, error: productsError } = await supabaseAdmin
+    .from('products')
+    .select('id, price_cents, tax_class_id, taxable')
+    .eq('tenant_id', tenantId)
+    .in('id', productIds);
+
+  if (productsError || !products) {
+    console.error('[checkout] failed to load products for tax calc', productsError);
+    return { subtotalCents: 0, taxCents: 0, totalCents: 0 };
+  }
+
+  const taxClassIds = Array.from(
+    new Set(
+      products
+        .map((p) => p.tax_class_id)
+        .filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
+    )
+  );
+
+  const taxClassMap = new Map<string, number>();
+  if (taxClassIds.length > 0) {
+    const { data: taxClasses } = await supabaseAdmin
+      .from('tax_classes')
+      .select('id, rate_percent')
+      .eq('tenant_id', tenantId)
+      .in('id', taxClassIds);
+
+    (taxClasses || []).forEach((tc) => {
+      taxClassMap.set(tc.id, Number(tc.rate_percent) || 0);
+    });
+  }
+
+  let subtotalCents = 0;
+  let taxCents = 0;
+
+  items.forEach((item) => {
+    const product = products.find((p) => p.id === item.productId);
+    if (!product) return;
+    const unitPrice = typeof product.price_cents === 'number' ? product.price_cents : 0;
+    const qty = Number(item.quantity) || 0;
+    const lineSubtotal = unitPrice * qty;
+    subtotalCents += lineSubtotal;
+
+    const taxRatePercent = product.taxable === false ? 0 : (product.tax_class_id ? taxClassMap.get(product.tax_class_id) || 0 : 0);
+    const lineTax = Math.round((lineSubtotal * taxRatePercent) / 100);
+    taxCents += lineTax;
+  });
+
+  return {
+    subtotalCents,
+    taxCents,
+    totalCents: subtotalCents + taxCents,
+  };
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const tenantId = await resolveTenantIdFromRequest();
-    if (!tenantId) {
-      return NextResponse.json({ error: 'tenant_not_found' }, { status: 400 });
-    }
+    const resolvedTenantId = await resolveTenantIdFromRequest();
 
     const body = (await request.json().catch(() => ({}))) as {
+      tenantKey?: string;
       amountPaise?: number;
       mode?: 'test' | 'live';
       customer?: {
@@ -26,26 +91,44 @@ export async function POST(request: NextRequest) {
         pincode?: string;
         gstin?: string;
       };
-      items?: Array<{
-        productId: string;
-        quantity: number;
-        unitPriceCents: number;
-      }>;
+      items?: CheckoutItem[];
     };
 
-    const amountPaise = typeof body.amountPaise === 'number' ? body.amountPaise : 100;
+    // Fallback to explicit tenant key from client if middleware header/cookie is missing (e.g., global checkout routes)
+    const explicitTenantId = body.tenantKey ? await resolveTenantIdFromKey(body.tenantKey) : null;
+    const tenantId = resolvedTenantId || explicitTenantId;
+
+    if (!tenantId) {
+      return NextResponse.json({ error: 'tenant_not_found' }, { status: 400 });
+    }
+
     const customerEmail = body.customer?.email || 'guest@example.com';
     const customerPhone = body.customer?.phone || '9999999999';
+
+    const itemPayload: CheckoutItem[] = Array.isArray(body.items)
+      ? body.items.map((it) => ({
+          productId: String(it.productId),
+          quantity: Number(it.quantity) || 0,
+          unitPriceCents: typeof it.unitPriceCents === 'number' ? it.unitPriceCents : undefined,
+        }))
+      : [];
+
+    const totals = await calculateCartTotals(tenantId, itemPayload);
+    const amountPaise = totals.totalCents || body.amountPaise || 0;
 
     // Get payment provider for this tenant
     const provider = await getPaymentProvider(tenantId);
     console.log(`[checkout] Using payment provider: ${provider} for tenant: ${tenantId}`);
 
+    if (body.mode === 'quote') {
+      return NextResponse.json({ totals });
+    }
+
     // Route to appropriate payment provider
     if (provider === 'phonepe') {
-      return await handlePhonePeCheckout(tenantId, amountPaise, customerEmail, customerPhone, body);
+      return await handlePhonePeCheckout(tenantId, amountPaise, customerEmail, customerPhone, { ...body, items: itemPayload, totals });
     } else if (provider === 'razorpay') {
-      return await handleRazorpayCheckout(tenantId, amountPaise, customerEmail, customerPhone, body);
+      return await handleRazorpayCheckout(tenantId, amountPaise, customerEmail, customerPhone, { ...body, items: itemPayload, totals });
     } else {
       return NextResponse.json({ error: 'unsupported_payment_provider' }, { status: 400 });
     }
@@ -65,7 +148,7 @@ async function handlePhonePeCheckout(
   amountPaise: number,
   customerEmail: string,
   customerPhone: string,
-  body: any
+  body: { items?: CheckoutItem[]; totals?: { subtotalCents: number; taxCents: number; totalCents: number } }
 ) {
   // Check if SDK credentials are configured
   const clientId = process.env.PHONEPE_CLIENT_ID;
@@ -90,14 +173,16 @@ async function handlePhonePeCheckout(
   );
 
   // Persist order items
-  if (Array.isArray(body.items) && body.items.length > 0) {
-    const itemsPayload = body.items.map((it: any) => ({
+  const items = body.items || [];
+  if (Array.isArray(items) && items.length > 0) {
+    const itemsPayload = items.map((it) => ({
       tenant_id: tenantId,
       order_id: orderId,
       product_id: it.productId,
       quantity: it.quantity,
-      unit_price_cents: it.unitPriceCents,
-      subtotal_cents: it.unitPriceCents * it.quantity,
+      unit_price_cents: it.unitPriceCents ?? 0,
+      subtotal_cents: (it.unitPriceCents ?? 0) * it.quantity,
+      tax_cents: body.totals ? Math.round((body.totals.taxCents / Math.max(items.length, 1))) : undefined,
     }));
     
     await supabaseAdmin.from('order_items').insert(itemsPayload);
@@ -117,7 +202,7 @@ async function handleRazorpayCheckout(
   amountPaise: number,
   customerEmail: string,
   customerPhone: string,
-  body: any
+  body: { items?: CheckoutItem[]; totals?: { subtotalCents: number; taxCents: number; totalCents: number } }
 ) {
   const credentials = await resolveRazorpayCredentials(tenantId);
   if (!credentials) {
@@ -157,14 +242,16 @@ async function handleRazorpayCheckout(
   }
 
   // Persist order items
-  if (Array.isArray(body.items) && body.items.length > 0) {
-    const itemsPayload = body.items.map((it: any) => ({
+  const items = body.items || [];
+  if (Array.isArray(items) && items.length > 0) {
+    const itemsPayload = items.map((it) => ({
       tenant_id: tenantId,
       order_id: order.id,
       product_id: it.productId,
       quantity: it.quantity,
-      unit_price_cents: it.unitPriceCents,
-      subtotal_cents: it.unitPriceCents * it.quantity,
+      unit_price_cents: it.unitPriceCents ?? 0,
+      subtotal_cents: (it.unitPriceCents ?? 0) * it.quantity,
+      tax_cents: body.totals ? Math.round((body.totals.taxCents / Math.max(items.length, 1))) : undefined,
     }));
     
     await supabaseAdmin.from('order_items').insert(itemsPayload);

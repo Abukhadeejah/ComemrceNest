@@ -30,25 +30,24 @@ export function PricingSection({ formData, errors, onInputChange }: PricingSecti
 
 
 
-  // Convert rupees to cents for storage (integers only)
+  // Convert rupees (with optional paise) to integer cents with stable rounding
   const rupeesToCents = (rupees: string): number => {
     if (!rupees || rupees.trim() === '') return 0
-    
-    // Remove any non-numeric characters (no decimals allowed)
-    const cleanValue = rupees.replace(/[^\d]/g, '')
-    const value = parseInt(cleanValue, 10)
-    
-    if (isNaN(value) || value < 0) return 0
-    
-    // Convert rupees to cents (multiply by 100)
-    const cents = value * 100
-    
-    // Validate the result is within reasonable bounds
+
+    const cleaned = rupees.replace(/[^\d.]/g, '')
+    const numeric = Number.parseFloat(cleaned)
+
+    if (!Number.isFinite(numeric) || numeric < 0) return 0
+
+    // Fix to two decimals before scaling to avoid floating drift
+    const normalized = Number(numeric.toFixed(2))
+    const cents = Math.round(normalized * 100)
+
     if (cents > Number.MAX_SAFE_INTEGER) {
       console.warn('Price value too large, capping at safe integer limit')
       return Number.MAX_SAFE_INTEGER
     }
-    
+
     return cents
   }
 
@@ -69,24 +68,20 @@ export function PricingSection({ formData, errors, onInputChange }: PricingSecti
 
   // Calculate profit margin: (Sale Price - Cost) / Sale Price * 100
   const calculateProfitMargin = (): string => {
-    const salePrice = formData.price_cents || 0
-    const cost = formData.cost_price_cents || 0
-    
-    if (salePrice === 0) return '0.00'
-    
+    const salePrice = Number(formData.price_cents) || 0
+    const cost = Number(formData.cost_price_cents) || 0
+    if (salePrice <= 0) return '0.00'
     const margin = ((salePrice - cost) / salePrice) * 100
-    return margin.toFixed(2)
+    return Number.isFinite(margin) ? margin.toFixed(2) : '0.00'
   }
 
   // Calculate markup: (Sale Price - Cost) / Cost * 100
   const calculateMarkup = (): string => {
-    const salePrice = formData.price_cents || 0
-    const cost = formData.cost_price_cents || 0
-    
-    if (cost === 0) return '0.00'
-    
+    const salePrice = Number(formData.price_cents) || 0
+    const cost = Number(formData.cost_price_cents) || 0
+    if (cost <= 0) return '0.00'
     const markup = ((salePrice - cost) / cost) * 100
-    return markup.toFixed(2)
+    return Number.isFinite(markup) ? markup.toFixed(2) : '0.00'
   }
 
   // Validate price relationships
@@ -121,10 +116,11 @@ export function PricingSection({ formData, errors, onInputChange }: PricingSecti
           </label>
           <input
             type="number"
+            inputMode="decimal"
+            step="0.01"
             value={inputValues.mrp}
             onChange={(e) => handlePriceInput('mrp', e.target.value)}
             placeholder="500"
-            step="1"
             min="0"
             className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
           />
@@ -143,10 +139,11 @@ export function PricingSection({ formData, errors, onInputChange }: PricingSecti
           </label>
           <input
             type="number"
+            inputMode="decimal"
+            step="0.01"
             value={inputValues.salePrice}
             onChange={(e) => handlePriceInput('salePrice', e.target.value)}
             placeholder="480"
-            step="1"
             min="0"
             className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
           />
@@ -165,10 +162,11 @@ export function PricingSection({ formData, errors, onInputChange }: PricingSecti
           </label>
           <input
             type="number"
+            inputMode="decimal"
+            step="0.01"
             value={inputValues.costPrice}
             onChange={(e) => handlePriceInput('costPrice', e.target.value)}
             placeholder="300"
-            step="1"
             min="0"
             className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
           />
