@@ -140,12 +140,12 @@ export class StorageService {
       }
     }
 
-    // Check file size (5MB limit)
-    const maxSize = 5 * 1024 * 1024 // 5MB
+    // Check file size (10MB limit)
+    const maxSize = 10 * 1024 * 1024 // 10MB
     if (file.size > maxSize) {
       return { 
         valid: false, 
-        error: 'File too large. Maximum size is 5MB.' 
+        error: 'File too large. Maximum size is 10MB.' 
       }
     }
 

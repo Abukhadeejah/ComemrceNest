@@ -394,14 +394,25 @@ export async function createProduct(formData: FormData) {
     : []
 
   if (categoryIdsToAssign.length > 0) {
-    const categoryInserts = categoryIdsToAssign.map(categoryId => ({
-      product_id: product.id,
-      category_id: categoryId,
-      tenant_id: tenantId!
-    }))
-    await supabaseAdmin
-      .from('product_categories')
-      .insert(categoryInserts)
+    try {
+      console.log('📝 Inserting product categories...')
+      const categoryInserts = categoryIdsToAssign.map(categoryId => ({
+        product_id: product.id,
+        category_id: categoryId,
+        tenant_id: tenantId!
+      }))
+      const { error: catError } = await supabaseAdmin
+        .from('product_categories')
+        .insert(categoryInserts)
+      
+      if (catError) {
+        console.error('❌ Failed to insert categories:', catError)
+        throw new Error(`Category insert failed: ${catError.message}`)
+      }
+    } catch (err) {
+      console.error('❌ Exception during category insert:', err)
+      throw err
+    }
   }
 
   // Handle product attributes (support multiple selected values per attribute)
@@ -459,15 +470,30 @@ export async function createProduct(formData: FormData) {
 
   // Handle variant options (using UPSERT to prevent duplicates)
   if (Array.isArray(productData.variantOptions) && productData.variantOptions.length > 0) {
-    const variantOptionPromises = productData.variantOptions.map(async (option: Record<string, unknown>) => {
-      // First, upsert the variant option (prevent duplicates)
-      const { data: variantOption, error: optionError } = await supabaseAdmin
-        .from('variant_options')
-        .upsert({
-          tenant_id: tenantId!,
-          name: option.name as string,
-          display_name: option.displayName as string,
-          type: option.type as string,
+    console.log('📝 Processing variant options...')
+    console.log('Variant options data:', JSON.stringify(productData.variantOptions, null, 2))
+    
+    try {
+      const variantOptionPromises = productData.variantOptions.map(async (option: Record<string, unknown>) => {
+        // Validate variant option fields
+        const optionName = String(option.name || '')
+        const optionDisplayName = String(option.displayName || '')
+        const optionType = String(option.type || '')
+        
+        console.log(`Validating variant option: name="${optionName}" (${optionName.length} chars), type="${optionType}" (${optionType.length} chars)`)
+        
+        if (optionType.length > 50) {
+          throw new Error(`Variant option type "${optionType}" exceeds 50 character limit (${optionType.length} chars)`)
+        }
+        
+        // First, upsert the variant option (prevent duplicates)
+        const { data: variantOption, error: optionError } = await supabaseAdmin
+          .from('variant_options')
+          .upsert({
+            tenant_id: tenantId!,
+            name: optionName,
+            display_name: optionDisplayName,
+            type: optionType,
           required: option.required as boolean,
           sort_order: 0
         }, {
@@ -495,13 +521,22 @@ export async function createProduct(formData: FormData) {
         : []
       if (optionValues.length > 0) {
         const valuePromises = optionValues.map(async (value: Record<string, unknown>) => {
+          const valueStr = String(value.value || '')
+          const displayValueStr = String(value.displayValue || '')
+          
+          console.log(`Validating option value: value="${valueStr}" (${valueStr.length} chars), displayValue="${displayValueStr}" (${displayValueStr.length} chars)`)
+          
+          if (valueStr.length > 50) {
+            throw new Error(`Variant option value "${valueStr}" exceeds 50 character limit (${valueStr.length} chars)`)
+          }
+          
           return supabaseAdmin
             .from('variant_option_values')
             .upsert({
               tenant_id: tenantId!,
               option_id: variantOption.id,
-              value: value.value as string,
-              display_value: value.displayValue as string,
+              value: valueStr,
+              display_value: displayValueStr,
               color_hex: value.colorHex as string,
               image_url: value.imageUrl as string,
               price_adjustment_cents: value.priceAdjustmentCents ? parseInt(String(value.priceAdjustmentCents)) : 0,
@@ -516,6 +551,11 @@ export async function createProduct(formData: FormData) {
       return variantOption
     })
     await Promise.all(variantOptionPromises)
+    console.log('✅ Variant options processed successfully')
+    } catch (variantErr) {
+      console.error('❌ Failed during variant options processing:', variantErr)
+      throw variantErr
+    }
   }
 
   // Handle variant combinations
@@ -564,21 +604,36 @@ export async function createProduct(formData: FormData) {
 
   // Handle size guides
   if (Array.isArray(productData.sizeGuides) && productData.sizeGuides.length > 0) {
-    const sizeGuidePromises = productData.sizeGuides.map(async (guide: Record<string, unknown>) => {
-      // Create the size guide
-      const { data: sizeGuide, error: sizeGuideError } = await supabaseAdmin
-        .from('size_guides')
-        .insert({
-          tenant_id: tenantId!,
-          name: guide.name as string,
-          category: guide.category as string,
-          gender: guide.gender as string,
-          measurements: adaptToSupabaseJson(guide.measurements as Record<string, unknown>)
-        })
-        .select()
-        .single()
+    console.log('📝 Processing size guides...')
+    try {
+      const sizeGuidePromises = productData.sizeGuides.map(async (guide: Record<string, unknown>) => {
+        const guideName = String(guide.name || '')
+        const guideCategory = String(guide.category || '')
+        const guideGender = String(guide.gender || '')
+        
+        console.log(`Validating size guide: name="${guideName}" (${guideName.length} chars), category="${guideCategory}" (${guideCategory.length} chars), gender="${guideGender}" (${guideGender.length} chars)`)
+        
+        if (guideCategory.length > 50) {
+          throw new Error(`Size guide category "${guideCategory}" exceeds 50 character limit (${guideCategory.length} chars)`)
+        }
+        if (guideGender.length > 50) {
+          throw new Error(`Size guide gender "${guideGender}" exceeds 50 character limit (${guideGender.length} chars)`)
+        }
+        
+        // Create the size guide
+        const { data: sizeGuide, error: sizeGuideError } = await supabaseAdmin
+          .from('size_guides')
+          .insert({
+            tenant_id: tenantId!,
+            name: guideName,
+            category: guideCategory,
+            gender: guideGender,
+            measurements: adaptToSupabaseJson(guide.measurements as Record<string, unknown>)
+          })
+          .select()
+          .single()
 
-      if (sizeGuideError) throw sizeGuideError
+        if (sizeGuideError) throw sizeGuideError
 
       // Link the size guide to the product
       await supabaseAdmin
@@ -593,6 +648,11 @@ export async function createProduct(formData: FormData) {
     })
 
     await Promise.all(sizeGuidePromises)
+    console.log('✅ Size guides processed successfully')
+    } catch (sizeGuideErr) {
+      console.error('❌ Failed during size guide processing:', sizeGuideErr)
+      throw sizeGuideErr
+    }
   }
 
   // Handle selected size guide

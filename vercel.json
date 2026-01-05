@@ -6,7 +6,9 @@
   "framework": "nextjs",
   "functions": {
     "app/api/**/*.ts": {
-      "maxDuration": 30
+      "maxDuration": 30,
+      "memory": 1024,
+      "maxRequestBodySize": "15mb"
     }
   },
   "headers": [

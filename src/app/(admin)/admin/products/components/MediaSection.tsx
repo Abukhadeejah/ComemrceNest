@@ -10,7 +10,7 @@ interface MediaSectionProps {
   productId?: string
 }
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB in bytes
+const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB in bytes
 const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif']
 
 export function MediaSection({ images, onImagesChange }: MediaSectionProps) {
@@ -45,7 +45,7 @@ export function MediaSection({ images, onImagesChange }: MediaSectionProps) {
         
         // Check file size
         if (file.size > MAX_FILE_SIZE) {
-          errors.push(`${file.name}: File too large. Max size is 5MB.`)
+          errors.push(`${file.name}: File too large. Max size is 10MB.`)
           return
         }
         
