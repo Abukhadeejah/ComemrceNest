@@ -247,26 +247,39 @@ export async function createProduct(formData: FormData) {
   if (productData.badge_display_from === '') productData.badge_display_from = null
 
   // Truncate fields to match database constraints
-  if (productData.slug && productData.slug.length > 255) {
-    productData.slug = productData.slug.substring(0, 255)
+  // Validate field lengths - throw error if any field exceeds database limits
+  const fieldLimits: Record<string, number> = {
+    name: 255,
+    slug: 255,
+    description: 5000,
+    short_description: 500,
+    sku: 100,
+    barcode: 100,
+    dimensions: 255,
+    meta_title: 255,
+    meta_description: 500,
+    fit_type: 50,
+    model_wearing_size: 50,
+    custom_badge_text: 100,
+    badge_color: 50,
+    hs_code: 50,
+    seo_url: 255,
+    material_composition: 255,
+    care_instructions: 1000,
+    currency: 3
   }
-  if (productData.sku && productData.sku.length > 100) {
-    productData.sku = productData.sku.substring(0, 100)
+
+  // Check for field length violations
+  const lengthErrors: string[] = []
+  for (const [field, limit] of Object.entries(fieldLimits)) {
+    const value = (productData as Record<string, unknown>)[field]
+    if (typeof value === 'string' && value.length > limit) {
+      lengthErrors.push(`${field} (${value.length} characters) exceeds maximum length of ${limit}`)
+    }
   }
-  if (productData.fit_type && productData.fit_type.length > 50) {
-    productData.fit_type = productData.fit_type.substring(0, 50)
-  }
-  if (productData.model_wearing_size && productData.model_wearing_size.length > 50) {
-    productData.model_wearing_size = productData.model_wearing_size.substring(0, 50)
-  }
-  if (productData.custom_badge_text && productData.custom_badge_text.length > 100) {
-    productData.custom_badge_text = productData.custom_badge_text.substring(0, 100)
-  }
-  if (productData.badge_color && productData.badge_color.length > 50) {
-    productData.badge_color = productData.badge_color.substring(0, 50)
-  }
-  if (productData.hs_code && productData.hs_code.length > 50) {
-    productData.hs_code = productData.hs_code.substring(0, 50)
+
+  if (lengthErrors.length > 0) {
+    throw new Error(`Validation failed - Field length exceeded:\n${lengthErrors.join('\n')}`)
   }
 
   const { data: product, error } = await supabaseAdmin
@@ -681,23 +694,39 @@ export async function updateProduct(productId: string, formData: FormData) {
   if (productData.slug && productData.slug.length > 255) {
     productData.slug = productData.slug.substring(0, 255)
   }
-  if (productData.sku && productData.sku.length > 100) {
-    productData.sku = productData.sku.substring(0, 100)
+  // Validate field lengths - throw error if any field exceeds database limits
+  const fieldLimits: Record<string, number> = {
+    name: 255,
+    slug: 255,
+    description: 5000,
+    short_description: 500,
+    sku: 100,
+    barcode: 100,
+    dimensions: 255,
+    meta_title: 255,
+    meta_description: 500,
+    fit_type: 50,
+    model_wearing_size: 50,
+    custom_badge_text: 100,
+    badge_color: 50,
+    hs_code: 50,
+    seo_url: 255,
+    material_composition: 255,
+    care_instructions: 1000,
+    currency: 3
   }
-  if (productData.fit_type && productData.fit_type.length > 50) {
-    productData.fit_type = productData.fit_type.substring(0, 50)
+
+  // Check for field length violations
+  const lengthErrors: string[] = []
+  for (const [field, limit] of Object.entries(fieldLimits)) {
+    const value = (productData as Record<string, unknown>)[field]
+    if (typeof value === 'string' && value.length > limit) {
+      lengthErrors.push(`${field} (${value.length} characters) exceeds maximum length of ${limit}`)
+    }
   }
-  if (productData.model_wearing_size && productData.model_wearing_size.length > 50) {
-    productData.model_wearing_size = productData.model_wearing_size.substring(0, 50)
-  }
-  if (productData.custom_badge_text && productData.custom_badge_text.length > 100) {
-    productData.custom_badge_text = productData.custom_badge_text.substring(0, 100)
-  }
-  if (productData.badge_color && productData.badge_color.length > 50) {
-    productData.badge_color = productData.badge_color.substring(0, 50)
-  }
-  if (productData.hs_code && productData.hs_code.length > 50) {
-    productData.hs_code = productData.hs_code.substring(0, 50)
+
+  if (lengthErrors.length > 0) {
+    throw new Error(`Validation failed - Field length exceeded:\n${lengthErrors.join('\n')}`)
   }
 
   const { data: product, error } = await supabaseAdmin

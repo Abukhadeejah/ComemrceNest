@@ -50,13 +50,14 @@ export function BasicInformationSection({ formData, errors, onInputChange }: Bas
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Product Name *
+            Product Name * <span className="text-gray-400 text-xs">({(formData.name || '').length}/255)</span>
           </label>
           <input
             type="text"
             value={formData.name || ''}
             onChange={(e) => onInputChange('name', e.target.value)}
             placeholder="Enter product name"
+            maxLength={255}
             className="block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-3 py-2"
           />
           {errors?.name && (
@@ -66,7 +67,7 @@ export function BasicInformationSection({ formData, errors, onInputChange }: Bas
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Slug *
+            Slug * <span className="text-gray-400 text-xs">({(formData.slug || '').length}/255)</span>
           </label>
           <div className="flex flex-col sm:flex-row gap-2">
             <input
@@ -74,6 +75,7 @@ export function BasicInformationSection({ formData, errors, onInputChange }: Bas
               value={formData.slug || ''}
               onChange={(e) => onInputChange('slug', e.target.value)}
               placeholder="product-slug"
+              maxLength={255}
               className="block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-3 py-2"
             />
             <button
@@ -95,13 +97,14 @@ export function BasicInformationSection({ formData, errors, onInputChange }: Bas
 
         <div className="col-span-1 md:col-span-2">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Description
+            Description <span className="text-gray-400 text-xs">({(formData.description || '').length}/5000)</span>
           </label>
           <textarea
             rows={4}
             value={formData.description || ''}
             onChange={(e) => onInputChange('description', e.target.value)}
             placeholder="Enter product description"
+            maxLength={5000}
             className="block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-3 py-2"
           />
           {errors?.description && (
