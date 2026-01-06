@@ -11,6 +11,16 @@ interface BasicInformationSectionProps {
   onInputChange: (field: keyof ProductFormData, value: string | number | boolean | null | unknown[]) => void
 }
 
+// Maximum lengths for form fields - must match database constraints
+const FIELD_MAX_LENGTHS = {
+  name: 255,
+  slug: 255,
+  description: 5000,
+  short_description: 500,
+  sku: 100,
+  barcode: 100
+} as const
+
 export function BasicInformationSection({ formData, errors, onInputChange }: BasicInformationSectionProps) {
   const [isGeneratingSlug, setIsGeneratingSlug] = useState(false)
 
@@ -50,14 +60,14 @@ export function BasicInformationSection({ formData, errors, onInputChange }: Bas
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Product Name * <span className="text-gray-400 text-xs">({(formData.name || '').length}/255)</span>
+            Product Name * <span className="text-gray-400 text-xs">({(formData.name || '').length}/{FIELD_MAX_LENGTHS.name})</span>
           </label>
           <input
             type="text"
             value={formData.name || ''}
             onChange={(e) => onInputChange('name', e.target.value)}
             placeholder="Enter product name"
-            maxLength={255}
+            maxLength={FIELD_MAX_LENGTHS.name}
             className="block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-3 py-2"
           />
           {errors?.name && (
@@ -67,7 +77,7 @@ export function BasicInformationSection({ formData, errors, onInputChange }: Bas
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Slug * <span className="text-gray-400 text-xs">({(formData.slug || '').length}/255)</span>
+            Slug * <span className="text-gray-400 text-xs">({(formData.slug || '').length}/{FIELD_MAX_LENGTHS.slug})</span>
           </label>
           <div className="flex flex-col sm:flex-row gap-2">
             <input
@@ -75,7 +85,7 @@ export function BasicInformationSection({ formData, errors, onInputChange }: Bas
               value={formData.slug || ''}
               onChange={(e) => onInputChange('slug', e.target.value)}
               placeholder="product-slug"
-              maxLength={255}
+              maxLength={FIELD_MAX_LENGTHS.slug}
               className="block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-3 py-2"
             />
             <button
@@ -97,14 +107,14 @@ export function BasicInformationSection({ formData, errors, onInputChange }: Bas
 
         <div className="col-span-1 md:col-span-2">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Description <span className="text-gray-400 text-xs">({(formData.description || '').length}/5000)</span>
+            Description <span className="text-gray-400 text-xs">({(formData.description || '').length}/{FIELD_MAX_LENGTHS.description})</span>
           </label>
           <textarea
             rows={4}
             value={formData.description || ''}
             onChange={(e) => onInputChange('description', e.target.value)}
             placeholder="Enter product description"
-            maxLength={5000}
+            maxLength={FIELD_MAX_LENGTHS.description}
             className="block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-3 py-2"
           />
           {errors?.description && (
@@ -114,14 +124,14 @@ export function BasicInformationSection({ formData, errors, onInputChange }: Bas
 
         <div className="md:col-span-2">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Short Description <span className="text-gray-400 text-xs">({(formData.short_description || '').length}/500)</span>
+            Short Description <span className="text-gray-400 text-xs">({(formData.short_description || '').length}/{FIELD_MAX_LENGTHS.short_description})</span>
           </label>
           <textarea
             rows={2}
             value={formData.short_description || ''}
             onChange={(e) => onInputChange('short_description', e.target.value)}
             placeholder="Brief product summary shown in listings (50-150 characters recommended)"
-            maxLength={500}
+            maxLength={FIELD_MAX_LENGTHS.short_description}
             className="block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-3 py-2"
           />
           {errors?.short_description && (

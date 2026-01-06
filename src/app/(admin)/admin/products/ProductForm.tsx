@@ -26,22 +26,6 @@ import { BadgeSection } from './components/BadgeSection'
 import { ProductStatusSection } from './components/ProductStatusSection'
 import { SizeGuideSection } from './components/SizeGuideSection'
 import { AttributesSection } from './components/AttributesSection'
-
-// Debug: Log all imported components to identify which is undefined
-console.log('🔍 Component Import Check:')
-console.log('BasicInformationSection:', typeof BasicInformationSection, BasicInformationSection)
-console.log('PricingSection:', typeof PricingSection, PricingSection)
-console.log('InventorySection:', typeof InventorySection, InventorySection)
-console.log('ShippingSection:', typeof ShippingSection, ShippingSection)
-console.log('TaxSection:', typeof TaxSection, TaxSection)
-console.log('OrganizationSection:', typeof OrganizationSection, OrganizationSection)
-console.log('MediaSection:', typeof MediaSection, MediaSection)
-console.log('SeoSection:', typeof SeoSection, SeoSection)
-console.log('ProductPreview:', typeof ProductPreview, ProductPreview)
-console.log('VariantsSection:', typeof VariantsSection, VariantsSection)
-console.log('BadgeSection:', typeof BadgeSection, BadgeSection)
-console.log('ProductStatusSection:', typeof ProductStatusSection, ProductStatusSection)
-console.log('SizeGuideSection:', typeof SizeGuideSection, SizeGuideSection)
 import { ProductFormData, VariantOption, CategoryTreeNode, ProductAttributeDefinition } from '@/types/product'
 
 import { useForm, SubmitHandler } from 'react-hook-form'
@@ -79,10 +63,6 @@ export function ProductForm({
   tenantId,
   attributes = [],
 }: ProductFormProps) {
-  console.log('🎨 ProductForm attributes received:', attributes)
-  console.log('🎨 Attributes length:', attributes?.length)
-  console.log('🎨 Sample attribute:', attributes?.[0])
-
   const router = useRouter()
   const searchParams = useSearchParams()
   const initialDraftId = searchParams?.get('draftId')
@@ -185,8 +165,9 @@ export function ProductForm({
     }
   }, [debouncedName, setValue, mode, initialData.slug])
 
+  // Memoize watchedValues to prevent unnecessary re-renders
   const watchedValues = watch()
-
+  
   const handleFieldChange = useCallback(
     (field: keyof ProductFormData, value: any) => {
       setValue(field as any, value, { shouldValidate: true, shouldDirty: true })
@@ -197,9 +178,11 @@ export function ProductForm({
   const [shouldAutoSave, setShouldAutoSave] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  // DISABLED: Auto-save was causing constant re-renders every 10 seconds
+  // Users can manually save as draft or publish when ready
   const { draftId, isSaving, lastSaved, deleteDraft } = useDraftAutoSave(
     tenantId,
-    mode === 'create' && shouldAutoSave && !isSubmitting ? watchedValues : null,
+    null, // Disabled: was "mode === 'create' && shouldAutoSave && !isSubmitting ? watchedValues : null"
     initialDraftId
   )
 
@@ -262,6 +245,14 @@ export function ProductForm({
         // Convert numeric fields to integers
         const numericFields = ['price_cents', 'compare_at_price_cents', 'cost_price_cents', 'stock', 'low_stock_threshold', 'gift_card_amount_cents', 'gift_card_expiry_days', 'badge_priority']
 
+        console.log('📋 BEFORE FormData construction - form data object:', {
+          price_cents: data.price_cents,
+          compare_at_price_cents: data.compare_at_price_cents,
+          cost_price_cents: data.cost_price_cents,
+          stock: data.stock,
+          low_stock_threshold: data.low_stock_threshold,
+        })
+
         for (const [key, value] of Object.entries(data)) {
           if (key === 'variantOptions' || key === 'variantCombinations') continue
           if (key === 'category_ids' && Array.isArray(value) && value.length > 0) {
@@ -278,19 +269,59 @@ export function ProductForm({
             // Convert numeric fields to integers
             if (numericFields.includes(key) && typeof value === 'number') {
               const rounded = Math.round(value)
-              if (['price_cents', 'compare_at_price_cents', 'cost_price_cents'].includes(key)) {
-                console.log(`💰 FormData ${key}: ${value} -> ${rounded}`)
+              // Log ALL numeric field conversions (including cost_price_cents)
+              if (numericFields.includes(key)) {
+                console.log(`💰 FormData ${key} -> ${formKey}: ${value} -> ${rounded}`)
+                // CRITICAL: Log cost price separately for debugging
+                if (key === 'cost_price_cents') {
+                  console.log(`🔴 COST PRICE AUDIT: cost_price_cents ${value} cents -> cost_per_item_cents ${rounded} cents [APPENDED TO FORMDATA]`)
+                }
               }
               form.append(formKey, String(rounded))
             } else {
               form.append(formKey, String(value))
             }
+          } else if (value === 0 && numericFields.includes(key)) {
+            // IMPORTANT: Always send numeric fields even if 0 (including cost_price_cents)
+            // This ensures we don't accidentally preserve old values during updates
+            const rounded = 0
+            form.append(formKey, String(rounded))
+            if (key === 'cost_price_cents') {
+              console.log(`🔴 COST PRICE AUDIT: cost_price_cents is 0 -> cost_per_item_cents 0 [APPENDED TO FORMDATA - IMPORTANT FOR EDIT MODE]`)
+            }
           }
         }
+
+        // STRICT LOGGING: Log ALL FormData entries with field lengths
+        console.log('📋 ========== COMPLETE FormData AUDIT ==========')
+        console.log('📋 Total FormData entries:', Array.from(form.entries()).length)
+        
+        // Fields that have specific character limits in database
+        const fieldsWithLimit50 = ['fit_type', 'model_wearing_size', 'badge_color', 'hs_code', 'color']
+        
+        for (const [key, value] of form.entries()) {
+          const stringValue = String(value)
+          const length = stringValue.length
+          console.log(`  🔸 ${key}: "${stringValue.substring(0, 50)}${stringValue.length > 50 ? '...' : ''}" (${length} chars)`)
+          
+          // Only flag specific 50-char limit fields
+          if (fieldsWithLimit50.includes(key) && length > 50) {
+            console.error(`⚠️  POTENTIAL ISSUE: ${key} = ${length} chars (exceeds 50 limit!)`)
+          }
+        }
+        console.log('📋 ========== END FormData AUDIT ==========')
+
+        console.log('📋 AFTER FormData construction - form entries:')
+        console.log('  price_cents:', form.get('price_cents'))
+        console.log('  compare_at_price_cents:', form.get('compare_at_price_cents'))
+        console.log('  cost_per_item_cents:', form.get('cost_per_item_cents'))
+        console.log('  stock:', form.get('stock'))
 
         // Remove primary category logic - products can belong to multiple categories equally
 
         if (mode === 'edit' && initialData?.id) {
+          console.log('🔴 EDIT MODE: cost_price_cents from form data:', form.get('cost_per_item_cents'), '[Before updateProduct]')
+          
           await updateProduct(initialData.id, form)
 
           const files = imageFiles.filter((i) => i instanceof File) as File[]
@@ -306,7 +337,15 @@ export function ProductForm({
             })
           }
 
-          fetch(`/api/product-drafts/${initialData.id}`, { method: 'DELETE' }).catch(() => { })
+          // CRITICAL: Delete draft AFTER successful update to prevent draft from persisting
+          try {
+            const deleteRes = await fetch(`/api/product-drafts/${initialData.id}`, { method: 'DELETE' })
+            if (deleteRes.ok) {
+              console.log('✅ Draft deleted after successful product update')
+            }
+          } catch (err) {
+            console.warn('⚠️ Failed to delete draft after update:', err)
+          }
         } else {
           console.log('Creating product with form data:', Object.fromEntries(form.entries())) // Debug log
           const result = await createProduct(form)

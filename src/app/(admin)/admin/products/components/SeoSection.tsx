@@ -11,6 +11,13 @@ interface SeoSectionProps {
   register?: UseFormRegister<ProductFormData>
 }
 
+// Maximum lengths for SEO fields - must match database constraints
+const SEO_FIELD_MAX_LENGTHS = {
+  meta_title: 255,
+  meta_description: 500,
+  seo_url: 255
+} as const
+
 export function SeoSection({ formData, onInputChange, errors }: SeoSectionProps) {
   const [charCounts, setCharCounts] = useState({
     title: formData.meta_title?.length || 0,
@@ -81,8 +88,8 @@ export function SeoSection({ formData, onInputChange, errors }: SeoSectionProps)
             <label className="block text-sm font-medium text-gray-700">
               Meta Title
             </label>
-            <span className={`text-xs ${charCounts.title > 255 ? 'text-red-600' : charCounts.title > 60 ? 'text-yellow-600' : 'text-gray-500'}`}>
-              {charCounts.title}/255 (SEO optimal: 60)
+            <span className={`text-xs ${charCounts.title > SEO_FIELD_MAX_LENGTHS.meta_title ? 'text-red-600' : charCounts.title > 60 ? 'text-yellow-600' : 'text-gray-500'}`}>
+              {charCounts.title}/{SEO_FIELD_MAX_LENGTHS.meta_title} (SEO optimal: 60)
             </span>
           </div>
           <div className="flex gap-2">
@@ -90,7 +97,6 @@ export function SeoSection({ formData, onInputChange, errors }: SeoSectionProps)
               type="text"
               value={formData.meta_title || ''}
               onChange={(e) => handleTitleChange(e.target.value)}
-              maxLength={255}
               className="block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-3 py-2"
               placeholder="Product meta title for SEO"
             />
@@ -113,8 +119,8 @@ export function SeoSection({ formData, onInputChange, errors }: SeoSectionProps)
             <label className="block text-sm font-medium text-gray-700">
               Meta Description
             </label>
-            <span className={`text-xs ${charCounts.description > 500 ? 'text-red-600' : charCounts.description > 160 ? 'text-yellow-600' : 'text-gray-500'}`}>
-              {charCounts.description}/500 (SEO optimal: 160)
+            <span className={`text-xs ${charCounts.description > SEO_FIELD_MAX_LENGTHS.meta_description ? 'text-red-600' : charCounts.description > 160 ? 'text-yellow-600' : 'text-gray-500'}`}>
+              {charCounts.description}/{SEO_FIELD_MAX_LENGTHS.meta_description} (SEO optimal: 160)
             </span>
           </div>
           <div className="space-y-2">
@@ -122,7 +128,6 @@ export function SeoSection({ formData, onInputChange, errors }: SeoSectionProps)
               rows={3}
               value={formData.meta_description || ''}
               onChange={(e) => handleDescriptionChange(e.target.value)}
-              maxLength={500}
               className="block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-3 py-2"
               placeholder="Brief description that appears in search results"
             />

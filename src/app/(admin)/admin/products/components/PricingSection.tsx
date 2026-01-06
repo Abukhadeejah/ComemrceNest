@@ -19,14 +19,16 @@ export function PricingSection({ formData, errors, onInputChange }: PricingSecti
     costPrice: ''
   })
 
-  // Initialize input values from formData only once to avoid precision loss
+  // Initialize input values ONLY on mount, not on every formData change
+  // This prevents re-render loops when user is typing
   useEffect(() => {
-    setInputValues(prev => ({
-      mrp: prev.mrp || (formData.compare_at_price_cents ? (formData.compare_at_price_cents / 100).toString() : ''),
-      salePrice: prev.salePrice || (formData.price_cents ? (formData.price_cents / 100).toString() : ''),
-      costPrice: prev.costPrice || (formData.cost_price_cents ? (formData.cost_price_cents / 100).toString() : '')
-    }))
-  }, [])
+    setInputValues({
+      mrp: formData.compare_at_price_cents ? (formData.compare_at_price_cents / 100).toString() : '',
+      salePrice: formData.price_cents ? (formData.price_cents / 100).toString() : '',
+      costPrice: formData.cost_price_cents ? (formData.cost_price_cents / 100).toString() : ''
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // Only run on mount to initialize values
 
 
 
@@ -63,7 +65,8 @@ export function PricingSection({ formData, errors, onInputChange }: PricingSecti
       salePrice: 'price_cents',
       costPrice: 'cost_price_cents'
     }
-    onInputChange?.(fieldMap[field] as keyof ProductFormData, cents)
+    const formField = fieldMap[field]
+    onInputChange?.(formField as keyof ProductFormData, cents)
   }
 
   // Calculate profit margin: (Sale Price - Cost) / Sale Price * 100

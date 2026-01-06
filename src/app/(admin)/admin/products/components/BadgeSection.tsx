@@ -11,6 +11,12 @@ interface BadgeSectionProps {
   register?: UseFormRegister<ProductFormData>
 }
 
+// Maximum lengths for badge fields - must match database constraints
+const BADGE_FIELD_MAX_LENGTHS = {
+  custom_badge_text: 100,
+  badge_color: 50
+} as const
+
 const BADGE_PRESETS = [
   { value: 'new', label: 'New Arrival', description: 'Highlight new products', color: 'bg-blue-500' },
   { value: 'sale', label: 'On Sale', description: 'Show discounted items', color: 'bg-red-500' },
@@ -154,18 +160,17 @@ export function BadgeSection({ formData, errors, onInputChange }: BadgeSectionPr
         {/* Custom Badge Text */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Custom Badge Text (Optional)
+            Custom Badge Text (Optional) <span className="text-gray-400 text-xs">({(formData.custom_badge_text || '').length}/{BADGE_FIELD_MAX_LENGTHS.custom_badge_text})</span>
           </label>
           <input
             type="text"
             value={formData.custom_badge_text || ''}
             onChange={(e) => handleCustomBadgeChange(e.target.value)}
-            maxLength={20}
             placeholder="e.g., Flash Deal, Trending, Hot"
             className="block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-3 py-2"
           />
           <p className="mt-1 text-sm text-gray-500">
-            Max 20 characters. This will show as an additional badge if entered.
+            Max {BADGE_FIELD_MAX_LENGTHS.custom_badge_text} characters. This will show as an additional badge if entered.
           </p>
         </div>
 

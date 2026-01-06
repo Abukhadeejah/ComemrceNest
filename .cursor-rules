@@ -1,7 +1,7 @@
 # Cursor Project Rules
 
 - Always use a data-driven, DB-first development approach.
-- Always read documentation in `Commercenest/docs/**` and existing rules before developing or suggesting anything.
+- Always read documentation in `\web\Senlysh` and existing rules before developing or suggesting anything.
 - Always review Supabase database state (tables, relationships, RLS policies, functions, triggers, migrations) before developing or suggesting changes.
 - Always run TypeScript and lint error tests, then build before production deployment. If any code changes are made, use Browser MCP to test the build locally before deploying to production.
 

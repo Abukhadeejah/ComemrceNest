@@ -48,12 +48,13 @@ export function ShippingSection({ formData, errors, onInputChange }: ShippingSec
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Dimensions (L × W × H cm)
+            Dimensions (L × W × H cm) <span className="text-gray-400 text-xs">({(formData.dimensions || '').length}/255)</span>
           </label>
           <input
             type="text"
             value={formData.dimensions || ''}
             onChange={(e) => onInputChange?.('dimensions', e.target.value)}
+            maxLength={255}
             placeholder="30 * 20 * 5"
             pattern="^\d+\s*×\s*\d+\s*×\s*\d+$"
             className="block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-3 py-2"

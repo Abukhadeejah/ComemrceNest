@@ -144,24 +144,44 @@ export default async function ProductViewPage({ params }: ProductViewPageProps) 
               {/* Pricing */}
               <div className="bg-white shadow rounded-lg p-6">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">Pricing</h3>
-                <dl className="grid grid-cols-1 gap-4">
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">Price</dt>
-                    <dd className="text-sm text-gray-900">{formatPrice(product.price_cents)}</dd>
-                  </div>
-                  {product.compare_at_price_cents && (
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Compare at Price</dt>
-                      <dd className="text-sm text-gray-900">{formatPrice(product.compare_at_price_cents)}</dd>
-                    </div>
-                  )}
-                  {product.cost_per_item_cents && (
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Cost per Item</dt>
-                      <dd className="text-sm text-gray-900">{formatPrice(product.cost_per_item_cents)}</dd>
-                    </div>
-                  )}
-                </dl>
+                {(() => {
+                  const mrp = product.compare_at_price_cents
+                  const sale = product.price_cents
+                  const hasSale = !!sale && sale > 0 && !!mrp && mrp > sale
+                  const selling = hasSale ? sale : (mrp ?? sale)
+
+                  return (
+                    <dl className="grid grid-cols-1 gap-4">
+                      <div>
+                        <dt className="text-sm font-medium text-gray-500">Selling Price</dt>
+                        <dd className="text-sm text-gray-900">{formatPrice(selling)}</dd>
+                      </div>
+
+                      {hasSale && (
+                        <div>
+                          <dt className="text-sm font-medium text-gray-500">Sale Price (Discounted)</dt>
+                          <dd className="text-sm text-gray-900">{formatPrice(sale)}</dd>
+                        </div>
+                      )}
+
+                      {mrp && (
+                        <div>
+                          <dt className="text-sm font-medium text-gray-500">MRP</dt>
+                          <dd className={`text-sm text-gray-900 ${hasSale ? 'line-through text-gray-500' : ''}`}>
+                            {formatPrice(mrp)}
+                          </dd>
+                        </div>
+                      )}
+
+                      {product.cost_per_item_cents && (
+                        <div>
+                          <dt className="text-sm font-medium text-gray-500">Cost per Item</dt>
+                          <dd className="text-sm text-gray-900">{formatPrice(product.cost_per_item_cents)}</dd>
+                        </div>
+                      )}
+                    </dl>
+                  )
+                })()}
               </div>
 
               {/* Inventory */}

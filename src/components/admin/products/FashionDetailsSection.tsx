@@ -12,6 +12,12 @@ interface FashionDetailsSectionProps {
   onInputChange: (field: keyof ProductFormData, value: string | number | boolean | null | unknown[]) => void
 }
 
+const FIELD_MAX_LENGTHS = {
+  material_composition: 255,
+  care_instructions: 1000,
+  model_wearing_size: 50,
+}
+
 export default function FashionDetailsSection({ formData, onInputChange }: FashionDetailsSectionProps) {
   const fitTypes = [
     { value: 'slim', label: 'Slim Fit' },
@@ -31,7 +37,7 @@ export default function FashionDetailsSection({ formData, onInputChange }: Fashi
         {/* Material Composition */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Material Composition
+            Material Composition <span className="text-gray-400 text-xs">({(formData.material_composition || '').length}/{FIELD_MAX_LENGTHS.material_composition})</span>
           </label>
           <textarea
             value={String(formData.material_composition || '')}
@@ -41,14 +47,14 @@ export default function FashionDetailsSection({ formData, onInputChange }: Fashi
             className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
           />
           <p className="mt-1 text-sm text-gray-500">
-            List the materials and their percentages
+            List the materials and their percentages (max {FIELD_MAX_LENGTHS.material_composition} characters)
           </p>
         </div>
 
         {/* Care Instructions */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Care Instructions
+            Care Instructions <span className="text-gray-400 text-xs">({(formData.care_instructions || '').length}/{FIELD_MAX_LENGTHS.care_instructions})</span>
           </label>
           <textarea
             value={String(formData.care_instructions || '')}
@@ -58,7 +64,7 @@ export default function FashionDetailsSection({ formData, onInputChange }: Fashi
             className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
           />
           <p className="mt-1 text-sm text-gray-500">
-            Washing and care instructions for customers
+            Washing and care instructions for customers (max {FIELD_MAX_LENGTHS.care_instructions} characters)
           </p>
         </div>
 
@@ -195,7 +201,7 @@ export default function FashionDetailsSection({ formData, onInputChange }: Fashi
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Model Wearing Size
+              Model Wearing Size <span className="text-gray-400 text-xs">({(formData.model_wearing_size || '').length}/{FIELD_MAX_LENGTHS.model_wearing_size})</span>
             </label>
             <input
               type="text"
@@ -204,6 +210,7 @@ export default function FashionDetailsSection({ formData, onInputChange }: Fashi
               placeholder="M"
               className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
             />
+            <p className="mt-1 text-sm text-gray-500">Model size label (max {FIELD_MAX_LENGTHS.model_wearing_size} characters)</p>
           </div>
 
           <div className="flex items-end">

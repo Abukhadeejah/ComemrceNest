@@ -57,7 +57,9 @@ export function SizeGuideSection({
 
       setSizeGuideImage(imageUrl)
       if (setValue) {
-        setValue('sizeGuideId', imageUrl)
+        // Do NOT store the full image URL in sizeGuideId - it's varchar(50) limited
+        // Instead, set a flag that a size guide image exists; the URL is handled separately
+        setValue('sizeGuideId', 'size-guide-image')
       }
     } catch (error) {
       console.error('Upload error:', error)

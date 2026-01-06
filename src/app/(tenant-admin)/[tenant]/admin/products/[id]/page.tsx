@@ -184,30 +184,64 @@ export default async function ProductViewPage({ params }: ProductViewPageProps) 
               {/* Pricing */}
               <div className="bg-white rounded-lg shadow p-6">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">Pricing</h3>
-                <div className="space-y-4">
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">Selling Price</dt>
-                    <dd className="mt-1 text-2xl font-bold text-gray-900">
-                      {formatPrice(product.price_cents)}
-                    </dd>
-                  </div>
-                  {product.cost_per_item_cents && (
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Cost Price</dt>
-                      <dd className="mt-1 text-lg text-gray-900">
-                        {formatPrice(product.cost_per_item_cents)}
-                      </dd>
+                {(() => {
+                  const mrp = product.compare_at_price_cents
+                  const sale = product.price_cents
+                  const hasSale = !!sale && sale > 0 && !!mrp && mrp > sale
+                  const selling = hasSale ? sale : (mrp ?? sale)
+
+                  const profitBase = selling || 0
+                  const profitMargin = product.cost_per_item_cents && profitBase > 0
+                    ? ((profitBase - product.cost_per_item_cents) / profitBase * 100).toFixed(1)
+                    : null
+
+                  return (
+                    <div className="space-y-4">
+                      <div>
+                        <dt className="text-sm font-medium text-gray-500">Selling Price</dt>
+                        <dd className="mt-1 text-2xl font-bold text-gray-900">
+                          {formatPrice(selling)}
+                        </dd>
+                      </div>
+
+                      {hasSale && (
+                        <div>
+                          <dt className="text-sm font-medium text-gray-500">Sale Price (Discounted)</dt>
+                          <dd className="mt-1 text-lg text-gray-900">
+                            {formatPrice(sale)}
+                          </dd>
+                        </div>
+                      )}
+
+                      {mrp && (
+                        <div>
+                          <dt className="text-sm font-medium text-gray-500">MRP</dt>
+                          <dd className={`mt-1 text-lg ${hasSale ? 'line-through text-gray-500' : 'text-gray-900'}`}>
+                            {formatPrice(mrp)}
+                          </dd>
+                        </div>
+                      )}
+
+                      {product.cost_per_item_cents && (
+                        <div>
+                          <dt className="text-sm font-medium text-gray-500">Cost Price</dt>
+                          <dd className="mt-1 text-lg text-gray-900">
+                            {formatPrice(product.cost_per_item_cents)}
+                          </dd>
+                        </div>
+                      )}
+
+                      {profitMargin && (
+                        <div>
+                          <dt className="text-sm font-medium text-gray-500">Profit Margin</dt>
+                          <dd className="mt-1 text-lg text-green-600 font-medium">
+                            {profitMargin}%
+                          </dd>
+                        </div>
+                      )}
                     </div>
-                  )}
-                  {product.cost_per_item_cents && (
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Profit Margin</dt>
-                      <dd className="mt-1 text-lg text-green-600 font-medium">
-                        {((product.price_cents - product.cost_per_item_cents) / product.price_cents * 100).toFixed(1)}%
-                      </dd>
-                    </div>
-                  )}
-                </div>
+                  )
+                })()}
               </div>
 
               {/* Inventory */}

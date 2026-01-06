@@ -35,14 +35,17 @@ export function TaxSection({ formData, errors, onInputChange, setValue }: TaxSec
   }, []) // ✅ FIXED: Empty dependency array - only runs once on mount
 
   // Set default tax class when taxable is enabled
+  // FIXED: Added proper dependency handling to prevent re-render loops
   useEffect(() => {
     if (formData.taxable && !formData.tax_class_id && taxClasses.length > 0) {
       const defaultClass = taxClasses.find(c => c.is_default)
-      if (defaultClass) {
-        onInputChange?.('tax_class_id', defaultClass.id)
+      if (defaultClass && onInputChange) {
+        onInputChange('tax_class_id', defaultClass.id)
       }
     }
-  }, [formData.taxable, formData.tax_class_id, taxClasses]) // ✅ FIXED: Removed onInputChange from dependencies
+    // Intentionally NOT including onInputChange to prevent infinite loops
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.taxable, formData.tax_class_id, taxClasses])
 
   const handleTaxableChange = useCallback((taxable: boolean) => {
     if (setValue) {
@@ -189,7 +192,7 @@ export function TaxSection({ formData, errors, onInputChange, setValue }: TaxSec
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                HS Code (Harmonized System)
+                HS Code (Harmonized System) <span className="text-gray-400 text-xs">({(formData.hs_code || '').length}/50)</span>
               </label>
                 <input
                 type="text"
@@ -199,7 +202,7 @@ export function TaxSection({ formData, errors, onInputChange, setValue }: TaxSec
                 className="block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-3 py-2"
               />
               <p className="mt-1 text-sm text-gray-500">
-                For customs and international shipping
+                For customs and international shipping (max 50 characters)
               </p>
             </div>
 

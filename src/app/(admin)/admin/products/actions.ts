@@ -230,6 +230,25 @@ export async function createProduct(formData: FormData) {
     attributes: formData.get('attributes') ? JSON.parse(formData.get('attributes') as string) : []
   }
 
+  // STRICT LOGGING: Audit ALL received FormData fields
+  console.log('📨 ========== SERVER-SIDE FormData AUDIT ==========')
+  console.log('📨 FormData source entries count:', Array.from(formData.entries()).length)
+  
+  // Fields that have 50 character limit in database
+  const fieldsWithLimit50 = ['fit_type', 'model_wearing_size', 'badge_color', 'hs_code', 'color']
+  
+  for (const [key, value] of formData.entries()) {
+    const stringValue = String(value)
+    const length = stringValue.length
+    console.log(`  🔹 ${key}: "${stringValue.substring(0, 40)}${stringValue.length > 40 ? '...' : ''}" (${length} chars)`)
+    if (fieldsWithLimit50.includes(key) && length > 50) {
+      console.error(`⚠️  WARNING: FormData field ${key} = ${length} chars (exceeds 50 limit!)`)
+    }
+  }
+  console.log('📨 ========== END FormData AUDIT ==========')
+
+
+
   // Basic server-side validation for product creation
   const creationProblems: string[] = []
   
@@ -272,58 +291,6 @@ export async function createProduct(formData: FormData) {
   if (productData.badge_display_until === '') productData.badge_display_until = null
   if (productData.badge_display_from === '') productData.badge_display_from = null
 
-  // Truncate fields to match database constraints
-  // Validate field lengths - throw error if any field exceeds database limits
-  const fieldLimits: Record<string, number> = {
-    name: 255,
-    slug: 255,
-    description: 5000,
-    short_description: 500,
-    sku: 100,
-    barcode: 100,
-    dimensions: 255,
-    meta_title: 255,
-    meta_description: 500,
-    fit_type: 50,
-    model_wearing_size: 50,
-    custom_badge_text: 100,
-    badge_color: 50,
-    hs_code: 50,
-    seo_url: 255,
-    material_composition: 255,
-    care_instructions: 1000,
-    currency: 3,
-    brand: 100,
-    color: 50,
-    material: 100,
-    status: 20,
-    tax_class_id: 255,
-    category_id: 255
-  }
-
-  // Log all string fields for debugging
-  console.log('🔍 Validating field lengths for product creation:')
-  for (const [field, limit] of Object.entries(fieldLimits)) {
-    const value = (productData as Record<string, unknown>)[field]
-    if (typeof value === 'string' && value.length > 0) {
-      console.log(`  ${field}: ${value.length}/${limit} chars`)
-    }
-  }
-
-  // Check for field length violations
-  const lengthErrors: string[] = []
-  for (const [field, limit] of Object.entries(fieldLimits)) {
-    const value = (productData as Record<string, unknown>)[field]
-    if (typeof value === 'string' && value.length > limit) {
-      lengthErrors.push(`${field} (${value.length} characters) exceeds maximum length of ${limit}`)
-    }
-  }
-
-  if (lengthErrors.length > 0) {
-    throw new Error(`Validation failed - Field length exceeded:\n${lengthErrors.join('\n')}`)
-  }
-
-  console.log('✅ All field length validations passed')
   console.log('📝 Attempting to insert product into database...')
   console.log('💰 Cost per item cents value:', productData.cost_per_item_cents, 'Type:', typeof productData.cost_per_item_cents)
 
@@ -376,7 +343,7 @@ export async function createProduct(formData: FormData) {
       badge_priority: productData.badge_priority,
       badge_display_until: productData.badge_display_until,
       badge_display_from: productData.badge_display_from,
-      size_guide_type: productData.sizeGuideId || null,
+      size_guide_type: null,  // Do NOT store sizeGuideId here - it's varchar(50) limited and images are stored separately
       // Tags
       tags: productData.tags || []
     })
@@ -393,14 +360,71 @@ export async function createProduct(formData: FormData) {
   if (error) {
     console.error('❌ Database error:', error)
     console.error('❌ Error details:', JSON.stringify(error, null, 2))
+    console.error('❌ Error message:', error.message)
+    console.error('❌ Error code:', error.code)
+    console.error('❌ Error hint:', error.hint)
+    console.error('❌ Error details property:', error.details)
     
     if (error.message.includes('duplicate key value violates unique constraint "products_tenant_id_slug_key"')) {
       throw new Error(`A product with the slug "${productData.slug}" already exists. Please choose a different slug.`)
     } else if (error.message.includes('value too long for type character varying')) {
-      // Extract which column from error if possible
-      const match = error.message.match(/column "([^"]+)"/)
-      const columnName = match ? match[1] : 'unknown'
-      throw new Error(`Field "${columnName}" exceeds database limit. ${error.message}`)
+      // Extract column name from Postgres error message
+      console.log('🔍 Attempting to extract column name from Postgres varchar error...')
+      console.log(`📌 Full error message: "${error.message}"`)
+      console.log(`📌 Full error object:`, JSON.stringify(error, null, 2))
+      
+      let columnName = 'unknown'
+      
+      // Pattern 1: Extract from "Key (column_name)=" in DETAIL line
+      const detailMatch = error.message.match(/Key \(([^)]+)\)/)
+      if (detailMatch && detailMatch[1]) {
+        columnName = detailMatch[1]
+        console.log(`✓ Column extracted via Pattern 1 (Key): ${columnName}`)
+      }
+      
+      // Pattern 2: Extract from "column \"column_name\"" if present
+      if (columnName === 'unknown') {
+        const columnMatch = error.message.match(/column "([^"]+)"/)
+        if (columnMatch && columnMatch[1]) {
+          columnName = columnMatch[1]
+          console.log(`✓ Column extracted via Pattern 2 (column): ${columnName}`)
+        }
+      }
+      
+      // Pattern 3: Check error details property
+      if (columnName === 'unknown' && error.details) {
+        console.log(`📌 Checking error.details: "${error.details}"`)
+        const detailsMatch = error.details.match(/Key \(([^)]+)\)/)
+        if (detailsMatch && detailsMatch[1]) {
+          columnName = detailsMatch[1]
+          console.log(`✓ Column extracted via Pattern 3 (details): ${columnName}`)
+        }
+      }
+      
+      // Pattern 4: Check error.hint
+      if (columnName === 'unknown' && error.hint) {
+        console.log(`📌 Checking error.hint: "${error.hint}"`)
+        const hintMatch = error.hint.match(/column "([^"]+)"/)
+        if (hintMatch && hintMatch[1]) {
+          columnName = hintMatch[1]
+          console.log(`✓ Column extracted via Pattern 4 (hint): ${columnName}`)
+        }
+      }
+      
+      // Pattern 5: Try to find which field exceeds limit by checking field names
+      if (columnName === 'unknown') {
+        console.log('📌 Pattern matching failed - unable to determine which field exceeded the database limit')
+      }
+      
+      if (columnName === 'unknown') {
+        console.error(`❌ FAILED TO EXTRACT COLUMN - this is a critical issue`)
+        console.error(`❌ Full Postgres error: ${JSON.stringify(error, null, 2)}`)
+      }
+      
+      // Build user-friendly error message with field name
+      const errorMsg = `Field "${columnName}" exceeds the database character limit. Please reduce the length and try again.`
+      console.error(`❌ Field length error detected: ${columnName}`)
+      throw new Error(errorMsg)
     } else {
       throw new Error(`Failed to create product: ${error.message}`)
     }
@@ -735,23 +759,38 @@ export async function updateProduct(productId: string, formData: FormData) {
   if (!tenantId) { throw new Error('Tenant not found') }
   await assertTenantAdmin(tenantId)
 
+  // Helpers to avoid overwriting existing DB values with implicit defaults
+  const parseIntOrUndefined = (key: string) => {
+    const raw = formData.get(key)
+    if (raw === null || raw === undefined || raw === '') return undefined
+    const parsed = parseInt(String(raw), 10)
+    return Number.isFinite(parsed) ? parsed : undefined
+  }
+
+  const parseFloatOrUndefined = (key: string) => {
+    const raw = formData.get(key)
+    if (raw === null || raw === undefined || raw === '') return undefined
+    const parsed = parseFloat(String(raw))
+    return Number.isFinite(parsed) ? parsed : undefined
+  }
+
   const productData: ProductData = {
     name: formData.get('name') as string,
     slug: formData.get('slug') as string,
     description: formData.get('description') as string,
     short_description: formData.get('short_description') as string,
-    price_cents: formData.get('price_cents') ? parseInt(formData.get('price_cents') as string) : 0,
-    compare_at_price_cents: formData.get('compare_at_price_cents') ? parseInt(formData.get('compare_at_price_cents') as string) : null,
-    cost_per_item_cents: formData.get('cost_per_item_cents') ? parseInt(formData.get('cost_per_item_cents') as string) : null,
+    price_cents: parseIntOrUndefined('price_cents'),
+    compare_at_price_cents: parseIntOrUndefined('compare_at_price_cents') ?? null,
+    cost_per_item_cents: parseIntOrUndefined('cost_per_item_cents') ?? null,
     currency: formData.get('currency') as string || 'INR',
-    stock: formData.get('stock') ? parseInt(formData.get('stock') as string) : 0,
+    stock: parseIntOrUndefined('stock'),
     sku: formData.get('sku') as string,
     barcode: formData.get('barcode') as string,
     weight: formData.get('weight') as string,
     dimensions: formData.get('dimensions') as string,
     has_variants: formData.get('has_variants') === 'true',
     track_inventory: formData.get('track_inventory') === 'true',
-    low_stock_threshold: formData.get('low_stock_threshold') ? parseInt(formData.get('low_stock_threshold') as string) : null,
+    low_stock_threshold: parseIntOrUndefined('low_stock_threshold') ?? null,
     meta_title: formData.get('meta_title') as string,
     meta_description: formData.get('meta_description') as string,
     allow_backorders: formData.get('allow_backorders') === 'true',
@@ -762,12 +801,12 @@ export async function updateProduct(productId: string, formData: FormData) {
     material_composition: formData.get('material_composition') as string,
     care_instructions: formData.get('care_instructions') as string,
     fit_type: formData.get('fit_type') as string,
-    model_height_cm: formData.get('model_height_cm') ? parseFloat(formData.get('model_height_cm') as string) : null,
-    model_weight_kg: formData.get('model_weight_kg') ? parseFloat(formData.get('model_weight_kg') as string) : null,
+    model_height_cm: parseFloatOrUndefined('model_height_cm') ?? null,
+    model_weight_kg: parseFloatOrUndefined('model_weight_kg') ?? null,
     model_wearing_size: formData.get('model_wearing_size') as string,
     is_gift_card: formData.get('is_gift_card') === 'true',
-    gift_card_amount_cents: formData.get('gift_card_amount_cents') ? parseInt(formData.get('gift_card_amount_cents') as string) : null,
-    gift_card_expiry_days: formData.get('gift_card_expiry_days') ? parseInt(formData.get('gift_card_expiry_days') as string) : null,
+    gift_card_amount_cents: parseIntOrUndefined('gift_card_amount_cents') ?? null,
+    gift_card_expiry_days: parseIntOrUndefined('gift_card_expiry_days') ?? null,
     category_id: formData.get('category_id') as string,
     category_ids: formData.getAll('category_ids[]') as string[],
     status: formData.get('status') as string,
@@ -859,60 +898,88 @@ export async function updateProduct(productId: string, formData: FormData) {
     throw new Error(`Validation failed - Field length exceeded:\n${lengthErrors.join('\n')}`)
   }
 
+  // Build the update payload conditionally to avoid clobbering existing values with undefined/zeros
+  // CRITICAL FIX: Only include values that were explicitly sent from the form
+  // If a field is undefined, it means it wasn't sent, so we shouldn't update it
+  const buildUpdatePayload = () => {
+    const payload: any = {}
+    
+    // Only include fields that have meaningful values (not undefined)
+    if (productData.name !== undefined) payload.name = productData.name
+    if (productData.slug !== undefined) payload.slug = productData.slug
+    if (productData.description !== undefined) payload.description = productData.description
+    if (productData.price_cents !== undefined) payload.price_cents = productData.price_cents
+    if (productData.compare_at_price_cents !== undefined) payload.compare_at_price_cents = productData.compare_at_price_cents
+    
+    // CRITICAL: Always include cost_per_item_cents (even if undefined from FormData, we logged it)
+    // This ensures we explicitly set it rather than leaving it alone
+    payload.cost_per_item_cents = productData.cost_per_item_cents
+    console.log('🔴 COST PRICE FIX: Including cost_per_item_cents in updatePayload =', payload.cost_per_item_cents)
+    
+    if (productData.stock !== undefined) payload.stock = productData.stock
+    if (productData.sku !== undefined) payload.sku = productData.sku
+    if (productData.weight !== undefined) {
+      payload.weight = typeof productData.weight === 'string' ? parseFloat(productData.weight) || null : productData.weight
+    }
+    if (productData.dimensions !== undefined) payload.dimensions = productData.dimensions
+    if (productData.has_variants !== undefined) payload.has_variants = productData.has_variants
+    if (productData.track_inventory !== undefined) payload.track_inventory = productData.track_inventory
+    if (productData.low_stock_threshold !== undefined) payload.low_stock_threshold = productData.low_stock_threshold
+    if (productData.meta_title !== undefined) payload.meta_title = productData.meta_title
+    if (productData.meta_description !== undefined) payload.meta_description = productData.meta_description
+    if (productData.allow_backorders !== undefined) payload.allow_backorders = productData.allow_backorders
+    if (productData.requires_shipping !== undefined) payload.requires_shipping = productData.requires_shipping
+    if (productData.taxable !== undefined) payload.taxable = productData.taxable
+    if (productData.tax_class_id !== undefined) {
+      payload.tax_class_id = productData.tax_class_id && productData.tax_class_id.trim() !== '' ? productData.tax_class_id : null
+    }
+    if (productData.hs_code !== undefined) payload.hs_code = productData.hs_code
+    if (productData.seo_url !== undefined) payload.seo_url = productData.seo_url
+    if (productData.material_composition !== undefined) payload.material_composition = productData.material_composition
+    if (productData.care_instructions !== undefined) payload.care_instructions = productData.care_instructions
+    if (productData.fit_type !== undefined) payload.fit_type = productData.fit_type
+    if (productData.model_height_cm !== undefined) payload.model_height_cm = productData.model_height_cm
+    if (productData.model_weight_kg !== undefined) payload.model_weight_kg = productData.model_weight_kg
+    if (productData.model_wearing_size !== undefined) payload.model_wearing_size = productData.model_wearing_size
+    if (productData.is_gift_card !== undefined) payload.is_gift_card = productData.is_gift_card
+    if (productData.gift_card_amount_cents !== undefined) payload.gift_card_amount_cents = productData.gift_card_amount_cents
+    if (productData.gift_card_expiry_days !== undefined) payload.gift_card_expiry_days = productData.gift_card_expiry_days
+    if (productData.status !== undefined) payload.status = adaptProductStatus(productData.status)
+    if (productData.is_featured !== undefined) payload.is_featured = productData.is_featured
+    if (productData.is_bestseller !== undefined) payload.is_bestseller = productData.is_bestseller
+    if (productData.is_new_arrival !== undefined) payload.is_new_arrival = productData.is_new_arrival
+    if (productData.is_on_sale !== undefined) payload.is_on_sale = productData.is_on_sale
+    if (productData.is_limited_edition !== undefined) payload.is_limited_edition = productData.is_limited_edition
+    if (productData.is_sold_out !== undefined) payload.is_sold_out = productData.is_sold_out
+    if (productData.custom_badge_text !== undefined) payload.custom_badge_text = productData.custom_badge_text
+    if (productData.badge_color !== undefined) payload.badge_color = productData.badge_color
+    if (productData.badge_priority !== undefined) payload.badge_priority = productData.badge_priority
+    if (productData.badge_display_until !== undefined) payload.badge_display_until = productData.badge_display_until
+    if (productData.badge_display_from !== undefined) payload.badge_display_from = productData.badge_display_from
+    
+    payload.size_guide_type = null  // Do NOT store sizeGuideId here - it's varchar(50) limited and images are stored separately
+    
+    if (productData.tags !== undefined) payload.tags = productData.tags || []
+    
+    return payload
+  }
+
+  const updatePayload = buildUpdatePayload()
+
+  console.log('[updateProduct] Updating product', { productId, tenantId, payload: updatePayload })
+  console.log('🔴 COST PRICE UPDATE AUDIT: cost_per_item_cents in payload =', updatePayload.cost_per_item_cents, '[Will be sent to database]')
+
   const { data: product, error } = await supabaseAdmin
     .from('products')
-    .update({
-      name: productData.name,
-      slug: productData.slug,
-      description: productData.description,
-      price_cents: productData.price_cents,
-      compare_at_price_cents: productData.compare_at_price_cents,
-      cost_per_item_cents: productData.cost_per_item_cents,
-      stock: productData.stock,
-      sku: productData.sku,
-      weight: typeof productData.weight === 'string' ? parseFloat(productData.weight) || null : productData.weight,
-      dimensions: productData.dimensions,
-      has_variants: productData.has_variants,
-      track_inventory: productData.track_inventory,
-      low_stock_threshold: productData.low_stock_threshold,
-      meta_title: productData.meta_title,
-      meta_description: productData.meta_description,
-      allow_backorders: productData.allow_backorders,
-      requires_shipping: productData.requires_shipping,
-      taxable: productData.taxable,
-      tax_class_id: productData.tax_class_id && productData.tax_class_id.trim() !== '' ? productData.tax_class_id : null,
-      hs_code: productData.hs_code,
-      seo_url: productData.seo_url,
-      material_composition: productData.material_composition,
-      care_instructions: productData.care_instructions,
-      fit_type: productData.fit_type,
-      model_height_cm: productData.model_height_cm,
-      model_weight_kg: productData.model_weight_kg,
-      model_wearing_size: productData.model_wearing_size,
-      is_gift_card: productData.is_gift_card,
-      gift_card_amount_cents: productData.gift_card_amount_cents,
-      gift_card_expiry_days: productData.gift_card_expiry_days,
-      status: adaptProductStatus(productData.status),
-      // Badge System
-      is_featured: productData.is_featured,
-      is_bestseller: productData.is_bestseller,
-      is_new_arrival: productData.is_new_arrival,
-      is_on_sale: productData.is_on_sale,
-      is_limited_edition: productData.is_limited_edition,
-      is_sold_out: productData.is_sold_out,
-      custom_badge_text: productData.custom_badge_text,
-      badge_color: productData.badge_color,
-      badge_priority: productData.badge_priority,
-      badge_display_until: productData.badge_display_until,
-      badge_display_from: productData.badge_display_from,
-      size_guide_type: productData.sizeGuideId || null,
-      // Tags
-      tags: productData.tags || []
-    })
+    .update(updatePayload)
     .eq('id', productId)
     .eq('tenant_id', tenantId)
     .select()
     .single()
+
+  if (product) {
+    console.log('🔴 COST PRICE UPDATE RESULT: Database returned cost_per_item_cents =', product.cost_per_item_cents, '[After update]')
+  }
 
   if (error) {
     throw new Error(`Failed to update product: ${error.message}`)
