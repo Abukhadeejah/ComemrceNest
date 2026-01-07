@@ -83,7 +83,7 @@ export function AttributesSection<T extends FieldValues>({
 							<label className="block text-sm font-medium text-gray-900 mb-3">
 								{attribute.name}
 							</label>
-							<div className="space-y-2">
+							<div className="flex flex-wrap gap-4">
 								<label className="flex items-center gap-2 text-sm text-gray-700">
 									<input
 										type="checkbox"
