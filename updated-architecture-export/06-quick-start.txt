@@ -1,0 +1,176 @@
+QUICK START & REFERENCE GUIDE
+======================================
+
+INSTALLATION & SETUP
+--------------------------------------
+1. Install dependencies:
+   npm install
+
+2. Configure environment (.env.local):
+   SUPABASE_URL=your_url
+   SUPABASE_ANON_KEY=your_key
+   SUPABASE_SERVICE_ROLE_KEY=your_key
+   RAZORPAY_KEY_ID=your_id
+   RAZORPAY_KEY_SECRET=your_secret
+   PHONEPE_MERCHANT_ID=your_id
+   PHONEPE_API_KEY=your_key
+
+3. Start development server:
+   npm run dev
+
+4. Open browser:
+   http://localhost:3000
+
+
+COMMON FILE LOCATIONS
+--------------------------------------
+
+Admin Pages:
+  /src/app/(admin)/admin/products/new/page.tsx
+  /src/app/(admin)/admin/products/[id]/edit/page.tsx
+  /src/app/(admin)/admin/categories/new/page.tsx
+
+API Routes:
+  /src/app/api/admin/products/route.ts
+  /src/app/api/checkout/route.ts
+  /src/app/api/webhooks/razorpay/route.ts
+
+Components:
+  /src/app/(admin)/admin/products/ProductForm.tsx
+  /src/app/(admin)/admin/products/components/AttributesSection.tsx
+  /src/components/admin/ProductCard.tsx
+
+Server Logic:
+  /src/server/modules/products/
+  /src/server/config/database.ts
+
+Database Queries:
+  /src/server/modules/products/actions.ts
+  /src/app/api/admin/products/actions.ts
+
+
+IMPORTANT FEATURES
+--------------------------------------
+
+Product Attributes (UPDATED Layout):
+  File: /src/app/(admin)/admin/products/components/AttributesSection.tsx
+  Change: Attribute values now display HORIZONTALLY
+  Classes: flex flex-wrap gap-4 (instead of space-y-2)
+
+Product Variants:
+  File: /src/app/(admin)/admin/products/components/VariantsManager.tsx
+  Support: Size, Color, etc.
+
+Payment Processing:
+  Razorpay: /src/app/api/webhooks/razorpay/route.ts
+  PhonePe: /src/app/api/webhooks/phonepe/route.ts
+
+Wallet System:
+  Withdrawal: /src/app/api/customers/wallet/withdraw/route.ts
+  Balance: Tracked in database
+
+
+DEBUGGING TIPS
+--------------------------------------
+
+Check Logs:
+  1. Browser console (F12)
+  2. Server terminal output
+  3. Supabase dashboard logs
+
+Common Issues:
+  ✓ CORS errors → Check API origins
+  ✓ Auth errors → Check .env variables
+  ✓ Database errors → Check RLS policies
+  ✓ Payment errors → Check webhook configurations
+
+Database Debugging:
+  - Use Supabase dashboard to view data
+  - Check RLS policies for permission issues
+  - Run migrations if schema changes
+
+
+KEY ROUTES
+--------------------------------------
+
+Admin:
+  /[tenant]/admin/                    - Dashboard
+  /[tenant]/admin/products            - Product list
+  /[tenant]/admin/products/new        - Add product
+  /[tenant]/admin/categories          - Category management
+  /[tenant]/admin/orders              - Order list
+
+Customer:
+  /[tenant]/products                  - Browse products
+  /[tenant]/products/[slug]           - Product detail
+  /[tenant]/cart                      - Shopping cart
+  /[tenant]/checkout                  - Checkout
+  /[tenant]/orders                    - My orders
+
+Auth:
+  /[tenant]/login                     - Sign in
+  /[tenant]/register                  - Sign up
+  /[tenant]/profile                   - Account
+
+
+USEFUL COMMANDS
+--------------------------------------
+
+Development:
+  npm run dev                 - Start dev server
+  npm run build               - Build for production
+  npm run start               - Start production server
+
+Testing:
+  npm run test:e2e            - Run E2E tests
+  npx playwright codegen      - Generate test code
+
+Database:
+  npm run migrate             - Run migrations
+  npm run seed                - Seed database (if available)
+
+Utilities:
+  npm run lint                - Check code quality
+  npm run type-check          - Run TypeScript check
+
+
+FOLDER NAVIGATION
+--------------------------------------
+
+For Product Management:
+  → /src/app/(admin)/admin/products/
+
+For API Development:
+  → /src/app/api/
+
+For Component Development:
+  → /src/components/
+
+For Types:
+  → /src/types/
+
+For Server Logic:
+  → /src/server/
+
+For Utilities:
+  → /src/utils/ or /src/lib/
+
+
+IMPORTANT FILES
+--------------------------------------
+
+Configuration:
+  package.json               - Dependencies & scripts
+  next.config.ts             - Next.js config
+  tsconfig.json              - TypeScript config
+  tailwind.config.ts         - TailwindCSS config
+
+Type Definitions:
+  /src/types/product.ts      - Product types
+  /src/types/order.ts        - Order types
+  /src/types/customer.ts     - Customer types
+
+Server:
+  /src/server/config/database.ts
+  /src/middleware.ts         - Request middleware
+  /src/auth.ts               - Auth configuration

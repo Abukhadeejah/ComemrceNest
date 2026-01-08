@@ -1,0 +1,128 @@
+CODE ARCHITECTURE & PATTERNS
+======================================
+
+MULTI-TENANT ARCHITECTURE
+--------------------------------------
+Pattern: Dynamic tenant routing using [tenant] parameter
+
+Admin Access:
+  /[tenant]/admin/*              - Tenant-specific admin dashboard
+  Routes are protected by auth middleware
+
+Customer Access:
+  /[tenant]/*                    - Customer-facing store
+  Multi-store support (bluebell, senlysh, etc.)
+
+Implementation:
+  ✓ Middleware handles tenant validation
+  ✓ Tenant context provides config
+  ✓ RLS policies enforce data isolation in DB
+
+
+AUTHENTICATION FLOW
+--------------------------------------
+✓ Supabase Auth (OAuth + Email/Password)
+✓ Protected routes via middleware
+✓ Session management
+✓ Role-based access (admin, customer, vendor)
+
+
+PRODUCT MANAGEMENT
+--------------------------------------
+Features:
+  ✓ Simple & variant products
+  ✓ Product attributes (dynamic)
+  ✓ Categories
+  ✓ Stock tracking
+  ✓ Pricing (base + variants)
+  ✓ Cost price tracking
+  ✓ Tenant-specific availability
+
+Components:
+  - ProductForm (add/edit)
+  - AttributesSection (horizontal layout - UPDATED)
+  - VariantsManager
+  - ProductGallery
+
+
+ORDER & CHECKOUT
+--------------------------------------
+Process:
+  1. Add to cart
+  2. Review cart
+  3. Enter address
+  4. Select payment method
+  5. Process payment (Razorpay/PhonePe)
+  6. Webhook confirmation
+  7. Order confirmation
+
+Payment Integration:
+  ✓ Razorpay (primary)
+  ✓ PhonePe (secondary)
+  ✓ Webhook handlers for confirmations
+  ✓ Wallet system (top-up & redemption)
+
+
+API STRUCTURE
+--------------------------------------
+Admin APIs:
+  GET/POST    /api/admin/products
+  GET/POST    /api/admin/categories
+  GET/POST    /api/admin/orders
+
+Auth APIs:
+  POST        /api/auth/signout
+  GET         /api/auth/whoami
+  POST        /api/auth/admin-tenant
+
+Checkout APIs:
+  POST        /api/checkout/confirm
+  POST        /api/webhooks/razorpay
+  POST        /api/webhooks/phonepe
+
+
+DATA FLOW
+--------------------------------------
+
+User Action → React Component
+         ↓
+Server Action / API Route
+         ↓
+Supabase (Database/Auth)
+         ↓
+Response → Component → UI Update
+
+
+TYPE SAFETY
+--------------------------------------
+All routes and components use TypeScript:
+  ✓ Strict null checks
+  ✓ Type-safe form data
+  ✓ Database schema types
+
+
+STYLING
+--------------------------------------
+✓ TailwindCSS for styling
+✓ Component-level styles
+✓ Responsive design (mobile-first)
+✓ Dark mode support (configurable)
+
+
+PERFORMANCE OPTIMIZATIONS
+--------------------------------------
+✓ Image optimization (Next.js Image)
+✓ Code splitting
+✓ Server components (default in App Router)
+✓ Data caching strategies
+✓ SEO-friendly structure
+
+
+SECURITY
+--------------------------------------
+✓ Row Level Security (RLS) in database
+✓ API route protection
+✓ CSRF protection
+✓ Input validation
+✓ SQL injection prevention (Supabase queries)
+✓ Environment variable protection

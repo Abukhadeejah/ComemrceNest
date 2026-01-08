@@ -1,0 +1,67 @@
+PROJECT ROOT FOLDER STRUCTURE
+======================================
+
+/
+├── src/
+│   ├── app/                           # Next.js App Router
+│   │   ├── (admin)/                   # Admin dashboard
+│   │   │   ├── admin/                 # Main admin routes
+│   │   │   │   ├── products/          # Product management
+│   │   │   │   ├── categories/        # Category management
+│   │   │   │   ├── orders/            # Order management
+│   │   │   │   ├── customers/         # Customer management
+│   │   │   │   ├── inventory/         # Inventory tracking
+│   │   │   │   ├── analytics/         # Analytics dashboard
+│   │   │   │   ├── settings/          # Admin settings
+│   │   │   │   └── team/              # Team management
+│   │   │   └── (site)/                # Tenant storefronts
+│   │   │       ├── bluebell/          # Brand 1
+│   │   │       ├── senlysh/           # Brand 2
+│   │   │       └── [slug]/            # Dynamic routes
+│   │   ├── (tenant-admin)/            # Tenant-specific admin
+│   │   │   └── [tenant]/              # Dynamic tenant routes
+│   │   ├── api/                       # API routes
+│   │   │   ├── admin/                 # Admin APIs
+│   │   │   ├── auth/                  # Authentication
+│   │   │   ├── checkout/              # Checkout
+│   │   │   ├── customers/             # Customer APIs
+│   │   │   ├── webhooks/              # Payment webhooks
+│   │   │   └── site/                  # Site APIs
+│   │   └── layout files               # Root layouts
+│   ├── components/                    # Reusable components
+│   │   ├── admin/                     # Admin components
+│   │   ├── tenant/                    # Tenant components
+│   │   └── patterns/                  # Pattern components
+│   ├── server/                        # Server utilities
+│   │   ├── config/                    # Server config
+│   │   ├── modules/                   # Server modules
+│   │   └── tenant/                    # Tenant utilities
+│   ├── modules/                       # Feature modules
+│   │   └── products/                  # Product module
+│   ├── types/                         # TypeScript types
+│   ├── hooks/                         # Custom hooks
+│   ├── lib/                           # Library code
+│   ├── utils/                         # Utilities
+│   ├── registry/                      # Component registry
+│   ├── config/                        # App config
+│   ├── tenants/                       # Tenant configs
+│   └── test/                          # Test files
+├── public/                            # Static assets
+│   └── images/                        # Image files
+├── tests/                             # Test files
+│   └── e2e/                           # E2E tests
+├── scripts/                           # Build/setup scripts
+├── migrations/                        # Database migrations
+├── docs/                              # Documentation
+└── setup/                             # Setup files
+
+CONFIGURATION FILES (ROOT)
+======================================
+✓ package.json              - Dependencies & scripts
+✓ tsconfig.json             - TypeScript config
+✓ next.config.ts            - Next.js config
+✓ tailwind.config.ts        - TailwindCSS config
+✓ postcss.config.js         - PostCSS config
+✓ eslint.config.mjs         - ESLint config
+✓ playwright.config.ts      - Playwright config
+✓ vercel.json               - Vercel deployment

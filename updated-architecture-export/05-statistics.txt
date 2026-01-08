@@ -1,0 +1,139 @@
+PROJECT STATISTICS & SUMMARY
+======================================
+
+TECHNOLOGY STACK
+--------------------------------------
+Runtime:        Node.js
+Framework:      Next.js 15 (App Router)
+Language:       TypeScript
+UI Library:     React 19+
+Styling:        TailwindCSS 4
+Form Management: React Hook Form
+Database:       Supabase (PostgreSQL)
+Authentication: Supabase Auth
+Payment:        Razorpay + PhonePe
+Testing:        Playwright
+Deployment:     Vercel
+
+
+CORE DEPENDENCIES (package.json)
+--------------------------------------
+✓ next: 15.x
+✓ react: 19+
+✓ typescript: 5.x
+✓ tailwindcss: 4.x
+✓ react-hook-form: Latest
+✓ @supabase/supabase-js: Latest
+✓ axios: For API calls
+✓ clsx: Conditional classnames
+✓ lucide-react: Icons
+✓ date-fns: Date utilities
+✓ recharts: Charts/analytics
+✓ playwright: E2E testing
+
+
+PROJECT STRUCTURE
+--------------------------------------
+Total Folders:  50+
+Key Modules:
+  - Admin Dashboard (full-featured)
+  - Multi-tenant Storefronts
+  - API Routes (20+ endpoints)
+  - Component Library
+  - Type Definitions
+  - Utility Functions
+  - Server-side Logic
+  - Database Layer
+
+
+MAIN FEATURES
+--------------------------------------
+✓ Multi-tenant E-commerce Platform
+✓ Product Management (variants, attributes)
+✓ Order Management
+✓ Customer Management
+✓ Inventory Tracking
+✓ Payment Processing (Razorpay + PhonePe)
+✓ Wallet System
+✓ Analytics Dashboard
+✓ Admin Panel
+✓ Customer Storefronts
+✓ Authentication & Authorization
+✓ Role-based Access Control
+
+
+RECENT UPDATES (2025-2026)
+--------------------------------------
+✓ PhonePe Payment Integration
+✓ Horizontal Attribute Layout (Product Form)
+✓ Wallet Withdrawals Feature
+✓ Cost Price Tracking
+✓ Supabase Auth Standardization
+✓ Product Attribute System
+✓ Best Sellers Support
+✓ Featured Products Management
+✓ Multi-provider Payment Support
+
+
+DEVELOPMENT WORKFLOW
+--------------------------------------
+1. Development:
+   npm run dev      - Start dev server on port 3000
+
+2. Building:
+   npm run build    - Production build
+
+3. Testing:
+   npm run test:e2e - Run E2E tests with Playwright
+
+4. Linting:
+   npm run lint     - Check code quality
+
+
+FOLDER HIGHLIGHTS
+--------------------------------------
+
+Admin Module:
+  Location: /src/app/(admin)/admin/
+  Size: ~30+ components
+  Features: Dashboard, Products, Orders, etc.
+
+API Routes:
+  Location: /src/app/api/
+  Count: 20+ routes
+  Features: Admin, Auth, Checkout, Webhooks
+
+Database:
+  Type: Supabase PostgreSQL
+  Tables: 15+
+  RLS Policies: Implemented
+
+Components:
+  Location: /src/components/
+  Organization: By feature (admin, tenant, patterns)
+  Reusability: High
+
+
+DEPLOYMENT NOTES
+--------------------------------------
+✓ Hosted on Vercel
+✓ Database on Supabase
+✓ Environment-based configuration
+✓ CI/CD ready (GitHub integration)
+✓ Auto-deployment on main branch
+
+
+DOCUMENTATION
+--------------------------------------
+See /Senlysh/ folder for:
+  - Development logs
+  - Feature implementations
+  - Bug fixes & resolutions
+  - Integration guides (Razorpay, PhonePe)
+  - Architecture decisions
+
+Key docs:
+  - COST_PRICE_COMPLETE_RESOLUTION.md
+  - MULTI_PROVIDER_PAYMENT_INTEGRATION.md
+  - ATTRIBUTE_SIDEBAR_IMPLEMENTATION.md
+  - JUSPAY_MIGRATION_GUIDE.md

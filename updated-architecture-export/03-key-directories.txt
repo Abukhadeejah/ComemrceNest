@@ -1,0 +1,119 @@
+KEY DIRECTORIES & MODULES
+======================================
+
+/src/app - NEXT.JS APP ROUTER
+--------------------------------------
+The main application structure using Next.js App Router:
+
+(admin)                    - Admin dashboard wrapper
+├── admin/                 - Main admin pages
+│   ├── products/          - Product CRUD & management
+│   ├── categories/        - Category management
+│   ├── orders/            - Order processing
+│   ├── customers/         - Customer database
+│   ├── inventory/         - Stock management
+│   └── settings/          - System configuration
+
+(site)                     - Customer storefront wrapper
+├── bluebell/              - First tenant store
+├── senlysh/               - Second tenant store
+└── [slug]/                - Dynamic product/portfolio pages
+
+(tenant-admin)             - Multi-tenant admin
+└── [tenant]/              - Dynamic tenant routes
+
+api/                       - Backend API routes
+├── admin/                 - Admin endpoints
+├── auth/                  - Authentication (Supabase)
+├── checkout/              - Cart & checkout
+├── webhooks/              - Payment webhooks (Razorpay, PhonePe)
+└── site/                  - Frontend APIs
+
+
+/src/CORE MODULES
+--------------------------------------
+
+components/
+├── admin/                 - Admin UI components
+│   └── layout/            - Admin layouts
+├── tenant/                - Tenant-specific components
+│   └── products/          - Product components
+└── patterns/              - Reusable patterns
+
+server/
+├── config/                - Database config
+├── modules/               - Server-side business logic
+│   ├── products/          - Product handling
+│   └── portfolio/         - Portfolio handling
+└── tenant/                - Tenant utilities
+
+modules/
+└── products/
+    └── components/        - Product components
+
+types/
+├── product.ts             - Product types
+├── order.ts               - Order types
+├── customer.ts            - Customer types
+└── payment.ts             - Payment types
+
+hooks/
+├── useAuth.ts             - Authentication hook
+├── useCart.ts             - Cart management
+└── useTenant.ts           - Tenant context
+
+utils/
+├── helpers.ts             - Helper functions
+├── validators.ts          - Validation logic
+└── constants.ts           - App constants
+
+lib/
+├── supabase/              - Supabase client
+├── razorpay/              - Razorpay integration
+└── phonepe/               - PhonePe integration
+
+
+/DATABASE & MIGRATIONS
+--------------------------------------
+
+Located in /migrations/:
+✓ add_phonepe_transaction_id.sql     - PhonePe column addition
+✓ create_wallet_withdrawals_table.sql - Wallet feature
+✓ setup-rls-policies.sql              - Row Level Security
+
+Tables in Supabase:
+✓ products              - Product data
+✓ product_attributes    - Attribute definitions
+✓ categories            - Product categories
+✓ orders                - Order records
+✓ order_items           - Order details
+✓ customers             - Customer accounts
+✓ wallets               - Customer wallets
+✓ payments              - Payment records
+
+
+/TESTING
+--------------------------------------
+
+tests/e2e/                - Playwright E2E tests
+✓ Test product flows
+✓ Test checkout
+✓ Test authentication
+
+
+STATIC FILES
+--------------------------------------
+
+public/
+├── images/
+│   ├── brands/          - Brand logos
+│   └── senlysh/         - Tenant-specific images
+
+
+SCRIPTS & UTILITIES
+--------------------------------------
+
+scripts/
+├── scaffold-tenant.js    - Create new tenant
+├── validate-imports.js   - Check imports
+└── fix-hero-images.js    - Image utilities
