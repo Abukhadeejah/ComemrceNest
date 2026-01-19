@@ -241,6 +241,14 @@ export default function Header() {
                 )}
               </Link>
 
+              {isCustomer && (
+                <Link href="/senlysh/wallet" className="text-gray-700 hover:text-purple-600 transition-colors relative" title="Wallet">
+                  <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7a2 2 0 012-2h12a2 2 0 012 2v1h1a1 1 0 010 2h-1v5a2 2 0 01-2 2H5a2 2 0 01-2-2V7zm2-1h12a1 1 0 011 1v1H5V7a1 1 0 011-1z" />
+                  </svg>
+                </Link>
+              )}
+
               <Link href="/cart" className="text-gray-700 hover:text-purple-600 transition-colors relative">
                 <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
@@ -397,6 +405,16 @@ export default function Header() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
               </Link>
+
+              {isCustomer && (
+                <Link href="/senlysh/wallet" className="flex items-center justify-between py-3 px-4 text-sm font-bold text-gray-900 hover:text-white bg-gray-50 hover:bg-purple-600 rounded-xl transition-all shadow-sm group"
+                  onClick={() => setIsMenuOpen(false)}>
+                  <span>WALLET</span>
+                  <svg className="w-4 h-4 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7a2 2 0 012-2h12a2 2 0 012 2v1h1a1 1 0 010 2h-1v5a2 2 0 01-2 2H5a2 2 0 01-2-2V7zm2-1h12a1 1 0 011 1v1H5V7a1 1 0 011-1z" />
+                  </svg>
+                </Link>
+              )}
             </nav>
 
             {/* Sticky Bottom CTA */}

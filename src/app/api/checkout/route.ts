@@ -13,7 +13,7 @@ interface CheckoutItem {
 
 async function calculateCartTotals(tenantId: string, items: CheckoutItem[]) {
   if (!Array.isArray(items) || items.length === 0) {
-    return { subtotalCents: 0, taxCents: 0, totalCents: 0 };
+    return { subtotalCents: 0, taxCents: 0, totalCents: 0, baseSubtotalCents: 0 };
   }
 
   const productIds = items.map((it) => it.productId);
@@ -48,27 +48,36 @@ async function calculateCartTotals(tenantId: string, items: CheckoutItem[]) {
       taxClassMap.set(tc.id, Number(tc.rate_percent) || 0);
     });
   }
-
   let subtotalCents = 0;
   let taxCents = 0;
+  let baseSubtotalCents = 0;
 
   items.forEach((item) => {
     const product = products.find((p) => p.id === item.productId);
     if (!product) return;
     const unitPrice = typeof product.price_cents === 'number' ? product.price_cents : 0;
     const qty = Number(item.quantity) || 0;
-    const lineSubtotal = unitPrice * qty;
+    const lineSubtotal = unitPrice * qty; // Stored prices are tax-inclusive
     subtotalCents += lineSubtotal;
 
     const taxRatePercent = product.taxable === false ? 0 : (product.tax_class_id ? taxClassMap.get(product.tax_class_id) || 0 : 0);
-    const lineTax = Math.round((lineSubtotal * taxRatePercent) / 100);
-    taxCents += lineTax;
+
+    if (taxRatePercent > 0) {
+      // Derive embedded tax: base = gross / (1 + rate)
+      const lineBase = Math.round(lineSubtotal / (1 + taxRatePercent / 100));
+      const lineTax = Math.max(lineSubtotal - lineBase, 0);
+      baseSubtotalCents += lineBase;
+      taxCents += lineTax;
+    } else {
+      baseSubtotalCents += lineSubtotal;
+    }
   });
 
   return {
-    subtotalCents,
-    taxCents,
-    totalCents: subtotalCents + taxCents,
+    subtotalCents, // gross total customer pays (tax-inclusive)
+    taxCents, // tax portion already included in subtotal
+    baseSubtotalCents, // net of tax
+    totalCents: subtotalCents, // do NOT add tax again
   };
 }
 
@@ -92,6 +101,11 @@ export async function POST(request: NextRequest) {
         gstin?: string;
       };
       items?: CheckoutItem[];
+      walletUsedRupees?: number;
+      customerId?: string;
+      coupon_code?: string;
+      coupon_id?: string;
+      discount_amount_cents?: number;
     };
 
     // Fallback to explicit tenant key from client if middleware header/cookie is missing (e.g., global checkout routes)
@@ -126,9 +140,27 @@ export async function POST(request: NextRequest) {
 
     // Route to appropriate payment provider
     if (provider === 'phonepe') {
-      return await handlePhonePeCheckout(tenantId, amountPaise, customerEmail, customerPhone, { ...body, items: itemPayload, totals });
+      return await handlePhonePeCheckout(tenantId, amountPaise, customerEmail, customerPhone, { 
+        ...body, 
+        items: itemPayload, 
+        totals,
+        coupon_code: body.coupon_code,
+        coupon_id: body.coupon_id,
+        discount_amount_cents: body.discount_amount_cents,
+        walletUsedRupees: body.walletUsedRupees,
+        customerId: body.customerId
+      });
     } else if (provider === 'razorpay') {
-      return await handleRazorpayCheckout(tenantId, amountPaise, customerEmail, customerPhone, { ...body, items: itemPayload, totals });
+      return await handleRazorpayCheckout(tenantId, amountPaise, customerEmail, customerPhone, { 
+        ...body, 
+        items: itemPayload, 
+        totals,
+        coupon_code: body.coupon_code,
+        coupon_id: body.coupon_id,
+        discount_amount_cents: body.discount_amount_cents,
+        walletUsedRupees: body.walletUsedRupees,
+        customerId: body.customerId
+      });
     } else {
       return NextResponse.json({ error: 'unsupported_payment_provider' }, { status: 400 });
     }
@@ -148,7 +180,15 @@ async function handlePhonePeCheckout(
   amountPaise: number,
   customerEmail: string,
   customerPhone: string,
-  body: { items?: CheckoutItem[]; totals?: { subtotalCents: number; taxCents: number; totalCents: number } }
+  body: { 
+    items?: CheckoutItem[]; 
+    totals?: { subtotalCents: number; taxCents: number; totalCents: number };
+    coupon_code?: string;
+    coupon_id?: string;
+    discount_amount_cents?: number;
+    walletUsedRupees?: number;
+    customerId?: string;
+  }
 ) {
   // Check if SDK credentials are configured
   const clientId = process.env.PHONEPE_CLIENT_ID;
@@ -188,6 +228,19 @@ async function handlePhonePeCheckout(
     await supabaseAdmin.from('order_items').insert(itemsPayload);
   }
 
+  // Store pending coupon data for webhook processing
+  if (body.coupon_id && body.coupon_code && body.customerId) {
+    await supabaseAdmin.from('pending_coupon_usage').insert({
+      tenant_id: tenantId,
+      order_id: orderId,
+      coupon_id: body.coupon_id,
+      coupon_code: body.coupon_code,
+      customer_id: body.customerId,
+      discount_amount_cents: body.discount_amount_cents || 0,
+      created_at: new Date().toISOString()
+    });
+  }
+
   return NextResponse.json({ 
     success: true, 
     redirectUrl,
@@ -202,7 +255,15 @@ async function handleRazorpayCheckout(
   amountPaise: number,
   customerEmail: string,
   customerPhone: string,
-  body: { items?: CheckoutItem[]; totals?: { subtotalCents: number; taxCents: number; totalCents: number } }
+  body: { 
+    items?: CheckoutItem[]; 
+    totals?: { subtotalCents: number; taxCents: number; totalCents: number };
+    coupon_code?: string;
+    coupon_id?: string;
+    discount_amount_cents?: number;
+    walletUsedRupees?: number;
+    customerId?: string;
+  }
 ) {
   const credentials = await resolveRazorpayCredentials(tenantId);
   if (!credentials) {
@@ -255,6 +316,19 @@ async function handleRazorpayCheckout(
     }));
     
     await supabaseAdmin.from('order_items').insert(itemsPayload);
+  }
+
+  // Store pending coupon data for webhook processing
+  if (body.coupon_id && body.coupon_code && body.customerId) {
+    await supabaseAdmin.from('pending_coupon_usage').insert({
+      tenant_id: tenantId,
+      order_id: order.id,
+      coupon_id: body.coupon_id,
+      coupon_code: body.coupon_code,
+      customer_id: body.customerId,
+      discount_amount_cents: body.discount_amount_cents || 0,
+      created_at: new Date().toISOString()
+    });
   }
 
   return NextResponse.json({

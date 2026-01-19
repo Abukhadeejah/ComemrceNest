@@ -42,6 +42,7 @@ export const ADMIN_URLS = {
   attributes: (tenant?: string) => getAdminUrl('/products/attributes', tenant),
   attributesNew: (tenant?: string) => getAdminUrl('/products/attributes/new', tenant),
   attributeEdit: (id: string, tenant?: string) => getAdminUrl(`/products/attributes/${id}/edit`, tenant),
+  coupons: (tenant?: string) => getAdminUrl('/coupons', tenant),
 }
 
 

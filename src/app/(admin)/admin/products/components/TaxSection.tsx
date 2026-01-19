@@ -84,6 +84,10 @@ export function TaxSection({ formData, errors, onInputChange, setValue }: TaxSec
 
   const selectedTaxClass = taxClasses.find(c => c.id === formData.tax_class_id)
   const defaultTaxClass = taxClasses.find(c => c.is_default)
+  const grossPriceCents = typeof formData.price_cents === 'number' ? formData.price_cents : 0
+  const selectedRate = selectedTaxClass?.rate_percent ?? 0
+  const basePriceCents = selectedRate > 0 ? Math.round(grossPriceCents / (1 + selectedRate / 100)) : grossPriceCents
+  const gstPortionCents = Math.max(grossPriceCents - basePriceCents, 0)
 
   return (
     <div className="bg-white shadow rounded-lg p-6">
@@ -214,17 +218,18 @@ export function TaxSection({ formData, errors, onInputChange, setValue }: TaxSec
                 <div className="bg-gray-50 rounded-md p-3">
                   <div className="text-sm">
                     <div className="flex justify-between">
-                      <span>Product Price:</span>
-                      <span>₹{((formData.price_cents as number) / 100).toFixed(2)}</span>
+                      <span>MRP (incl. GST):</span>
+                      <span>₹{(grossPriceCents / 100).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-gray-600">
-                      <span>GST ({selectedTaxClass.rate_percent}%):</span>
-                      <span>₹{(((formData.price_cents as number) / 100) * (selectedTaxClass.rate_percent / 100)).toFixed(2)}</span>
+                      <span>Base (excl. GST):</span>
+                      <span>₹{(basePriceCents / 100).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between font-medium border-t pt-1 mt-1">
-                      <span>Total (incl. tax):</span>
-                      <span>₹{(((formData.price_cents as number) / 100) * (1 + selectedTaxClass.rate_percent / 100)).toFixed(2)}</span>
+                      <span>GST @ {selectedTaxClass.rate_percent}%:</span>
+                      <span>₹{(gstPortionCents / 100).toFixed(2)}</span>
                     </div>
+                    <p className="mt-1 text-xs text-gray-600">Prices are stored tax-inclusive; base and GST are derived for filings.</p>
                   </div>
                 </div>
               )}

@@ -224,11 +224,22 @@ export function useCart() {
 
 // Helper function to format price
 export function formatPrice(priceInCents: number): string {
-  // 🔧 FIX: Ensure priceInCents is a valid number
+  // Prices are stored as tax-inclusive cents; show rounded rupee for shelf/cart UI
   const safePriceInCents = Number(priceInCents) || 0
   return (safePriceInCents / 100).toLocaleString('en-IN', {
     style: 'currency',
     currency: 'INR',
     maximumFractionDigits: 0
+  })
+}
+
+export function formatPriceWithPaise(priceInCents: number): string {
+  // Utility to show precise tax-inclusive amounts (e.g., GST breakdown)
+  const safePriceInCents = Number(priceInCents) || 0
+  return (safePriceInCents / 100).toLocaleString('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
   })
 }

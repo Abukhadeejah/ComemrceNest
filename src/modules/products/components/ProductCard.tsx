@@ -2,6 +2,7 @@
 import React from 'react'
 import Image from 'next/image'
 import { BLUR_DATA_URL } from '@/lib/blurPlaceholder'
+import { formatPrice } from '@/lib/cart'
 
 
 type Accent = 'primary' | 'mustard'
@@ -21,6 +22,7 @@ type Props = {
 
 export function ProductCard({ 
   name, 
+  priceCents,
   imageUrl, 
   badgeText = 'Premium', 
   accent = 'primary', 
@@ -28,6 +30,7 @@ export function ProductCard({
   whatsappNumber = '919876543210' // Default number - replace with actual
 }: Props) {
   const accentColor = accent === 'mustard' ? 'var(--color-mustard)' : 'var(--color-primary)'
+  const formattedPrice = formatPrice(priceCents)
   
   // WhatsApp link with pre-filled message
   const whatsappLink = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(`Hi, I'm interested in ${name}`)}`
@@ -82,6 +85,13 @@ export function ProductCard({
         <p className="mb-5 text-[color:var(--color-brown)] text-sm leading-relaxed">
           {description ?? 'Premium blend with subtle texture and exceptional durability'}
         </p>
+
+        <div className="mb-4 flex items-baseline justify-between">
+          <div>
+            <div className="text-lg font-semibold text-[color:var(--color-primary)]">{formattedPrice}</div>
+            <p className="text-xs text-[color:var(--color-brown)]">MRP (tax inclusive)</p>
+          </div>
+        </div>
         
         {/* WhatsApp Button */}
         <a
