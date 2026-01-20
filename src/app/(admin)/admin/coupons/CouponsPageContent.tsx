@@ -43,6 +43,21 @@ export default function CouponsPageContent() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const [showEditForm, setShowEditForm] = useState(false)
+  const [editingCoupon, setEditingCoupon] = useState<Coupon | null>(null)
+  const [editFormData, setEditFormData] = useState({
+    code: '',
+    description: '',
+    discount_type: 'percentage' as 'percentage' | 'fixed',
+    discount_value: '',
+    max_discount_rupees: '',
+    valid_from: new Date().toISOString().split('T')[0],
+    valid_until: '',
+    min_order_value_rupees: '',
+    max_uses: '',
+    uses_per_customer: '1',
+    is_active: true
+  })
 
   useEffect(() => {
     loadCoupons()
@@ -172,6 +187,79 @@ export default function CouponsPageContent() {
       }
     } catch (error) {
       console.error('Failed to delete coupon:', error)
+    }
+  }
+
+  const openEdit = (coupon: Coupon) => {
+    setEditingCoupon(coupon)
+    setEditFormData({
+      code: coupon.code || '',
+      description: coupon.description || '',
+      discount_type: coupon.discount_type,
+      discount_value: String(coupon.discount_value ?? ''),
+      max_discount_rupees: coupon.max_discount_cents != null ? (coupon.max_discount_cents / 100).toFixed(2) : '',
+      valid_from: coupon.valid_from ? new Date(coupon.valid_from).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      valid_until: coupon.valid_until ? new Date(coupon.valid_until).toISOString().split('T')[0] : '',
+      min_order_value_rupees: coupon.min_order_value_cents ? (coupon.min_order_value_cents / 100).toFixed(2) : '',
+      max_uses: coupon.max_uses != null ? String(coupon.max_uses) : '',
+      uses_per_customer: String(coupon.uses_per_customer ?? '1'),
+      is_active: coupon.is_active,
+    })
+    setShowEditForm(true)
+    setShowCreateForm(false)
+    setError(null)
+    setSuccess(null)
+  }
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingCoupon) return
+    setSubmitting(true)
+    setError(null)
+    setSuccess(null)
+
+    try {
+      const finalCode = (editFormData.code || '').trim().toUpperCase()
+
+      const maxDiscountCents = editFormData.discount_type === 'percentage' && editFormData.max_discount_rupees
+        ? Math.max(0, Math.round(parseFloat(editFormData.max_discount_rupees) * 100))
+        : null
+      const minOrderValueCents = editFormData.min_order_value_rupees
+        ? Math.max(0, Math.round(parseFloat(editFormData.min_order_value_rupees) * 100))
+        : 0
+
+      const tenant = getTenantKey()
+      const response = await fetch(`/api/admin/coupons/${editingCoupon.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...(tenant ? { 'x-tenant-admin': tenant } : {}) },
+        body: JSON.stringify({
+          code: finalCode,
+          description: editFormData.description,
+          discount_type: editFormData.discount_type,
+          discount_value: parseFloat(editFormData.discount_value),
+          max_discount_cents: maxDiscountCents,
+          valid_from: new Date(editFormData.valid_from).toISOString(),
+          valid_until: new Date(editFormData.valid_until + 'T23:59:59').toISOString(),
+          min_order_value_cents: minOrderValueCents,
+          max_uses: editFormData.max_uses ? parseInt(editFormData.max_uses) : null,
+          uses_per_customer: parseInt(editFormData.uses_per_customer),
+          is_active: editFormData.is_active
+        })
+      })
+
+      if (response.ok) {
+        setSuccess('Coupon updated successfully!')
+        setShowEditForm(false)
+        setEditingCoupon(null)
+        loadCoupons()
+      } else {
+        const data = await response.json()
+        setError(data.error || 'Failed to update coupon')
+      }
+    } catch (error) {
+      setError('An error occurred while updating the coupon')
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -433,6 +521,207 @@ export default function CouponsPageContent() {
         </div>
       )}
 
+      {/* Edit Form */}
+      {showEditForm && editingCoupon && (
+        <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
+          <div className="mb-6">
+            <h2 className="text-xl font-bold text-gray-900">Edit Coupon</h2>
+            <p className="text-sm text-gray-500 mt-1">Update the fields and save your changes</p>
+          </div>
+          <form onSubmit={handleEditSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Coupon Code */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Coupon Code <span className="text-red-600 font-semibold">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editFormData.code}
+                  onChange={(e) => setEditFormData({ ...editFormData, code: e.target.value.toUpperCase() })}
+                  className="w-full border-2 border-gray-200 rounded-lg px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 uppercase"
+                  maxLength={32}
+                />
+              </div>
+
+              {/* Discount Type */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Discount Type <span className="text-red-600 font-semibold">*</span>
+                </label>
+                <select
+                  value={editFormData.discount_type}
+                  onChange={(e) => setEditFormData({ ...editFormData, discount_type: e.target.value as 'percentage' | 'fixed' })}
+                  className="w-full border-2 border-gray-200 rounded-lg px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                >
+                  <option value="percentage">Percentage (%)</option>
+                  <option value="fixed">Fixed Amount (₹)</option>
+                </select>
+              </div>
+
+              {/* Discount Value */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Discount Value <span className="text-red-600 font-semibold">*</span> {editFormData.discount_type === 'percentage' ? '(%)' : '(₹)'}
+                </label>
+                <input
+                  type="number"
+                  required
+                  step="0.01"
+                  min="0"
+                  max={editFormData.discount_type === 'percentage' ? '100' : undefined}
+                  value={editFormData.discount_value}
+                  onChange={(e) => setEditFormData({ ...editFormData, discount_value: e.target.value })}
+                  placeholder={editFormData.discount_type === 'percentage' ? '20' : '100'}
+                  className="w-full border-2 border-gray-200 rounded-lg px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                />
+              </div>
+
+              {/* Max Discount (for percentage, in ₹) */}
+              {editFormData.discount_type === 'percentage' && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Max Discount Cap (₹) <span className="text-gray-500 text-xs">(optional)</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={editFormData.max_discount_rupees}
+                    onChange={(e) => setEditFormData({ ...editFormData, max_discount_rupees: e.target.value })}
+                    placeholder="e.g., 100"
+                    className="w-full border-2 border-gray-200 rounded-lg px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Enter in rupees. Leave empty for no cap.</p>
+                </div>
+              )}
+
+              {/* Valid From */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Valid From <span className="text-red-600 font-semibold">*</span>
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={editFormData.valid_from}
+                  onChange={(e) => setEditFormData({ ...editFormData, valid_from: e.target.value })}
+                  className="w-full border-2 border-gray-200 rounded-lg px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                />
+              </div>
+
+              {/* Valid Until */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Valid Until <span className="text-red-600 font-semibold">*</span>
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={editFormData.valid_until}
+                  onChange={(e) => setEditFormData({ ...editFormData, valid_until: e.target.value })}
+                  className="w-full border-2 border-gray-200 rounded-lg px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                />
+              </div>
+
+              {/* Min Order Value (₹) */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Min Order Value (₹) <span className="text-gray-500 text-xs">(optional)</span>
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={editFormData.min_order_value_rupees}
+                  onChange={(e) => setEditFormData({ ...editFormData, min_order_value_rupees: e.target.value })}
+                  placeholder="e.g., 500"
+                  className="w-full border-2 border-gray-200 rounded-lg px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                />
+                <p className="text-xs text-gray-500 mt-1">Enter in rupees. 0 = no minimum</p>
+              </div>
+
+              {/* Max Uses */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Max Total Uses <span className="text-gray-500 text-xs">(optional)</span>
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={editFormData.max_uses}
+                  onChange={(e) => setEditFormData({ ...editFormData, max_uses: e.target.value })}
+                  placeholder="Leave empty for unlimited"
+                  className="w-full border-2 border-gray-200 rounded-lg px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                />
+              </div>
+
+              {/* Uses Per Customer */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Uses Per Customer <span className="text-red-600 font-semibold">*</span>
+                </label>
+                <input
+                  type="number"
+                  required
+                  min="1"
+                  value={editFormData.uses_per_customer}
+                  onChange={(e) => setEditFormData({ ...editFormData, uses_per_customer: e.target.value })}
+                  className="w-full border-2 border-gray-200 rounded-lg px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                />
+              </div>
+
+              {/* Active */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Status
+                </label>
+                <select
+                  value={editFormData.is_active ? 'true' : 'false'}
+                  onChange={(e) => setEditFormData({ ...editFormData, is_active: e.target.value === 'true' })}
+                  className="w-full border-2 border-gray-200 rounded-lg px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                >
+                  <option value="true">Active</option>
+                  <option value="false">Inactive</option>
+                </select>
+              </div>
+
+              {/* Description */}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Description <span className="text-gray-500 text-xs">(optional)</span>
+                </label>
+                <textarea
+                  value={editFormData.description}
+                  onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                  placeholder="Internal notes about this coupon"
+                  rows={3}
+                  className="w-full border-2 border-gray-200 rounded-lg px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-4">
+              <button
+                type="submit"
+                disabled={submitting}
+                className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 font-semibold disabled:bg-gray-400 transition-colors"
+              >
+                {submitting ? 'Saving...' : 'Save Changes'}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowEditForm(false); setEditingCoupon(null); }}
+                className="bg-gray-200 text-gray-700 px-8 py-3 rounded-lg hover:bg-gray-300 font-semibold transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       {/* Coupons List */}
       <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
         {coupons.length === 0 ? (
@@ -515,6 +804,12 @@ export default function CouponsPageContent() {
                           className="text-sm text-blue-600 hover:text-blue-800 font-medium"
                         >
                           {coupon.is_active ? 'Deactivate' : 'Activate'}
+                        </button>
+                        <button
+                          onClick={() => openEdit(coupon)}
+                          className="text-sm text-gray-700 hover:text-black font-medium"
+                        >
+                          Edit
                         </button>
                         <button
                           onClick={() => deleteCoupon(coupon.id)}

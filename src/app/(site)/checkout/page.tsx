@@ -68,6 +68,7 @@ export default function CheckoutPage() {
   const [tenantKey, setTenantKey] = useState<string | null>(null)
   type PriceSummary = { total: number; tax: number; base: number }
   const [priceSummary, setPriceSummary] = useState<PriceSummary>({ total: 0, tax: 0, base: 0 })
+  const [productPrices, setProductPrices] = useState<Array<{ lineIndex: number; productId: string; priceCents: number; quantity: number; lineTotalCents: number }>>([])
   const grandTotal = priceSummary.total > 0 ? priceSummary.total : cart.total
   const includedTax = priceSummary.tax > 0 ? priceSummary.tax : 0
   const baseAmount = priceSummary.base > 0 ? priceSummary.base : Math.max(grandTotal - includedTax, 0)
@@ -233,13 +234,14 @@ export default function CheckoutPage() {
       }
       
       // Calculate total after discount
-      const orderTotalCents = Math.round(grandTotal * 100)
+      // grandTotal is already in cents; do not multiply by 100
+      const orderTotalCents = Math.round(grandTotal)
       const discountCents = appliedCoupon?.discount_amount_cents || 0
       const totalAfterDiscountCents = orderTotalCents - discountCents
       
       const totalCostCents = cart.items.reduce((sum, item) => {
-        // Assuming cost price is 70% of sale price if not available
-        const costCents = item.cost_price_cents || Math.round(item.price * 100 * 0.7)
+        // Estimate cost price as 70% of sale price (item.price is in cents)
+        const costCents = Math.round(item.price * 0.7)
         return sum + costCents * item.quantity
       }, 0)
       
@@ -258,6 +260,7 @@ export default function CheckoutPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             customerId: session.user.id,
+            tenantKey: tenantKey || tenant.key,
             totalSalePriceCents: totalAfterDiscountCents, // Use discounted price
             totalPurchasePriceCents: totalCostCents,
             walletUsedCents,
@@ -290,7 +293,7 @@ export default function CheckoutPage() {
       return
     }
     
-    if (!tenant.id) {
+    if (!tenantKey && !tenant.key) {
       setCouponError('Tenant information not available')
       return
     }
@@ -299,7 +302,8 @@ export default function CheckoutPage() {
     setCouponError(null)
     
     try {
-      const orderTotalCents = Math.round(grandTotal * 100)
+      // grandTotal is already in cents; do not multiply by 100
+      const orderTotalCents = Math.round(grandTotal)
       
       const response = await fetch('/api/coupons/validate', {
         method: 'POST',
@@ -308,12 +312,18 @@ export default function CheckoutPage() {
           coupon_code: couponCode.trim().toUpperCase(),
           order_total_cents: orderTotalCents,
           customer_id: session.user.id,
-          tenant_id: tenant.id
+          tenant_key: tenantKey || tenant.key
         })
       })
       
       const data = await response.json()
       
+      if (!response.ok) {
+        setAppliedCoupon(null)
+        setCouponError(data?.error || 'Failed to validate coupon')
+        return
+      }
+
       if (data.valid) {
         setAppliedCoupon({
           code: couponCode.trim().toUpperCase(),
@@ -325,7 +335,8 @@ export default function CheckoutPage() {
         setCouponError(null)
         setCouponCode('')
       } else {
-        setCouponError(data.error || 'Invalid coupon')
+        // Prefer specific message if available
+        setCouponError(data.error || data.details || 'Invalid coupon')
         setAppliedCoupon(null)
       }
     } catch (error) {
@@ -385,6 +396,7 @@ export default function CheckoutPage() {
     if (!hydrated) return
     if (!cart.items.length) {
       setPriceSummary({ total: 0, tax: 0, base: 0 })
+      setProductPrices([])
       return
     }
 
@@ -408,6 +420,7 @@ export default function CheckoutPage() {
 
         if (!response.ok) {
           setPriceSummary({ total: cart.total, tax: 0, base: cart.total })
+          setProductPrices([])
           return
         }
 
@@ -420,16 +433,19 @@ export default function CheckoutPage() {
           tax: taxCents,
           base: Number(totals.baseSubtotalCents) || Math.max(totalCents - taxCents, 0),
         })
+        // Store product prices from API response
+        setProductPrices(totals.productPrices || [])
       } catch (error) {
         if (controller.signal.aborted) return
         console.error('Failed to load tax quote', error)
         setPriceSummary({ total: cart.total, tax: 0, base: cart.total })
+        setProductPrices([])
       }
     }
 
     loadQuote()
     return () => controller.abort()
-  }, [cart.items, cart.total, hydrated])
+  }, [cart.items, cart.total, hydrated, tenantKey, tenant.key])
 
   const handleAddressSelection = (addressId: string) => {
     setSelectedAddressId(addressId)
@@ -505,7 +521,7 @@ export default function CheckoutPage() {
         headers: { 'content-type': 'application/json' }, 
         body: JSON.stringify({ 
           amountPaise, 
-          mode: 'test', 
+          mode: 'payment', 
           tenantKey: tenantKey || tenant.key,
           customer,
           items: validItems.map(it => ({
@@ -636,15 +652,22 @@ export default function CheckoutPage() {
               <h2 className={`${playfair.className} text-2xl font-bold text-gray-900 mb-6 text-center`}>Your Order</h2>
               
               <div className="bg-gray-50 rounded-xl p-6 mb-6">
-                {cart.items.map((item) => (
-                  <div key={item.id} className="flex justify-between items-center py-3 border-b border-gray-200 last:border-b-0">
-                    <div className="flex-1">
-                      <span className="font-semibold text-gray-900">{item.name}</span>
-                      <span className="text-gray-500 ml-2">× {item.quantity}</span>
+                {cart.items.map((item, idx) => {
+                  // Use server-validated price aligned by line index; fallback to cart price
+                  const productPrice = productPrices.find(p => p.lineIndex === idx)
+                  const displayPrice = productPrice?.priceCents ?? item.price
+                  const displayTotal = displayPrice * item.quantity
+                  
+                  return (
+                    <div key={item.id} className="flex justify-between items-center py-3 border-b border-gray-200 last:border-b-0">
+                      <div className="flex-1">
+                        <span className="font-semibold text-gray-900">{item.name}</span>
+                        <span className="text-gray-500 ml-2">× {item.quantity}</span>
+                      </div>
+                      <span className="font-bold text-gray-900">{formatPrice(displayTotal)}</span>
                     </div>
-                    <span className="font-bold text-gray-900">{formatPrice(item.price * item.quantity)}</span>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
               
               <div className="bg-blue-50 rounded-xl p-6 space-y-2">
@@ -906,7 +929,7 @@ export default function CheckoutPage() {
                           <span className="text-sm text-gray-600">applied</span>
                         </div>
                         <p className="text-sm text-gray-700">
-                          Discount: <span className="font-bold text-green-600">-{formatPrice(appliedCoupon.discount_amount_cents / 100)}</span>
+                          Discount: <span className="font-bold text-green-600">-{formatPrice(appliedCoupon.discount_amount_cents)}</span>
                         </p>
                         {appliedCoupon.discount_type === 'percentage' && (
                           <p className="text-xs text-gray-500 mt-1">
@@ -975,7 +998,7 @@ export default function CheckoutPage() {
                       <input
                         type="range"
                         min="0"
-                        max={Math.min(walletBalance / 100, grandTotal - (appliedCoupon?.discount_amount_cents || 0) / 100)}
+                        max={Math.min(walletBalance / 100, (grandTotal - (appliedCoupon?.discount_amount_cents || 0)) / 100)}
                         step="1"
                         value={walletUsedRupees}
                         onChange={(e) => setWalletUsedRupees(parseFloat(e.target.value))}
@@ -984,7 +1007,7 @@ export default function CheckoutPage() {
                       
                       <div className="flex justify-between text-xs text-gray-500 mt-1">
                         <span>₹0</span>
-                        <span>{formatPrice(Math.min(walletBalance / 100, grandTotal - (appliedCoupon?.discount_amount_cents || 0) / 100))}</span>
+                        <span>{formatPrice(Math.min(walletBalance / 100, (grandTotal - (appliedCoupon?.discount_amount_cents || 0)) / 100))}</span>
                       </div>
 
                       {/* Quick Select Buttons */}
@@ -998,14 +1021,14 @@ export default function CheckoutPage() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => setWalletUsedRupees(Math.min(walletBalance / 100, grandTotal - (appliedCoupon?.discount_amount_cents || 0) / 100) / 2)}
+                          onClick={() => setWalletUsedRupees(Math.min(walletBalance / 100, (grandTotal - (appliedCoupon?.discount_amount_cents || 0)) / 100) / 2)}
                           className="flex-1 px-3 py-2 text-sm border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-indigo-400 transition-colors"
                         >
                           Half
                         </button>
                         <button
                           type="button"
-                          onClick={() => setWalletUsedRupees(Math.min(walletBalance / 100, grandTotal - (appliedCoupon?.discount_amount_cents || 0) / 100))}
+                          onClick={() => setWalletUsedRupees(Math.min(walletBalance / 100, (grandTotal - (appliedCoupon?.discount_amount_cents || 0)) / 100))}
                           className="flex-1 px-3 py-2 text-sm border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-indigo-400 transition-colors"
                         >
                           Max
@@ -1028,10 +1051,10 @@ export default function CheckoutPage() {
                       <div className="bg-white rounded-lg p-4 shadow-sm border-2 border-green-200">
                         <p className="text-xs font-semibold text-gray-600 mb-1">Cash Payment</p>
                         <p className="text-2xl font-bold text-green-600">
-                          {formatPrice((grandTotal - (appliedCoupon?.discount_amount_cents || 0) / 100) - walletUsedRupees)}
+                          {formatPrice((grandTotal - (appliedCoupon?.discount_amount_cents || 0)) - (walletUsedRupees * 100))}
                         </p>
                         <p className="text-xs text-gray-500 mt-1">
-                          {((grandTotal - (appliedCoupon?.discount_amount_cents || 0) / 100) - walletUsedRupees) > 0 ? '✅ Earns cashback' : 'Fully covered'}
+                          {(((grandTotal - (appliedCoupon?.discount_amount_cents || 0)) - (walletUsedRupees * 100)) > 0) ? '✅ Earns cashback' : 'Fully covered'}
                         </p>
                       </div>
                     </div>
@@ -1092,8 +1115,8 @@ export default function CheckoutPage() {
             <button 
               disabled={busy || !scriptLoaded || grandTotal <= 0} 
               onClick={() => {
-                const totalAfterDiscount = grandTotal - (appliedCoupon?.discount_amount_cents || 0) / 100
-                const finalAmount = totalAfterDiscount - (useWallet ? walletUsedRupees : 0)
+                const totalAfterDiscount = grandTotal - (appliedCoupon?.discount_amount_cents || 0)
+                const finalAmount = totalAfterDiscount - (useWallet ? walletUsedRupees * 100 : 0)
                 handlePayment(finalAmount > 0 ? finalAmount : 0)
               }}
               className={`w-full text-white py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none ${
@@ -1113,8 +1136,8 @@ export default function CheckoutPage() {
               ) : (
                 <>
                   {(() => {
-                    const totalAfterDiscount = grandTotal - (appliedCoupon?.discount_amount_cents || 0) / 100
-                    const finalAmount = totalAfterDiscount - (useWallet ? walletUsedRupees : 0)
+                    const totalAfterDiscount = grandTotal - (appliedCoupon?.discount_amount_cents || 0)
+                    const finalAmount = totalAfterDiscount - (useWallet ? walletUsedRupees * 100 : 0)
                     
                     if (appliedCoupon && useWallet && walletUsedRupees > 0) {
                       return `Pay ${formatPrice(finalAmount)}`

@@ -17,7 +17,7 @@ type ProductServerResponse = Partial<Product> & {
   pricecents: number
   currency?: string
   size_guide_type?: string | null
-  productsizeguides?: {
+  productsizeguides?: Array<{
     sizeguides: {
       id: string
       name: string
@@ -25,7 +25,7 @@ type ProductServerResponse = Partial<Product> & {
       gender: string
       measurements: Record<string, Record<string, string>>
     }
-  }[]
+  }>
 }
 
 // Type for tenant config with additional properties
@@ -104,7 +104,8 @@ export function ProductDetail({
     }
     return null
   })
-  const hasSizeGuide = Boolean(sizeGuideImageUrl) || Boolean(product.product_size_guides?.length) || Boolean(product.productsizeguides?.length)
+  // @ts-ignore - productsizeguides is from database but may not be typed
+  const hasSizeGuide = !!(sizeGuideImageUrl || product.product_size_guides?.length || product.productsizeguides?.length)
   const [peopleViewing, setPeopleViewing] = useState(29)
 
 
@@ -290,8 +291,10 @@ export function ProductDetail({
               }
             : undefined,
       })
-      // Redirect to checkout
-      window.location.href = '/checkout'
+      // Redirect to checkout after a small delay to ensure cart state is saved
+      setTimeout(() => {
+        window.location.href = '/checkout'
+      }, 100)
     } catch (e) {
       // Handle error
     }

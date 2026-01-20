@@ -19,6 +19,7 @@ interface ProductData {
   name: string
   slug: string
   description?: string
+  short_description?: string
   price_cents: number
   compare_at_price_cents?: number | null
   cost_per_item_cents?: number | null
@@ -30,6 +31,7 @@ interface ProductData {
   meta_title?: string
   meta_description?: string
   sku?: string
+  barcode?: string
   weight?: string | number | null
   dimensions?: string
   has_variants?: boolean
@@ -779,11 +781,11 @@ export async function updateProduct(productId: string, formData: FormData) {
     slug: formData.get('slug') as string,
     description: formData.get('description') as string,
     short_description: formData.get('short_description') as string,
-    price_cents: parseIntOrUndefined('price_cents'),
+    price_cents: parseIntOrUndefined('price_cents') ?? 0,
     compare_at_price_cents: parseIntOrUndefined('compare_at_price_cents') ?? null,
     cost_per_item_cents: parseIntOrUndefined('cost_per_item_cents') ?? null,
     currency: formData.get('currency') as string || 'INR',
-    stock: parseIntOrUndefined('stock'),
+    stock: parseIntOrUndefined('stock') ?? 0,
     sku: formData.get('sku') as string,
     barcode: formData.get('barcode') as string,
     weight: formData.get('weight') as string,
@@ -888,7 +890,7 @@ export async function updateProduct(productId: string, formData: FormData) {
   // Check for field length violations
   const lengthErrors: string[] = []
   for (const [field, limit] of Object.entries(fieldLimits)) {
-    const value = (productData as Record<string, unknown>)[field]
+    const value = (productData as unknown as Record<string, unknown>)[field]
     if (typeof value === 'string' && value.length > limit) {
       lengthErrors.push(`${field} (${value.length} characters) exceeds maximum length of ${limit}`)
     }

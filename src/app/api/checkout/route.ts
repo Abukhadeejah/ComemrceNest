@@ -11,9 +11,17 @@ interface CheckoutItem {
   unitPriceCents?: number;
 }
 
+interface ProductPriceInfo {
+  lineIndex: number;
+  productId: string;
+  priceCents: number;
+  quantity: number;
+  lineTotalCents: number;
+}
+
 async function calculateCartTotals(tenantId: string, items: CheckoutItem[]) {
   if (!Array.isArray(items) || items.length === 0) {
-    return { subtotalCents: 0, taxCents: 0, totalCents: 0, baseSubtotalCents: 0 };
+    return { subtotalCents: 0, taxCents: 0, totalCents: 0, baseSubtotalCents: 0, productPrices: [] };
   }
 
   const productIds = items.map((it) => it.productId);
@@ -25,7 +33,7 @@ async function calculateCartTotals(tenantId: string, items: CheckoutItem[]) {
 
   if (productsError || !products) {
     console.error('[checkout] failed to load products for tax calc', productsError);
-    return { subtotalCents: 0, taxCents: 0, totalCents: 0 };
+    return { subtotalCents: 0, taxCents: 0, totalCents: 0, baseSubtotalCents: 0, productPrices: [] };
   }
 
   const taxClassIds = Array.from(
@@ -51,14 +59,26 @@ async function calculateCartTotals(tenantId: string, items: CheckoutItem[]) {
   let subtotalCents = 0;
   let taxCents = 0;
   let baseSubtotalCents = 0;
+  const productPrices: ProductPriceInfo[] = [];
 
-  items.forEach((item) => {
+  items.forEach((item, index) => {
     const product = products.find((p) => p.id === item.productId);
     if (!product) return;
-    const unitPrice = typeof product.price_cents === 'number' ? product.price_cents : 0;
+    // Prefer client-provided unit price (e.g., variant price), fallback to product base price
+    const unitPrice = typeof item.unitPriceCents === 'number' && item.unitPriceCents >= 0
+      ? item.unitPriceCents
+      : (typeof product.price_cents === 'number' ? product.price_cents : 0);
     const qty = Number(item.quantity) || 0;
     const lineSubtotal = unitPrice * qty; // Stored prices are tax-inclusive
     subtotalCents += lineSubtotal;
+
+    productPrices.push({
+      lineIndex: index,
+      productId: item.productId,
+      priceCents: unitPrice,
+      quantity: qty,
+      lineTotalCents: lineSubtotal
+    });
 
     const taxRatePercent = product.taxable === false ? 0 : (product.tax_class_id ? taxClassMap.get(product.tax_class_id) || 0 : 0);
 
@@ -78,6 +98,7 @@ async function calculateCartTotals(tenantId: string, items: CheckoutItem[]) {
     taxCents, // tax portion already included in subtotal
     baseSubtotalCents, // net of tax
     totalCents: subtotalCents, // do NOT add tax again
+    productPrices, // Return actual database prices
   };
 }
 
@@ -128,13 +149,27 @@ export async function POST(request: NextRequest) {
       : [];
 
     const totals = await calculateCartTotals(tenantId, itemPayload);
-    const amountPaise = totals.totalCents || body.amountPaise || 0;
+    
+    // Apply discount if provided
+    let finalAmountPaise = totals.totalCents || body.amountPaise || 0;
+    if (body.discount_amount_cents && body.discount_amount_cents > 0) {
+      finalAmountPaise = Math.max(0, finalAmountPaise - body.discount_amount_cents);
+    }
+    
+    // Apply wallet deduction if provided
+    if (body.walletUsedRupees && body.walletUsedRupees > 0) {
+      const walletUsedCents = Math.round(body.walletUsedRupees * 100);
+      finalAmountPaise = Math.max(0, finalAmountPaise - walletUsedCents);
+    }
+    
+    const amountPaise = finalAmountPaise;
 
     // Get payment provider for this tenant
     const provider = await getPaymentProvider(tenantId);
     console.log(`[checkout] Using payment provider: ${provider} for tenant: ${tenantId}`);
 
-    if (body.mode === 'quote') {
+    // If just requesting quote/totals, return without processing payment
+    if (!body.mode || body.mode === 'test') {
       return NextResponse.json({ totals });
     }
 

@@ -59,26 +59,41 @@ export async function getActiveMembership(
   customerId: string,
   tenantId: string
 ): Promise<Membership | null> {
-  const { data, error } = await supabaseAdmin
-    .from('memberships')
-    .select('*')
-    .eq('customer_id', customerId)
-    .eq('tenant_id', tenantId)
-    .eq('is_active', true)
-    .gte('valid_until', new Date().toISOString())
-    .order('valid_until', { ascending: false })
-    .limit(1)
-    .single()
-  
-  if (error) {
-    if (error.code === 'PGRST116') {
-      // No rows returned
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('memberships')
+      .select('*')
+      .eq('customer_id', customerId)
+      .eq('tenant_id', tenantId)
+      .eq('is_active', true)
+      .gte('valid_until', new Date().toISOString())
+      .order('valid_until', { ascending: false })
+      .limit(1)
+      .single()
+    
+    if (error) {
+      if (error.code === 'PGRST116') {
+        // No rows returned - this is expected if no membership exists
+        return null
+      }
+      console.error('[getActiveMembership] Error fetching membership:', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        customerId,
+        tenantId
+      })
+      // Return null instead of throwing to gracefully handle missing memberships
+      // This allows cashback preview to work even if membership table is empty
       return null
     }
-    throw new Error(`Failed to fetch membership: ${error.message}`)
+    
+    return data
+  } catch (err: any) {
+    console.error('[getActiveMembership] Exception:', err.message)
+    // Gracefully handle errors - return null instead of throwing
+    return null
   }
-  
-  return data
 }
 
 /**

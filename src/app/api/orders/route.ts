@@ -292,13 +292,22 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * GET /api/orders/:orderId - Get order details with cashback info
+ * GET /api/orders?orderId=xxx - Get order details with cashback info
  */
 export async function GET(
-  request: NextRequest,
-  { params }: { params: { orderId: string } }
+  request: NextRequest
 ) {
   try {
+    const { searchParams } = new URL(request.url)
+    const orderId = searchParams.get('orderId')
+    
+    if (!orderId) {
+      return NextResponse.json(
+        { error: 'orderId parameter is required' },
+        { status: 400 }
+      )
+    }
+    
     const tenantId = await resolveTenantIdFromRequest()
     
     if (!tenantId) {
@@ -333,7 +342,7 @@ export async function GET(
           cash_paid_cents
         )
       `)
-      .eq('id', params.orderId)
+      .eq('id', orderId)
       .eq('tenant_id', tenantId)
       .single()
     

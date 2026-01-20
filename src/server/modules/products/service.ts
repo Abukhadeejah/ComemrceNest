@@ -319,14 +319,14 @@ export async function fetchProductAttributes(tenantId: string, productId: string
     return []
   }
 
-  const byAttribute = new Map<string, { id: string; name: string; values: { id: string; value: string }[] }>()
+  const byAttribute = new Map<string, { id: string; name: string; values: Array<{ id: string; value: string }> }>()
 
   data.forEach((row: any) => {
     const av = row.attribute_values
     const attr = av?.attributes
     if (!av || !attr) return
 
-    const existing = byAttribute.get(attr.id) || { id: attr.id, name: attr.name, values: [] }
+    const existing = byAttribute.get(attr.id) || { id: attr.id, name: attr.name, values: [] as Array<{ id: string; value: string }> }
     existing.values.push({ id: av.id, value: av.value })
     byAttribute.set(attr.id, existing)
   })

@@ -5,12 +5,20 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { resolveTenantIdFromRequest } from '@/server/tenant'
+import { resolveTenantIdFromRequest, resolveTenantIdFromKey } from '@/server/tenant'
 import { previewCashback } from '@/lib/cashback/cashbackService'
 
 export async function POST(request: NextRequest) {
   try {
-    const tenantId = await resolveTenantIdFromRequest()
+    const body = await request.json()
+    const { customerId, tenantKey } = body
+    
+    // Try to resolve tenant ID from request first, then from tenantKey
+    let tenantId = await resolveTenantIdFromRequest()
+    
+    if (!tenantId && tenantKey) {
+      tenantId = await resolveTenantIdFromKey(tenantKey)
+    }
     
     if (!tenantId) {
       return NextResponse.json(
@@ -19,22 +27,19 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    const body = await request.json()
-    
-    const {
-      customerId,
-      totalSalePriceCents,
-      totalPurchasePriceCents,
-      walletUsedCents,
-      cashPaidCents
-    } = body
-    
     if (!customerId) {
       return NextResponse.json(
         { error: 'Customer ID is required' },
         { status: 400 }
       )
     }
+    
+    const {
+      totalSalePriceCents,
+      totalPurchasePriceCents,
+      walletUsedCents,
+      cashPaidCents
+    } = body
     
     // Preview cashback
     const preview = await previewCashback(
