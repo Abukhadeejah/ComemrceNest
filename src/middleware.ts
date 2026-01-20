@@ -29,8 +29,17 @@ export function middleware(request: NextRequest) {
   // Set x-pathname header for proper tenant resolution
   headers.set('x-pathname', pathname);
   
-  // Allow localhost requests to pass through without tenant redirect
+  // Allow localhost requests to pass through but still handle useful rewrites
   if (host.includes('localhost')) {
+    // If tenant is in the path and user is visiting tenant-prefixed admin, rewrite to global /admin path
+    if (tenantFromPath && segments.length >= 2 && segments[1] === 'admin') {
+      const targetPath = `/${segments.slice(1).join('/')}`; // drop tenant prefix
+      const response = NextResponse.rewrite(new URL(targetPath, request.url), { request: { headers } });
+      response.headers.set('x-pathname', targetPath);
+      response.cookies.set('tenant', tenantFromPath, { path: '/', sameSite: 'lax' });
+      return response;
+    }
+
     const response = NextResponse.next({ request: { headers } });
     // Set x-pathname header in response for server components
     response.headers.set('x-pathname', pathname);
@@ -114,6 +123,15 @@ export function middleware(request: NextRequest) {
 
   // Rewrite global routes from tenant prefixed paths
   if (tenantFromPath) {
+    // Rewrite tenant-prefixed admin routes to global /admin path
+    if (segments.length >= 2 && segments[1] === 'admin') {
+      const globalTarget = `/${segments.slice(1).join('/')}`;
+      const response = NextResponse.rewrite(new URL(globalTarget, request.url), { request: { headers } });
+      response.headers.set('x-pathname', pathname);
+      response.cookies.set('tenant', tenantFromPath, { path: '/', sameSite: 'lax' });
+      return response;
+    }
+
     if (pathname === `/${tenantFromPath}/checkout` || pathname === `/${tenantFromPath}/cart`) {
       const globalTarget = `/${segments.slice(1).join('/')}`;
       const response = NextResponse.rewrite(new URL(globalTarget, request.url), { request: { headers } });

@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { Playfair_Display } from 'next/font/google'
 import { useTenant } from '@/hooks/useTenant'
 import { SITE_URLS } from '@/utils/site-urls'
-import { useSession } from 'next-auth/react'
+import { useSupabaseSession } from '@/hooks/useSupabaseSession'
 
 const playfair = Playfair_Display({ subsets: ['latin'], weight: ['700','800','900'] })
 
@@ -63,7 +63,7 @@ declare global {
 export default function CheckoutPage() {
   const { state: cart, clearCart } = useCart()
   const tenant = useTenant()
-  const { data: session } = useSession()
+  const { data: session } = useSupabaseSession()
   const [hydrated, setHydrated] = useState(false)
   const [tenantKey, setTenantKey] = useState<string | null>(null)
   type PriceSummary = { total: number; tax: number; base: number }
@@ -1089,34 +1089,6 @@ export default function CheckoutPage() {
           )}
 
           <div className="space-y-4">
-            {/* Final Price Summary */}
-            {appliedCoupon && (
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border-2 border-blue-200">
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span>Subtotal:</span>
-                    <span className="font-semibold">{formatPrice(grandTotal)}</span>
-                  </div>
-                  <div className="flex justify-between text-green-600">
-                    <span>Coupon Discount:</span>
-                    <span className="font-semibold">-{formatPrice(appliedCoupon.discount_amount_cents / 100)}</span>
-                  </div>
-                  {useWallet && walletUsedRupees > 0 && (
-                    <div className="flex justify-between text-indigo-600">
-                      <span>Wallet Used:</span>
-                      <span className="font-semibold">-{formatPrice(walletUsedRupees)}</span>
-                    </div>
-                  )}
-                  <div className="border-t-2 border-blue-300 pt-2 flex justify-between text-lg font-bold">
-                    <span>To Pay:</span>
-                    <span className="text-blue-600">
-                      {formatPrice((grandTotal - (appliedCoupon.discount_amount_cents / 100)) - (useWallet ? walletUsedRupees : 0))}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-
             <button 
               disabled={busy || !scriptLoaded || grandTotal <= 0} 
               onClick={() => {

@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Inter, Playfair_Display } from 'next/font/google'
 import './globals.css'
 import { AdminWrapper } from '@/components/AdminWrapper'
+import { SessionProvider } from '@/components/SessionProvider'
 
 const inter = Inter({ subsets: ['latin'] })
 const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-serif' })
@@ -24,9 +25,11 @@ export default function RootLayout({
   return (
     <html lang="en" className={playfair.variable} suppressHydrationWarning>
       <body className={`${inter.className} ${playfair.className}`} suppressHydrationWarning>
-        <AdminWrapper>
-          {children}
-        </AdminWrapper>
+        <SessionProvider>
+          <AdminWrapper>
+            {children}
+          </AdminWrapper>
+        </SessionProvider>
       </body>
     </html>
   )

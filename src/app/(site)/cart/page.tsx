@@ -181,21 +181,6 @@ export default function CartPage() {
             <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 sticky top-8">
               <h2 className={`${playfair.className} text-2xl font-bold text-gray-900 mb-6 text-center`}>Order Summary</h2>
 
-              <div className="space-y-4 mb-6">
-                <div className="flex justify-between items-center py-2">
-                  <span className="text-gray-600">Subtotal ({state.itemCount} items)</span>
-                  <span className="font-semibold text-gray-900">{formatPrice(state.total)}</span>
-                </div>
-                <div className="flex justify-between items-center py-2">
-                  <span className="text-gray-600">Shipping</span>
-                  <span className="text-green-600 font-semibold">Free</span>
-                </div>
-                <div className="flex justify-between items-center py-2">
-                  <span className="text-gray-600">Tax</span>
-                  <span className="text-gray-500 text-sm">Inclusive of all taxes</span>
-                </div>
-              </div>
-
               <div className="border-t-2 border-gray-100 pt-6 mb-6">
                 <div className="flex justify-between items-center">
                   <span className="text-xl font-bold text-gray-900">Total</span>
