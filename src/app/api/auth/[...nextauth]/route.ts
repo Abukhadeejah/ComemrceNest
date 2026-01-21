@@ -1,9 +1,5 @@
 import NextAuth from 'next-auth'
 import type { NextAuthOptions } from 'next-auth'
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
 const authOptions: NextAuthOptions = {
   providers: [],
@@ -27,6 +23,11 @@ const authOptions: NextAuthOptions = {
   session: {
     strategy: 'jwt',
   },
+  pages: {
+    signIn: '/login',
+    error: '/login',
+  },
+  secret: process.env.NEXTAUTH_SECRET || 'fallback-secret-for-development',
 }
 
 const handler = NextAuth(authOptions)

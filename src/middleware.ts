@@ -109,12 +109,12 @@ export function middleware(request: NextRequest) {
     const cookieHeader = request.headers.get('cookie') || '';
     const hasAuthCookie = /sb-.*-auth-token/.test(cookieHeader);
 
-    const cookieTenant = request.cookies.get('tenant')?.value;
-    const inferredTenant = (tenantFromHost && knownTenants.has(tenantFromHost))
+    // For admin routes, prefer tenant from host, then cookie, then default
+    const inferredTenant = tenantFromHost && knownTenants.has(tenantFromHost)
       ? tenantFromHost
-      : (cookieTenant && knownTenants.has(cookieTenant))
-        ? cookieTenant
-        : 'bluebell';
+      : (request.cookies.get('tenant')?.value && knownTenants.has(request.cookies.get('tenant')?.value!))
+        ? request.cookies.get('tenant')?.value!
+        : 'senlysh'; // Default to senlysh for production
 
     headers.set('x-tenant-admin', inferredTenant);
 
