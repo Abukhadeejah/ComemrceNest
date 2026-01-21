@@ -30,13 +30,8 @@ export default async function CouponsPage() {
     return <CouponsPageContent />
   } catch (error) {
     console.error('🎫 [CouponsPage] ❌ Error in coupon page:', error)
-    console.error('🎫 [CouponsPage] Error details:', {
-      message: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
-      name: error instanceof Error ? error.name : undefined
-    })
     
-    // Return error display
+    // Return error display with more details
     return (
       <div className="p-8">
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
@@ -44,8 +39,19 @@ export default async function CouponsPage() {
           <p className="mt-1">
             {error instanceof Error ? error.message : 'An unexpected error occurred'}
           </p>
-          <p className="text-sm mt-2 text-red-600">
-            Check the browser console for detailed error information.
+          <details className="mt-2">
+            <summary className="cursor-pointer text-sm font-medium">Show Error Details</summary>
+            <pre className="mt-2 text-xs bg-red-100 p-2 rounded overflow-auto">
+              {error instanceof Error ? error.stack : String(error)}
+            </pre>
+          </details>
+        </div>
+        
+        {/* Fallback test content */}
+        <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded">
+          <h3 className="font-semibold text-blue-800">Fallback Test</h3>
+          <p className="text-sm text-blue-600">
+            The coupon page had an error, but routing is working.
           </p>
         </div>
       </div>

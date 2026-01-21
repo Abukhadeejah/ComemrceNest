@@ -23,12 +23,11 @@ interface Coupon {
 }
 
 export default function CouponsPageContent() {
-  console.log('🎫 [CouponsPageContent] Component initializing...')
-  
   const router = useRouter()
   const [coupons, setCoupons] = useState<Coupon[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateForm, setShowCreateForm] = useState(false)
+  const [componentError, setComponentError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     code: '',
     description: '',
@@ -62,8 +61,13 @@ export default function CouponsPageContent() {
   })
 
   useEffect(() => {
-    console.log('🎫 [CouponsPageContent] useEffect triggered, loading coupons...')
-    loadCoupons()
+    try {
+      loadCoupons()
+    } catch (error) {
+      console.error('Error in coupon useEffect:', error)
+      setComponentError(`useEffect error: ${error instanceof Error ? error.message : String(error)}`)
+      setLoading(false)
+    }
   }, [])
 
   const getTenantKey = () => {
@@ -344,21 +348,23 @@ export default function CouponsPageContent() {
     )
   }
 
+  // Show component error if any
+  if (componentError) {
+    console.log('🎫 [CouponsPageContent] ❌ Rendering component error:', componentError)
+    return (
+      <div className="p-8">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          <h3 className="font-semibold">Component Error</h3>
+          <p className="mt-1">{componentError}</p>
+        </div>
+      </div>
+    )
+  }
+
   console.log('🎫 [CouponsPageContent] 🎨 Rendering main content with coupons:', coupons.length)
 
   return (
     <div className="p-8">
-      {/* Debug info */}
-      <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded">
-        <h3 className="font-semibold text-blue-800">Debug Info:</h3>
-        <p className="text-sm text-blue-600">
-          Loading: {loading ? 'true' : 'false'} | 
-          Coupons: {coupons.length} | 
-          Error: {error || 'none'} | 
-          Success: {success || 'none'}
-        </p>
-      </div>
-
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <div>
