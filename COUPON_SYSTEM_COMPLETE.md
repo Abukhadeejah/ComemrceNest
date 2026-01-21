@@ -91,7 +91,7 @@ src/app/api/coupons/
 └── apply/route.ts            # Customer coupon validation
 
 src/components/checkout/
-└── CouponInput.tsx           # Reusable coupon component
+└── CouponSelector.tsx         # Automatic coupon selection component
 ```
 
 #### Integration Points:

@@ -7,6 +7,7 @@ import { Playfair_Display } from 'next/font/google'
 import { useTenant } from '@/hooks/useTenant'
 import { SITE_URLS } from '@/utils/site-urls'
 import { useSupabaseSession } from '@/hooks/useSupabaseSession'
+import CouponSelector from '@/components/checkout/CouponSelector'
 
 const playfair = Playfair_Display({ subsets: ['latin'], weight: ['700','800','900'] })
 
@@ -85,17 +86,13 @@ export default function CheckoutPage() {
     cashbackAmount: number
   } | null>(null)
   
-  // Coupon state
-  const [couponCode, setCouponCode] = useState('')
+  // Coupon state - simplified for CouponSelector
   const [appliedCoupon, setAppliedCoupon] = useState<{
     code: string
-    coupon_id: string
-    discount_amount_cents: number
-    discount_type: string
-    discount_value: number
+    discount: number
+    description?: string
+    id: string
   } | null>(null)
-  const [couponError, setCouponError] = useState<string | null>(null)
-  const [validatingCoupon, setValidatingCoupon] = useState(false)
 
   // Get tenant key from URL path or cookies (avoid hydration mismatch)
   useEffect(() => {
@@ -236,7 +233,7 @@ export default function CheckoutPage() {
       // Calculate total after discount
       // grandTotal is already in cents; do not multiply by 100
       const orderTotalCents = Math.round(grandTotal)
-      const discountCents = appliedCoupon?.discount_amount_cents || 0
+      const discountCents = appliedCoupon ? Math.round(appliedCoupon.discount * 100) : 0
       const totalAfterDiscountCents = orderTotalCents - discountCents
       
       const totalCostCents = cart.items.reduce((sum, item) => {
@@ -281,76 +278,18 @@ export default function CheckoutPage() {
     return () => clearTimeout(debounce)
   }, [walletUsedRupees, useWallet, grandTotal, cart.items, session?.user?.id, appliedCoupon])
   
-  // Function to validate and apply coupon
-  const applyCoupon = async () => {
-    if (!couponCode.trim()) {
-      setCouponError('Please enter a coupon code')
-      return
-    }
-    
-    if (!session?.user?.id) {
-      setCouponError('Please log in to use coupons')
-      return
-    }
-    
-    if (!tenantKey && !tenant.key) {
-      setCouponError('Tenant information not available')
-      return
-    }
-    
-    setValidatingCoupon(true)
-    setCouponError(null)
-    
-    try {
-      // grandTotal is already in cents; do not multiply by 100
-      const orderTotalCents = Math.round(grandTotal)
-      
-      const response = await fetch('/api/coupons/validate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          coupon_code: couponCode.trim().toUpperCase(),
-          order_total_cents: orderTotalCents,
-          customer_id: session.user.id,
-          tenant_key: tenantKey || tenant.key
-        })
-      })
-      
-      const data = await response.json()
-      
-      if (!response.ok) {
-        setAppliedCoupon(null)
-        setCouponError(data?.error || 'Failed to validate coupon')
-        return
-      }
-
-      if (data.valid) {
-        setAppliedCoupon({
-          code: couponCode.trim().toUpperCase(),
-          coupon_id: data.coupon_id,
-          discount_amount_cents: data.discount_amount_cents,
-          discount_type: data.discount_type,
-          discount_value: data.discount_value
-        })
-        setCouponError(null)
-        setCouponCode('')
-      } else {
-        // Prefer specific message if available
-        setCouponError(data.error || data.details || 'Invalid coupon')
-        setAppliedCoupon(null)
-      }
-    } catch (error) {
-      console.error('Error validating coupon:', error)
-      setCouponError('Failed to validate coupon')
-    } finally {
-      setValidatingCoupon(false)
-    }
+  // Coupon handlers for CouponSelector
+  const handleCouponSelected = (discount: { amount: number; code: string; description?: string; id: string }) => {
+    setAppliedCoupon({
+      code: discount.code,
+      discount: discount.amount,
+      description: discount.description,
+      id: discount.id
+    })
   }
-  
-  const removeCoupon = () => {
+
+  const handleCouponRemoved = () => {
     setAppliedCoupon(null)
-    setCouponCode('')
-    setCouponError(null)
   }
 
   // Set hydrated state and load Razorpay if needed
@@ -537,8 +476,8 @@ export default function CheckoutPage() {
           // Include coupon information if applied
           ...(appliedCoupon && {
             coupon_code: appliedCoupon.code,
-            coupon_id: appliedCoupon.coupon_id,
-            discount_amount_cents: appliedCoupon.discount_amount_cents
+            coupon_id: appliedCoupon.id,
+            discount_amount_cents: Math.round(appliedCoupon.discount * 100)
           })
         }) 
       })
@@ -870,83 +809,12 @@ export default function CheckoutPage() {
           {/* Coupon Section */}
           {cart.items.length > 0 && (
             <div className="mb-8">
-              <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 border-2 border-green-200">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center">
-                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className={`${playfair.className} text-xl font-bold text-gray-900`}>Discount Coupon</h3>
-                    <p className="text-sm text-gray-600">Have a promo code? Apply it here</p>
-                  </div>
-                </div>
-
-                {!appliedCoupon ? (
-                  <div>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={couponCode}
-                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                        onKeyPress={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault()
-                            applyCoupon()
-                          }
-                        }}
-                        placeholder="Enter coupon code"
-                        className="flex-1 border-2 border-gray-300 rounded-lg px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-200 uppercase font-mono"
-                        maxLength={50}
-                      />
-                      <button
-                        onClick={applyCoupon}
-                        disabled={validatingCoupon || !couponCode.trim()}
-                        className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-                      >
-                        {validatingCoupon ? 'Validating...' : 'Apply'}
-                      </button>
-                    </div>
-                    {couponError && (
-                      <p className="text-red-600 text-sm mt-2 flex items-center gap-1">
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                        </svg>
-                        {couponError}
-                      </p>
-                    )}
-                  </div>
-                ) : (
-                  <div className="bg-white rounded-lg p-4 shadow-sm border-2 border-green-300">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                          </svg>
-                          <span className="font-mono font-bold text-green-700">{appliedCoupon.code}</span>
-                          <span className="text-sm text-gray-600">applied</span>
-                        </div>
-                        <p className="text-sm text-gray-700">
-                          Discount: <span className="font-bold text-green-600">-{formatPrice(appliedCoupon.discount_amount_cents)}</span>
-                        </p>
-                        {appliedCoupon.discount_type === 'percentage' && (
-                          <p className="text-xs text-gray-500 mt-1">
-                            {appliedCoupon.discount_value}% off applied
-                          </p>
-                        )}
-                      </div>
-                      <button
-                        onClick={removeCoupon}
-                        className="text-red-600 hover:text-red-800 font-medium text-sm px-3 py-2 rounded-lg hover:bg-red-50 transition-colors"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
+              <CouponSelector
+                orderTotal={grandTotal / 100} // Convert cents to rupees
+                onCouponSelected={handleCouponSelected}
+                onCouponRemoved={handleCouponRemoved}
+                selectedCoupon={appliedCoupon}
+              />
             </div>
           )}
 
@@ -998,7 +866,7 @@ export default function CheckoutPage() {
                       <input
                         type="range"
                         min="0"
-                        max={Math.min(walletBalance / 100, (grandTotal - (appliedCoupon?.discount_amount_cents || 0)) / 100)}
+                        max={Math.min(walletBalance / 100, (grandTotal - (appliedCoupon ? Math.round(appliedCoupon.discount * 100) : 0)) / 100)}
                         step="1"
                         value={walletUsedRupees}
                         onChange={(e) => setWalletUsedRupees(parseFloat(e.target.value))}
@@ -1007,7 +875,7 @@ export default function CheckoutPage() {
                       
                       <div className="flex justify-between text-xs text-gray-500 mt-1">
                         <span>₹0</span>
-                        <span>{formatPrice(Math.min(walletBalance / 100, (grandTotal - (appliedCoupon?.discount_amount_cents || 0)) / 100))}</span>
+                        <span>{formatPrice(Math.min(walletBalance / 100, (grandTotal - (appliedCoupon ? Math.round(appliedCoupon.discount * 100) : 0)) / 100))}</span>
                       </div>
 
                       {/* Quick Select Buttons */}
@@ -1021,14 +889,14 @@ export default function CheckoutPage() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => setWalletUsedRupees(Math.min(walletBalance / 100, (grandTotal - (appliedCoupon?.discount_amount_cents || 0)) / 100) / 2)}
+                          onClick={() => setWalletUsedRupees(Math.min(walletBalance / 100, (grandTotal - (appliedCoupon ? Math.round(appliedCoupon.discount * 100) : 0)) / 100) / 2)}
                           className="flex-1 px-3 py-2 text-sm border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-indigo-400 transition-colors"
                         >
                           Half
                         </button>
                         <button
                           type="button"
-                          onClick={() => setWalletUsedRupees(Math.min(walletBalance / 100, (grandTotal - (appliedCoupon?.discount_amount_cents || 0)) / 100))}
+                          onClick={() => setWalletUsedRupees(Math.min(walletBalance / 100, (grandTotal - (appliedCoupon ? Math.round(appliedCoupon.discount * 100) : 0)) / 100))}
                           className="flex-1 px-3 py-2 text-sm border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-indigo-400 transition-colors"
                         >
                           Max
@@ -1051,10 +919,10 @@ export default function CheckoutPage() {
                       <div className="bg-white rounded-lg p-4 shadow-sm border-2 border-green-200">
                         <p className="text-xs font-semibold text-gray-600 mb-1">Cash Payment</p>
                         <p className="text-2xl font-bold text-green-600">
-                          {formatPrice((grandTotal - (appliedCoupon?.discount_amount_cents || 0)) - (walletUsedRupees * 100))}
+                          {formatPrice((grandTotal - (appliedCoupon ? Math.round(appliedCoupon.discount * 100) : 0)) - (walletUsedRupees * 100))}
                         </p>
                         <p className="text-xs text-gray-500 mt-1">
-                          {(((grandTotal - (appliedCoupon?.discount_amount_cents || 0)) - (walletUsedRupees * 100)) > 0) ? '✅ Earns cashback' : 'Fully covered'}
+                          {(((grandTotal - (appliedCoupon ? Math.round(appliedCoupon.discount * 100) : 0)) - (walletUsedRupees * 100)) > 0) ? '✅ Earns cashback' : 'Fully covered'}
                         </p>
                       </div>
                     </div>
@@ -1115,7 +983,7 @@ export default function CheckoutPage() {
             <button 
               disabled={busy || !scriptLoaded || grandTotal <= 0} 
               onClick={() => {
-                const totalAfterDiscount = grandTotal - (appliedCoupon?.discount_amount_cents || 0)
+                const totalAfterDiscount = grandTotal - (appliedCoupon ? Math.round(appliedCoupon.discount * 100) : 0)
                 const finalAmount = totalAfterDiscount - (useWallet ? walletUsedRupees * 100 : 0)
                 handlePayment(finalAmount > 0 ? finalAmount : 0)
               }}
@@ -1136,7 +1004,7 @@ export default function CheckoutPage() {
               ) : (
                 <>
                   {(() => {
-                    const totalAfterDiscount = grandTotal - (appliedCoupon?.discount_amount_cents || 0)
+                    const totalAfterDiscount = grandTotal - (appliedCoupon ? Math.round(appliedCoupon.discount * 100) : 0)
                     const finalAmount = totalAfterDiscount - (useWallet ? walletUsedRupees * 100 : 0)
                     
                     if (appliedCoupon && useWallet && walletUsedRupees > 0) {
@@ -1144,7 +1012,7 @@ export default function CheckoutPage() {
                     } else if (useWallet && walletUsedRupees > 0) {
                       return <>Pay {formatPrice(finalAmount)} + Use {formatPrice(walletUsedRupees)} Wallet</>
                     } else if (appliedCoupon) {
-                      return `Pay ${formatPrice(finalAmount)} (${appliedCoupon.discount_value}% off applied)`
+                      return `Pay ${formatPrice(finalAmount)} (Coupon Applied)`
                     } else {
                       return `Pay ${formatPrice(grandTotal)} with ${paymentProvider === 'phonepe' ? 'PhonePe' : 'Razorpay'}`
                     }

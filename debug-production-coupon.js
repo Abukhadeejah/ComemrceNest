@@ -15,7 +15,7 @@ const requiredFiles = [
   'src/app/(admin)/admin/coupons/CouponManager.tsx',
   'src/app/api/admin/coupons/route.ts',
   'src/app/api/admin/coupons/[id]/route.ts',
-  'src/components/checkout/CouponInput.tsx'
+  'src/components/checkout/CouponSelector.tsx'
 ];
 
 console.log('📁 Checking required files:');
