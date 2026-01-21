@@ -119,7 +119,17 @@ export async function resolveTenantIdFromRequest(): Promise<string | null> {
     return hostData.tenant_id
   }
 
-  // 5. For production, root paths should also return null for platform content
+  // 5. Production fallback: if we're on a production domain but no specific mapping,
+  // try to infer from common patterns or default to senlysh
+  if (process.env.NODE_ENV === 'production' && !host.includes('localhost')) {
+    // Check if it's a Vercel deployment URL
+    if (host.includes('vercel.app') || host.includes('.app')) {
+      // Default to senlysh for main deployment
+      return '1e4c9aa7-e7af-4fe7-999b-c9c46219fa3c' // Senlysh Fashion
+    }
+  }
+
+  // 6. For production, root paths should also return null for platform content
   // Only tenant-specific paths should resolve to tenant IDs
   return null
 }

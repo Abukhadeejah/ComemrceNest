@@ -58,14 +58,24 @@ export function middleware(request: NextRequest) {
   }
 
   // If no tenant detected in path or host and path isn't global/admin/root,
-  // allow request to proceed in non-production environments (e.g., preview, local).
-  // Enforce tenant-not-found redirect only in production.
+  // try to infer from cookie or default to senlysh for production
   if (!tenantFromPath && !tenantFromHost && !isAdminRoute && !isGlobalRoute && pathname !== '/') {
-    if (process.env.NODE_ENV === 'production') {
-      // Redirect to tenant not found page in production for unmatched tenants
-      console.warn('[Middleware] Tenant NOT found - redirecting to tenant-not-found:', pathname, host);
-      const response = NextResponse.redirect(new URL('/tenant-not-found', request.url));
+    // Try to get tenant from cookie as fallback
+    const cookieTenant = request.cookies.get('tenant')?.value;
+    if (cookieTenant && knownTenants.has(cookieTenant)) {
+      console.log('[Middleware] Using tenant from cookie:', cookieTenant);
+      const response = NextResponse.next({ request: { headers } });
       response.headers.set('x-pathname', pathname);
+      response.cookies.set('tenant', cookieTenant, { path: '/', sameSite: 'lax' });
+      return response;
+    }
+    
+    if (process.env.NODE_ENV === 'production') {
+      // In production, default to senlysh if no tenant found (most common case)
+      console.warn('[Middleware] No tenant found, defaulting to senlysh for:', pathname, host);
+      const response = NextResponse.next({ request: { headers } });
+      response.headers.set('x-pathname', pathname);
+      response.cookies.set('tenant', 'senlysh', { path: '/', sameSite: 'lax' });
       return response;
     } else {
       // In non-production, just log and allow
