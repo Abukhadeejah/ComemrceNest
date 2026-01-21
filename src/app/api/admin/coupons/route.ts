@@ -5,7 +5,11 @@ import { createServerClient } from '@supabase/ssr'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
 
 export async function GET(request: NextRequest) {
+  console.log('🎫 [API] /api/admin/coupons GET request started')
+  
   try {
+    console.log('🎫 [API] Request headers:', Object.fromEntries(request.headers.entries()))
+    
     // Use SSR client to read auth from cookies
     const cookieStore = await cookies()
     const supabaseSSR = createServerClient(
@@ -27,26 +31,40 @@ export async function GET(request: NextRequest) {
     )
 
     // Get current user
-    const { data: { user } } = await supabaseSSR.auth.getUser()
+    console.log('🎫 [API] Getting user from Supabase...')
+    const { data: { user }, error: userError } = await supabaseSSR.auth.getUser()
+    console.log('🎫 [API] User result:', { user: user?.id, error: userError })
+    
     if (!user) {
+      console.log('🎫 [API] ❌ No user found, returning 401')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // Resolve tenant via middleware-provided context (header/cookie)
+    console.log('🎫 [API] Resolving tenant ID...')
     const tenantId = await resolveTenantIdFromRequest()
+    console.log('🎫 [API] Resolved tenant ID:', tenantId)
+    
     if (!tenantId) {
+      console.log('🎫 [API] ❌ No tenant ID found, returning 403')
       return NextResponse.json({ error: 'Tenant not found' }, { status: 403 })
     }
 
     // Fetch coupons with wildcard selection to avoid schema cache issues
+    console.log('🎫 [API] Fetching coupons from database...')
     const { data: coupons, error } = await supabaseAdmin
       .from('coupons')
       .select('*')
       .eq('tenant_id', tenantId)
       .order('created_at', { ascending: false })
 
+    console.log('🎫 [API] Database query result:', { 
+      couponsCount: coupons?.length || 0, 
+      error: error?.message 
+    })
+
     if (error) {
-      console.error('Error fetching coupons:', error)
+      console.error('🎫 [API] ❌ Error fetching coupons:', error)
       return NextResponse.json({ 
         error: error.message || 'Failed to fetch coupons',
         details: error
@@ -62,9 +80,15 @@ export async function GET(request: NextRequest) {
       }
     })
 
+    console.log('🎫 [API] ✅ Returning coupons:', couponsWithStats.length)
     return NextResponse.json({ coupons: couponsWithStats })
   } catch (error) {
-    console.error('Error in GET /api/admin/coupons:', error)
+    console.error('🎫 [API] ❌ Error in GET /api/admin/coupons:', error)
+    console.error('🎫 [API] Error details:', {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined
+    })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

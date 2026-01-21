@@ -27,45 +27,69 @@ interface TenantConfig {
 }
 
 export async function resolveTenantIdFromRequest(): Promise<string | null> {
+  console.log('🏢 [TenantResolver] Starting tenant resolution...')
+  
   const h = await headers()
   const rawHost = h.get('host') || ''
   const host = rawHost.split(':')[0]
   const pathname = h.get('x-pathname') || '/'
   const tenantAdmin = h.get('x-tenant-admin')
 
+  console.log('🏢 [TenantResolver] Request context:', {
+    host,
+    pathname,
+    tenantAdmin,
+    rawHost
+  })
+
   if (!host) {
+    console.log('🏢 [TenantResolver] ❌ No host found')
     return null
   }
 
   // 1. Try tenant admin header first (most reliable for tenant-specific routes)
   if (tenantAdmin) {
+    console.log('🏢 [TenantResolver] Trying tenant admin header:', tenantAdmin)
     const tenantId = await resolveTenantIdFromKey(tenantAdmin)
     if (tenantId) {
+      console.log('🏢 [TenantResolver] ✅ Resolved from tenant admin header:', tenantId)
       return tenantId
     }
+    console.log('🏢 [TenantResolver] ❌ Failed to resolve from tenant admin header')
   }
 
   // 2. Try path-based resolution for tenant routes first
   const pathSegments = pathname.split('/').filter(Boolean)
+  console.log('🏢 [TenantResolver] Path segments:', pathSegments)
+  
   if (pathSegments.length > 0) {
     const tenantKey = pathSegments[0]
+    console.log('🏢 [TenantResolver] Trying path-based tenant key:', tenantKey)
     const tenantId = await resolveTenantIdFromKey(tenantKey)
     if (tenantId) {
+      console.log('🏢 [TenantResolver] ✅ Resolved from path:', tenantId)
       return tenantId
     }
+    console.log('🏢 [TenantResolver] ❌ Failed to resolve from path')
   }
 
   // 2b. Fallback for API routes (middleware doesn't set headers there): use tenant cookie
   try {
     const cookieStore = await cookies()
     const cookieTenant = cookieStore.get('tenant')?.value
+    console.log('🏢 [TenantResolver] Cookie tenant:', cookieTenant)
+    
     if (cookieTenant) {
       const cookieTenantId = await resolveTenantIdFromKey(cookieTenant)
       if (cookieTenantId) {
+        console.log('🏢 [TenantResolver] ✅ Resolved from cookie:', cookieTenantId)
         return cookieTenantId
       }
+      console.log('🏢 [TenantResolver] ❌ Failed to resolve from cookie')
     }
-  } catch {}
+  } catch (error) {
+    console.error('🏢 [TenantResolver] Error reading cookies:', error)
+  }
 
   // 2c. Enhanced fallback: Try to infer tenant from referer or other context
   // This helps when accessing global routes like /checkout directly
@@ -136,6 +160,8 @@ export async function resolveTenantIdFromRequest(): Promise<string | null> {
 
 // Helper function to resolve tenant ID from tenant key (name or slug)
 export async function resolveTenantIdFromKey(tenantKey: string): Promise<string | null> {
+  console.log('🔑 [TenantKeyResolver] Resolving tenant key:', tenantKey)
+  
   // Try exact name match first
   const { data: tenantData } = await supabaseAdmin
     .from('tenants')
@@ -144,6 +170,7 @@ export async function resolveTenantIdFromKey(tenantKey: string): Promise<string 
     .maybeSingle()
 
   if (tenantData?.id) {
+    console.log('🔑 [TenantKeyResolver] ✅ Found exact name match:', { id: tenantData.id, name: tenantData.name })
     return tenantData.id
   }
 
@@ -154,6 +181,8 @@ export async function resolveTenantIdFromKey(tenantKey: string): Promise<string 
   }
 
   const mappedName = keyMappings[tenantKey.toLowerCase()]
+  console.log('🔑 [TenantKeyResolver] Checking key mapping:', { tenantKey: tenantKey.toLowerCase(), mappedName })
+  
   if (mappedName) {
     const { data: mappedTenant } = await supabaseAdmin
       .from('tenants')
@@ -162,8 +191,10 @@ export async function resolveTenantIdFromKey(tenantKey: string): Promise<string 
       .maybeSingle()
 
     if (mappedTenant?.id) {
+      console.log('🔑 [TenantKeyResolver] ✅ Found mapped tenant:', { id: mappedTenant.id, name: mappedTenant.name })
       return mappedTenant.id
     }
+    console.log('🔑 [TenantKeyResolver] ❌ Mapped name not found in database:', mappedName)
   }
 
   // Try case-insensitive name match LAST (after key mappings)
@@ -174,9 +205,11 @@ export async function resolveTenantIdFromKey(tenantKey: string): Promise<string 
     .maybeSingle()
 
   if (tenantDataCI?.id) {
+    console.log('🔑 [TenantKeyResolver] ✅ Found case-insensitive match:', { id: tenantDataCI.id, name: tenantDataCI.name })
     return tenantDataCI.id
   }
 
+  console.log('🔑 [TenantKeyResolver] ❌ No tenant found for key:', tenantKey)
   return null
 }
 

@@ -26,6 +26,8 @@ export async function getEnabledModules(tenantId: string): Promise<Set<string>> 
  * Checks whether a given module key is enabled for a tenant.
  */
 export async function isModuleEnabled(tenantId: string, moduleKey: string): Promise<boolean> {
+  console.log('🔧 [AdminModules] Checking module enabled:', { tenantId, moduleKey })
+  
   const { data, error } = await supabaseAdmin
     .from('tenant_modules')
     .select('enabled')
@@ -33,8 +35,21 @@ export async function isModuleEnabled(tenantId: string, moduleKey: string): Prom
     .eq('module_key', moduleKey)
     .maybeSingle()
 
-  if (error) return false
-  return Boolean(data?.enabled)
+  console.log('🔧 [AdminModules] Module check result:', { 
+    data, 
+    error: error?.message,
+    enabled: Boolean(data?.enabled)
+  })
+
+  if (error) {
+    console.error('🔧 [AdminModules] ❌ Error checking module:', error)
+    return false
+  }
+  
+  const isEnabled = Boolean(data?.enabled)
+  console.log('🔧 [AdminModules]', isEnabled ? '✅' : '❌', `Module ${moduleKey} is ${isEnabled ? 'enabled' : 'disabled'} for tenant ${tenantId}`)
+  
+  return isEnabled
 }
 
 

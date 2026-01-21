@@ -23,6 +23,8 @@ interface Coupon {
 }
 
 export default function CouponsPageContent() {
+  console.log('🎫 [CouponsPageContent] Component initializing...')
+  
   const router = useRouter()
   const [coupons, setCoupons] = useState<Coupon[]>([])
   const [loading, setLoading] = useState(true)
@@ -60,6 +62,7 @@ export default function CouponsPageContent() {
   })
 
   useEffect(() => {
+    console.log('🎫 [CouponsPageContent] useEffect triggered, loading coupons...')
     loadCoupons()
   }, [])
 
@@ -67,26 +70,71 @@ export default function CouponsPageContent() {
     try {
       const path = typeof window !== 'undefined' ? window.location.pathname : ''
       const seg = path.split('/').filter(Boolean)[0]
-      if (seg && ['bluebell', 'senlysh'].includes(seg.toLowerCase())) return seg.toLowerCase()
+      console.log('🎫 [CouponsPageContent] Path segments:', { path, firstSegment: seg })
+      
+      if (seg && ['bluebell', 'senlysh'].includes(seg.toLowerCase())) {
+        console.log('🎫 [CouponsPageContent] Tenant from path:', seg.toLowerCase())
+        return seg.toLowerCase()
+      }
+      
       const match = typeof document !== 'undefined' ? document.cookie.match(/(?:^|; )tenant=([^;]+)/) : null
-      if (match) return decodeURIComponent(match[1])
-    } catch {}
+      if (match) {
+        const tenantFromCookie = decodeURIComponent(match[1])
+        console.log('🎫 [CouponsPageContent] Tenant from cookie:', tenantFromCookie)
+        return tenantFromCookie
+      }
+      
+      console.log('🎫 [CouponsPageContent] ⚠️ No tenant found in path or cookie')
+    } catch (error) {
+      console.error('🎫 [CouponsPageContent] ❌ Error getting tenant key:', error)
+    }
     return ''
   }
 
   const loadCoupons = async () => {
     try {
+      console.log('🎫 [CouponsPageContent] Starting loadCoupons...')
       const tenant = getTenantKey()
+      console.log('🎫 [CouponsPageContent] Using tenant:', tenant)
+      
+      const headers: Record<string, string> = {}
+      if (tenant) {
+        headers['x-tenant-admin'] = tenant
+      }
+      
+      console.log('🎫 [CouponsPageContent] Making API request with headers:', headers)
+      
       const response = await fetch('/api/admin/coupons', {
-        headers: tenant ? { 'x-tenant-admin': tenant } : undefined,
+        headers,
       })
+      
+      console.log('🎫 [CouponsPageContent] API response status:', response.status)
+      console.log('🎫 [CouponsPageContent] API response ok:', response.ok)
+      
       if (response.ok) {
         const data = await response.json()
+        console.log('🎫 [CouponsPageContent] ✅ API response data:', data)
+        console.log('🎫 [CouponsPageContent] Coupons array:', data.coupons)
+        console.log('🎫 [CouponsPageContent] Coupons count:', data.coupons?.length || 0)
         setCoupons(data.coupons || [])
+      } else {
+        const errorData = await response.text()
+        console.error('🎫 [CouponsPageContent] ❌ API error response:', {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorData
+        })
+        setError(`Failed to load coupons: ${response.status} ${response.statusText}`)
       }
     } catch (error) {
-      console.error('Failed to load coupons:', error)
+      console.error('🎫 [CouponsPageContent] ❌ Failed to load coupons:', error)
+      console.error('🎫 [CouponsPageContent] Error details:', {
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      })
+      setError(`Network error: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
+      console.log('🎫 [CouponsPageContent] Setting loading to false')
       setLoading(false)
     }
   }
@@ -285,6 +333,7 @@ export default function CouponsPageContent() {
   }
 
   if (loading) {
+    console.log('🎫 [CouponsPageContent] 🔄 Rendering loading state')
     return (
       <div className="p-8">
         <div className="animate-pulse space-y-4">
@@ -295,8 +344,21 @@ export default function CouponsPageContent() {
     )
   }
 
+  console.log('🎫 [CouponsPageContent] 🎨 Rendering main content with coupons:', coupons.length)
+
   return (
     <div className="p-8">
+      {/* Debug info */}
+      <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded">
+        <h3 className="font-semibold text-blue-800">Debug Info:</h3>
+        <p className="text-sm text-blue-600">
+          Loading: {loading ? 'true' : 'false'} | 
+          Coupons: {coupons.length} | 
+          Error: {error || 'none'} | 
+          Success: {success || 'none'}
+        </p>
+      </div>
+
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <div>
