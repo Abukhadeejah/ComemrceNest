@@ -50,8 +50,15 @@ DATABASE & MIGRATIONS
 --------------------------------------
 
 Located in /migrations/
-  ✓ add_phonepe_transaction_id.sql
-  ✓ create_wallet_withdrawals_table.sql
+  ✓ add_phonepe_transaction_id.sql     - PhonePe column addition
+  ✓ create_cashback_system.sql         - Cashback/rewards system
+  ✓ create_coupons_system.sql          - Coupon management
+  ✓ create_pending_coupon_usage.sql    - Coupon usage tracking
+  ✓ create_wallet_withdrawals_table.sql - Wallet feature
+  ✓ fix_coupons_schema.sql              - Coupon schema fixes
+  ✓ fix_validate_coupon_function.sql    - Coupon validation
+  ✓ recreate_coupons_fresh.sql          - Fresh coupon setup
+  ✓ recreate_coupons_no_users.sql       - Coupon system rebuild
   ✓ RLS (Row Level Security) policies
 
 ENVIRONMENT VARIABLES

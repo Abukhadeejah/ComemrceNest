@@ -22,11 +22,45 @@ PROJECT ROOT FOLDER STRUCTURE
 │   │   │   └── [tenant]/              # Dynamic tenant routes
 │   │   ├── api/                       # API routes
 │   │   │   ├── admin/                 # Admin APIs
+│   │   │   │   ├── attributes/        # Product attributes CRUD
+│   │   │   │   ├── categories/        # Category management
+│   │   │   │   ├── coupons/           # Coupon system
+│   │   │   │   ├── orders/            # Order management
+│   │   │   │   ├── products/          # Product CRUD & drafts
+│   │   │   │   ├── settings/          # System settings
+│   │   │   │   └── upload/            # File uploads
 │   │   │   ├── auth/                  # Authentication
+│   │   │   │   ├── [...nextauth]/     # NextAuth handler
+│   │   │   │   ├── admin-tenant/      # Tenant admin auth
+│   │   │   │   ├── callback/          # Auth callbacks
+│   │   │   │   ├── check-tenant-access/ # Tenant access validation
+│   │   │   │   ├── signout/           # Sign out
+│   │   │   │   └── whoami/            # User info
 │   │   │   ├── checkout/              # Checkout
+│   │   │   ├── coupons/               # Coupon validation
 │   │   │   ├── customers/             # Customer APIs
-│   │   │   ├── webhooks/              # Payment webhooks
-│   │   │   └── site/                  # Site APIs
+│   │   │   │   ├── addresses/         # Address management
+│   │   │   │   ├── profile/           # Profile updates
+│   │   │   │   ├── register/          # Registration
+│   │   │   │   └── wallet/            # Wallet operations
+│   │   │   ├── debug/                 # Debug endpoints
+│   │   │   ├── health/                # Health check
+│   │   │   ├── orders/                # Order processing
+│   │   │   ├── product-drafts/        # Draft management
+│   │   │   ├── products/              # Product APIs
+│   │   │   ├── rewards/               # Cashback system
+│   │   │   │   ├── calculate/         # Cashback calculation
+│   │   │   │   └── history/           # Reward history
+│   │   │   ├── site/                  # Site APIs
+│   │   │   │   ├── categories/        # Public categories
+│   │   │   │   └── tags/              # Product tags
+│   │   │   ├── wallet/                # Wallet system
+│   │   │   │   ├── cashback-stats/    # Cashback statistics
+│   │   │   │   ├── preview-cashback/  # Preview calculations
+│   │   │   │   └── transactions/      # Transaction history
+│   │   │   └── webhooks/              # Payment webhooks
+│   │   │       ├── juspay/            # Juspay webhooks (legacy)
+│   │   │       └── phonepe/           # PhonePe webhooks
 │   │   └── layout files               # Root layouts
 │   ├── components/                    # Reusable components
 │   │   ├── admin/                     # Admin components
@@ -41,6 +75,8 @@ PROJECT ROOT FOLDER STRUCTURE
 │   ├── types/                         # TypeScript types
 │   ├── hooks/                         # Custom hooks
 │   ├── lib/                           # Library code
+│   │   ├── cashback/                  # Cashback engine
+│   │   └── payments/                  # Payment integrations
 │   ├── utils/                         # Utilities
 │   ├── registry/                      # Component registry
 │   ├── config/                        # App config

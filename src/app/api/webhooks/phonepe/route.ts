@@ -2,6 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyPhonePeWebhook } from '@/lib/payments/phonepe';
 import { supabaseAdmin } from '@/server/supabaseAdmin';
 
+/**
+ * PhonePe Webhook Handler
+ * 
+ * This webhook is specifically for Senlysh tenant which uses PhonePe.
+ * Bluebell tenant uses Razorpay and has its own webhook handler.
+ * 
+ * Handles:
+ * - COMPLETED payment states (successful payments)
+ * - FAILED payment states (failed payments)
+ * - Coupon usage completion after successful payment
+ */
+
 // Helper function to process coupon usage after successful payment
 async function processCouponUsage(orderId: string) {
   try {

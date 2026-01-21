@@ -32,17 +32,22 @@ PRODUCT MANAGEMENT
 Features:
   ✓ Simple & variant products
   ✓ Product attributes (dynamic)
-  ✓ Categories
+  ✓ Categories with hierarchical structure
   ✓ Stock tracking
   ✓ Pricing (base + variants)
   ✓ Cost price tracking
   ✓ Tenant-specific availability
+  ✓ Draft auto-save system
+  ✓ Product image galleries
+  ✓ SEO optimization
 
 Components:
   - ProductForm (add/edit)
   - AttributesSection (horizontal layout - UPDATED)
-  - VariantsManager
-  - ProductGallery
+  - VariantsSection (size, color, etc.)
+  - PricingSection (base + variant pricing)
+  - SizeGuideSection (fashion products)
+  - ProductGallery (image management)
 
 
 ORDER & CHECKOUT
@@ -50,17 +55,27 @@ ORDER & CHECKOUT
 Process:
   1. Add to cart
   2. Review cart
-  3. Enter address
-  4. Select payment method
-  5. Process payment (Razorpay/PhonePe)
-  6. Webhook confirmation
-  7. Order confirmation
+  3. Apply coupons (if available)
+  4. Enter shipping address
+  5. Select payment method (Razorpay/PhonePe/Wallet)
+  6. Process payment
+  7. Webhook confirmation
+  8. Order confirmation & cashback calculation
 
 Payment Integration:
   ✓ Razorpay (primary)
   ✓ PhonePe (secondary)
-  ✓ Webhook handlers for confirmations
   ✓ Wallet system (top-up & redemption)
+  ✓ Webhook handlers for confirmations
+  ✓ Multi-provider payment support
+  ✓ Cashback calculation engine
+
+Coupon System:
+  ✓ Percentage & fixed amount discounts
+  ✓ Minimum order value requirements
+  ✓ Usage limits & expiry dates
+  ✓ Tenant-specific coupons
+  ✓ Real-time validation
 
 
 API STRUCTURE
@@ -69,16 +84,33 @@ Admin APIs:
   GET/POST    /api/admin/products
   GET/POST    /api/admin/categories
   GET/POST    /api/admin/orders
+  GET/POST    /api/admin/coupons
+  GET/POST    /api/admin/attributes
+  POST        /api/admin/upload
 
 Auth APIs:
   POST        /api/auth/signout
   GET         /api/auth/whoami
   POST        /api/auth/admin-tenant
+  GET         /api/auth/check-tenant-access
+
+Customer APIs:
+  POST        /api/customers/register
+  GET/PUT     /api/customers/profile
+  GET/POST    /api/customers/addresses
+  GET/POST    /api/customers/wallet
 
 Checkout APIs:
-  POST        /api/checkout/confirm
+  POST        /api/checkout
+  POST        /api/coupons/validate
   POST        /api/webhooks/razorpay
   POST        /api/webhooks/phonepe
+
+Rewards APIs:
+  POST        /api/rewards/calculate
+  GET         /api/rewards/history
+  GET         /api/wallet/cashback-stats
+  POST        /api/wallet/preview-cashback
 
 
 DATA FLOW

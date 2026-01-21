@@ -1,8 +1,8 @@
 PROJECT ARCHITECTURE EXPORT - UPDATED
 ======================================
 Project: CommerceNest - Multi-tenant E-commerce Platform
-Updated: January 7, 2026
-Framework: Next.js 15 + TypeScript
+Updated: January 21, 2026
+Framework: Next.js 16 + TypeScript
 Database: Supabase (PostgreSQL)
 Payment: Razorpay + PhonePe
 
@@ -11,20 +11,27 @@ ARCHITECTURE OVERVIEW
 This is a multi-tenant e-commerce platform with:
 - Admin Dashboard (tenant-admin routes)
 - Customer Storefronts (tenant-specific)
-- Multi-payment Gateway Support
+- Multi-payment Gateway Support (Razorpay + PhonePe)
 - Product Management with Variants & Attributes
 - Inventory & Order Management
+- Cashback & Wallet System
+- Coupon Management System
 - Role-based Access Control (RBAC)
+- Draft Auto-save System
 
 KEY TECHNOLOGIES
 ======================================
-✓ Next.js 15 (App Router)
-✓ TypeScript
+✓ Next.js 16 (App Router)
+✓ TypeScript 5.9.3
+✓ React 19.1.0
 ✓ React Hook Form
-✓ TailwindCSS
+✓ TailwindCSS 4
 ✓ Supabase (Auth + Database)
 ✓ Razorpay & PhonePe Payment Gateways
 ✓ Playwright (E2E Testing)
+✓ Framer Motion (Animations)
+✓ Zustand (State Management)
+✓ Zod (Schema Validation)
 
 FOLDER STRUCTURE
 ======================================

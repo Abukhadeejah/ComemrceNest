@@ -24,10 +24,45 @@ The main application structure using Next.js App Router:
 
 api/                       - Backend API routes
 ├── admin/                 - Admin endpoints
+│   ├── attributes/        - Product attributes CRUD
+│   ├── categories/        - Category management
+│   ├── coupons/           - Coupon system
+│   ├── orders/            - Order management
+│   ├── products/          - Product CRUD & drafts
+│   ├── settings/          - System settings
+│   └── upload/            - File uploads
 ├── auth/                  - Authentication (Supabase)
+│   ├── [...nextauth]/     - NextAuth handler
+│   ├── admin-tenant/      - Tenant admin auth
+│   ├── callback/          - Auth callbacks
+│   ├── check-tenant-access/ - Tenant access validation
+│   ├── signout/           - Sign out
+│   └── whoami/            - User info
 ├── checkout/              - Cart & checkout
-├── webhooks/              - Payment webhooks (Razorpay, PhonePe)
-└── site/                  - Frontend APIs
+├── coupons/               - Coupon validation
+├── customers/             - Customer management
+│   ├── addresses/         - Address management
+│   ├── profile/           - Profile updates
+│   ├── register/          - Registration
+│   └── wallet/            - Wallet operations
+├── debug/                 - Debug endpoints
+├── health/                - Health check
+├── orders/                - Order processing
+├── product-drafts/        - Draft management
+├── products/              - Product APIs
+├── rewards/               - Cashback system
+│   ├── calculate/         - Cashback calculation
+│   └── history/           - Reward history
+├── site/                  - Frontend APIs
+│   ├── categories/        - Public categories
+│   └── tags/              - Product tags
+├── wallet/                - Wallet system
+│   ├── cashback-stats/    - Cashback statistics
+│   ├── preview-cashback/  - Preview calculations
+│   └── transactions/      - Transaction history
+└── webhooks/              - Payment webhooks
+    ├── juspay/            - Juspay webhooks (legacy)
+    └── phonepe/           - PhonePe webhooks
 
 
 /src/CORE MODULES
@@ -68,9 +103,13 @@ utils/
 └── constants.ts           - App constants
 
 lib/
-├── supabase/              - Supabase client
-├── razorpay/              - Razorpay integration
-└── phonepe/               - PhonePe integration
+├── cashback/              - Cashback engine & service
+├── payments/              - Payment integrations
+│   └── phonepe.ts         - PhonePe integration
+├── supabaseClient.ts      - Supabase client
+├── cart.tsx               - Cart management
+├── draftService.ts        - Draft auto-save
+└── storage.ts             - File storage utilities
 
 
 /DATABASE & MIGRATIONS
@@ -84,11 +123,17 @@ Located in /migrations/:
 Tables in Supabase:
 ✓ products              - Product data
 ✓ product_attributes    - Attribute definitions
+✓ product_variants      - Product variants
 ✓ categories            - Product categories
 ✓ orders                - Order records
 ✓ order_items           - Order details
 ✓ customers             - Customer accounts
+✓ customer_addresses    - Customer addresses
 ✓ wallets               - Customer wallets
+✓ wallet_transactions   - Wallet transaction history
+✓ cashback_transactions - Cashback records
+✓ coupons               - Coupon definitions
+✓ coupon_usage          - Coupon usage tracking
 ✓ payments              - Payment records
 
 
