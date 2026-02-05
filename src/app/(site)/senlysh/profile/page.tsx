@@ -67,6 +67,30 @@ export default async function SenlyshProfilePage() {
     .single()
 
   if (error || !customer) {
+    // Try to find customer by email as fallback
+    const { data: { user } } = await supabaseAdmin.auth.admin.getUserById(userId)
+    
+    if (user?.email) {
+      const { data: customerByEmail } = await supabaseAdmin
+        .from('customers')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .eq('email', user.email)
+        .single()
+
+      if (customerByEmail) {
+        // Update customer record with correct user_id
+        await supabaseAdmin
+          .from('customers')
+          .update({ user_id: userId })
+          .eq('id', customerByEmail.id)
+        
+        // Redirect to refresh the page with updated data
+        redirect('/senlysh/profile')
+      }
+    }
+    
+    // If still no customer found, redirect to register
     redirect('/senlysh/register')
   }
 

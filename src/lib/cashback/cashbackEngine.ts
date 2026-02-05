@@ -99,26 +99,27 @@ export function getCashbackSlab(
  * MAIN CALCULATION: Calculate cashback on cash paid only
  * 
  * CRITICAL: Cashback is ONLY on cashPaid, NOT on walletUsed
+ * CRITICAL: Profit margin is calculated based on cash paid vs cost price
  * 
  * Example 1 (Partial wallet):
- *   totalSalePrice: ₹100
- *   totalPurchasePrice: ₹70 (profit = 42.86%)
- *   walletUsed: ₹10
- *   cashPaid: ₹90
- *   → cashback slab = 15% (41-50% profit range)
- *   → cashbackAmount = ₹90 × 15% = ₹13.50
+ *   Product: Cost ₹30, Sale ₹100
+ *   Customer pays: ₹50 wallet + ₹50 cash
+ *   → Profit calculation: (₹50 cash - ₹30 cost) / ₹30 cost = 66.67% profit
+ *   → Cashback slab = 25% (61-70% profit range)  
+ *   → Cashback amount = ₹50 × 25% = ₹12.50
  * 
- * Example 2 (Full wallet):
- *   totalSalePrice: ₹100
- *   walletUsed: ₹100
- *   cashPaid: ₹0
- *   → cashbackAmount = ₹0 (no cash paid)
+ * Example 2 (Full cash):
+ *   Product: Cost ₹30, Sale ₹100
+ *   Customer pays: ₹0 wallet + ₹100 cash
+ *   → Profit calculation: (₹100 cash - ₹30 cost) / ₹30 cost = 233.33% profit
+ *   → Cashback slab = 55% (251-300% profit range)
+ *   → Cashback amount = ₹100 × 55% = ₹55.00
  * 
- * Example 3 (Full cash):
- *   totalSalePrice: ₹100
- *   walletUsed: ₹0
- *   cashPaid: ₹100
- *   → cashbackAmount = ₹100 × cashback% (full cashback)
+ * Example 3 (Full wallet):
+ *   Product: Cost ₹30, Sale ₹100
+ *   Customer pays: ₹100 wallet + ₹0 cash
+ *   → No profit calculation needed (no cash paid)
+ *   → Cashback amount = ₹0
  */
 export function calculateCashback(orderData: CashbackCalculationInput): CashbackResult {
   const { totalSalePrice, totalPurchasePrice, walletUsed, cashPaid } = orderData
@@ -145,10 +146,26 @@ export function calculateCashback(orderData: CashbackCalculationInput): Cashback
     )
   }
   
-  // Calculate profit and get cashback percentage
-  const { profitPct, cashbackPct } = getCashbackSlab(totalPurchasePrice, totalSalePrice)
+  // If no cash paid, no cashback
+  if (cashPaid <= 0) {
+    return {
+      profitPct: 0,
+      cashbackPct: 0,
+      cashbackAmount: 0
+    }
+  }
   
-  // CRITICAL: Cashback ONLY on cash paid
+  // CRITICAL: Calculate profit based on cash paid vs cost price
+  // This ensures profit margin reflects actual customer cash investment
+  const profit = cashPaid - totalPurchasePrice
+  const profitPct = (profit / totalPurchasePrice) * 100
+  
+  // Get cashback percentage based on actual profit from cash payment
+  const cashbackPct = CASHBACK_SLABS.find(
+    s => profitPct >= s.minProfitPct && profitPct <= s.maxProfitPct
+  )?.cashbackPct || 0
+  
+  // Cashback ONLY on cash paid
   const cashbackAmount = (cashPaid * cashbackPct) / 100
   
   return {

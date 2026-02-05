@@ -15,7 +15,7 @@ type Membership = {
   id: string
   tenant_id: string
   customer_id: string
-  membership_type: 'FREE' | 'SILVER' | 'GOLD' | 'PLATINUM'
+  membership_type: 'FREE' | 'PREMIUM'  // Updated to include FREE
   valid_from: string
   valid_until: string
   is_active: boolean
@@ -53,7 +53,7 @@ export interface ProcessCashbackResult {
 }
 
 /**
- * Check if customer has an active membership
+ * Check if customer has an active membership (FREE or PREMIUM)
  */
 export async function getActiveMembership(
   customerId: string,
@@ -65,7 +65,7 @@ export async function getActiveMembership(
       .select('*')
       .eq('customer_id', customerId)
       .eq('tenant_id', tenantId)
-      .eq('is_active', true)
+      .eq('status', 'ACTIVE')  // Changed from is_active to status
       .gte('valid_until', new Date().toISOString())
       .order('valid_until', { ascending: false })
       .limit(1)
@@ -97,7 +97,7 @@ export async function getActiveMembership(
 }
 
 /**
- * Create FREE membership for new customer
+ * Create FREE membership for new customer (1 year duration)
  * (This is also handled by database trigger, but provided for manual creation)
  */
 export async function createFreeMembership(
@@ -114,9 +114,9 @@ export async function createFreeMembership(
       customer_id: customerId,
       tenant_id: tenantId,
       membership_type: 'FREE',
+      status: 'ACTIVE',  // Use status instead of is_active
       valid_from: now.toISOString(),
-      valid_until: validUntil.toISOString(),
-      is_active: true
+      valid_until: validUntil.toISOString()
     })
     .select()
     .single()
@@ -188,7 +188,7 @@ export async function creditCashbackToWallet(
     .insert({
       account_id: accountId,
       tenant_id: tenantId,
-      entry_type: 'CREDIT',
+      entry_type: 'credit', // Use lowercase to match constraint
       amount_cents: cashbackAmountCents,
       currency: 'INR',
       source_key: 'CASHBACK',
@@ -222,7 +222,7 @@ export async function debitWalletForOrder(
     .insert({
       account_id: accountId,
       tenant_id: tenantId,
-      entry_type: 'DEBIT',
+      entry_type: 'debit', // Use lowercase to match constraint
       amount_cents: amountCents,
       currency: 'INR',
       source_key: 'ORDER_PAYMENT',

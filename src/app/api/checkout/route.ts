@@ -236,7 +236,87 @@ async function handlePhonePeCheckout(
     }, { status: 500 });
   }
 
-  const orderId = `phonepe_${tenantId.replace(/-/g, '').slice(0, 8)}_${Date.now().toString().slice(-10)}`;
+  const orderId = `phonepe_${tenantId.replace(/-/g, '').slice(0, 8)}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+  // Calculate wallet and cash amounts
+  const walletUsedCents = body.walletUsedRupees ? Math.round(body.walletUsedRupees * 100) : 0;
+  const originalTotalCents = body.totals?.totalCents || 0;
+  const discountCents = body.discount_amount_cents || 0;
+  const totalAfterDiscount = Math.max(0, originalTotalCents - discountCents);
+  const cashPaidCents = Math.max(0, totalAfterDiscount - walletUsedCents);
+
+  console.log('PhonePe Order Creation:', {
+    orderId,
+    tenantId,
+    totalAfterDiscount,
+    walletUsedCents,
+    cashPaidCents,
+    customerId: body.customerId
+  });
+
+  // Create order record in database (with conflict handling)
+  let order: any = null;
+  const { data: orderData, error: orderError } = await supabaseAdmin
+    .from('orders')
+    .insert({
+      order_number: orderId,
+      tenant_id: tenantId,
+      status: 'pending',
+      total_cents: totalAfterDiscount,
+      payment_provider: 'phonepe',
+      payment_env: process.env.PHONEPE_ENV === 'SANDBOX' ? 'test' : 'live',
+      email: customerEmail,
+      currency: 'INR'
+    })
+    .select()
+    .single();
+
+  if (orderError) {
+    console.error('PhonePe order creation error:', orderError);
+    
+    // If it's a duplicate key error, try to find the existing order
+    if (orderError.message?.includes('duplicate key') || orderError.code === '23505') {
+      console.log('Duplicate order detected, checking if order exists...');
+      
+      const { data: existingOrder } = await supabaseAdmin
+        .from('orders')
+        .select('*')
+        .eq('order_number', orderId)
+        .eq('tenant_id', tenantId)
+        .single();
+      
+      if (existingOrder) {
+        console.log('Using existing order:', existingOrder.id);
+        order = existingOrder;
+      } else {
+        throw new Error(`Order creation failed: ${orderError.message}`);
+      }
+    } else {
+      throw new Error(`Order creation failed: ${orderError.message}`);
+    }
+  } else {
+    order = orderData;
+  }
+
+  if (!order) {
+    throw new Error('Order creation failed: No order returned');
+  }
+
+  // Update order with additional fields (these might be added by migrations)
+  if (body.customerId) {
+    await supabaseAdmin
+      .from('orders')
+      .update({
+        customer_id: body.customerId,
+        wallet_used_cents: walletUsedCents,
+        cash_paid_cents: cashPaidCents,
+        coupon_id: body.coupon_id,
+        coupon_code: body.coupon_code,
+        discount_amount_cents: discountCents,
+        phone: customerPhone
+      })
+      .eq('id', order.id);
+  }
 
   // Use SDK-based payment creation (no config needed, uses global phonepeConfig)
   const { redirectUrl } = await createPhonePePayment(
@@ -252,11 +332,11 @@ async function handlePhonePeCheckout(
   if (Array.isArray(items) && items.length > 0) {
     const itemsPayload = items.map((it) => ({
       tenant_id: tenantId,
-      order_id: orderId,
+      order_id: order.id,
       product_id: it.productId,
       quantity: it.quantity,
       unit_price_cents: it.unitPriceCents ?? 0,
-      subtotal_cents: (it.unitPriceCents ?? 0) * it.quantity,
+      total_price_cents: (it.unitPriceCents ?? 0) * it.quantity,
       tax_cents: body.totals ? Math.round((body.totals.taxCents / Math.max(items.length, 1))) : undefined,
     }));
     
@@ -267,7 +347,7 @@ async function handlePhonePeCheckout(
   if (body.coupon_id && body.coupon_code && body.customerId) {
     await supabaseAdmin.from('pending_coupon_usage').insert({
       tenant_id: tenantId,
-      order_id: orderId,
+      order_id: order.id,
       coupon_id: body.coupon_id,
       coupon_code: body.coupon_code,
       customer_id: body.customerId,
@@ -310,6 +390,13 @@ async function handleRazorpayCheckout(
     key_secret: credentials.keySecret,
   });
 
+  // Calculate wallet and cash amounts
+  const walletUsedCents = body.walletUsedRupees ? Math.round(body.walletUsedRupees * 100) : 0;
+  const originalTotalCents = body.totals?.totalCents || 0;
+  const discountCents = body.discount_amount_cents || 0;
+  const totalAfterDiscount = Math.max(0, originalTotalCents - discountCents);
+  const cashPaidCents = Math.max(0, totalAfterDiscount - walletUsedCents);
+
   // Create Razorpay order
   const rzpOrder = await razorpay.orders.create({
     amount: amountPaise,
@@ -317,21 +404,69 @@ async function handleRazorpayCheckout(
     receipt: `rcpt_${Date.now()}`,
   });
 
-  // Create order in database
-  const { data: order, error } = await supabaseAdmin
+  // Create order in database (with conflict handling)
+  let order: any = null;
+  const { data: orderData, error } = await supabaseAdmin
     .from('orders')
     .insert({
       order_number: rzpOrder.id,
       tenant_id: tenantId,
       status: 'pending',
-      total_cents: amountPaise,
+      total_cents: totalAfterDiscount,
       payment_provider: 'razorpay',
       razorpay_order_id: rzpOrder.id,
       email: customerEmail,
       payment_env: credentials.env,
+      currency: 'INR'
     })
     .select()
     .single();
+
+  if (error) {
+    console.error('Razorpay order creation error:', error);
+    
+    // If it's a duplicate key error, try to find the existing order
+    if (error.message?.includes('duplicate key') || error.code === '23505') {
+      console.log('Duplicate order detected, checking if order exists...');
+      
+      const { data: existingOrder } = await supabaseAdmin
+        .from('orders')
+        .select('*')
+        .eq('order_number', rzpOrder.id)
+        .eq('tenant_id', tenantId)
+        .single();
+      
+      if (existingOrder) {
+        console.log('Using existing order:', existingOrder.id);
+        order = existingOrder;
+      } else {
+        throw new Error(`Order creation failed: ${error.message}`);
+      }
+    } else {
+      throw new Error(`Order creation failed: ${error.message}`);
+    }
+  } else {
+    order = orderData;
+  }
+
+  if (!order) {
+    throw new Error('Order creation failed: No order returned');
+  }
+
+  // Update order with additional fields (these might be added by migrations)
+  if (body.customerId) {
+    await supabaseAdmin
+      .from('orders')
+      .update({
+        customer_id: body.customerId,
+        wallet_used_cents: walletUsedCents,
+        cash_paid_cents: cashPaidCents,
+        coupon_id: body.coupon_id,
+        coupon_code: body.coupon_code,
+        discount_amount_cents: discountCents
+      })
+      .eq('id', order.id);
+  }
 
   if (error || !order) {
     throw new Error(`Order creation failed: ${error?.message}`);
@@ -346,7 +481,7 @@ async function handleRazorpayCheckout(
       product_id: it.productId,
       quantity: it.quantity,
       unit_price_cents: it.unitPriceCents ?? 0,
-      subtotal_cents: (it.unitPriceCents ?? 0) * it.quantity,
+      total_price_cents: (it.unitPriceCents ?? 0) * it.quantity,
       tax_cents: body.totals ? Math.round((body.totals.taxCents / Math.max(items.length, 1))) : undefined,
     }));
     

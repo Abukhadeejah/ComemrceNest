@@ -215,12 +215,12 @@ export default function SenlyshAccountDashboard({ customer }: SenlyshAccountDash
                       <div className="text-3xl">📦</div>
                     </div>
                     <div className="mt-4">
-                      <button 
-                        onClick={() => setActiveTab('orders')}
+                      <Link 
+                        href="/senlysh/orders"
                         className="inline-flex items-center text-sm text-pink-600 hover:text-pink-700"
                       >
-                        View Orders →
-                      </button>
+                        View All Orders →
+                      </Link>
                     </div>
                   </div>
 

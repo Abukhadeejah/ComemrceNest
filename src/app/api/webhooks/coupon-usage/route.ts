@@ -136,8 +136,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Database error' }, { status: 500 })
     }
 
-    const processed = []
-    const errors = []
+    const processed: Array<{ order_id: string; coupon_code: string }> = []
+    const errors: Array<{ order_id: string; error: string }> = []
 
     for (const pending of pendingUsages || []) {
       try {

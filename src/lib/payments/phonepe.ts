@@ -19,25 +19,7 @@ export async function createPhonePePayment(
   customerPhone: string,
   config?: PhonePeConfig // Made optional since we now use SDK config
 ) {
-  // 1. Create pending order in DB
-  const { data: order, error } = await supabaseAdmin
-    .from('orders')
-    .insert({
-      order_number: orderId,
-      tenant_id: tenantId,
-      status: 'pending',
-      total_cents: amountCents,
-      payment_provider: 'phonepe',
-      email: customerEmail,
-    })
-    .select()
-    .single();
-
-  if (error || !order) {
-    throw new Error(`Order creation failed: ${error?.message}`);
-  }
-
-  // 2. Create SDK payment request using builder pattern
+  // Create SDK payment request using builder pattern
   const payRequest = StandardCheckoutPayRequest.builder()
     .merchantOrderId(orderId)
     .amount(amountCents) // Amount in paise
@@ -51,7 +33,7 @@ export async function createPhonePePayment(
     env: phonepeConfig.env
   });
 
-  // 3. Use SDK to create payment
+  // Use SDK to create payment
   try {
     const response = await phonepeClient.pay(payRequest);
     

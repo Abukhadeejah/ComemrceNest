@@ -21,17 +21,7 @@ export default function CustomerWalletDashboard() {
   const [error, setError] = useState<string | null>(null)
   const [filterType, setFilterType] = useState<FilterType>('all')
   const [period, setPeriod] = useState<Period>('all')
-  const [showRedeemModal, setShowRedeemModal] = useState(false)
-  const [redeemAmount, setRedeemAmount] = useState('')
-  const [bankDetails, setBankDetails] = useState({
-    accountNumber: '',
-    ifscCode: '',
-    accountHolderName: '',
-    bankName: ''
-  })
-  const [redeemLoading, setRedeemLoading] = useState(false)
-  const [redeemError, setRedeemError] = useState<string | null>(null)
-  const [redeemSuccess, setRedeemSuccess] = useState<string | null>(null)
+
 
   useEffect(() => { loadWalletData() }, [])
 
@@ -53,56 +43,7 @@ export default function CustomerWalletDashboard() {
     }
   }
 
-  const handleRedeem = async () => {
-    if (!redeemAmount || parseFloat(redeemAmount) < 100) {
-      setRedeemError('Minimum withdrawal amount is ₹100')
-      return
-    }
 
-    if (!bankDetails.accountNumber || !bankDetails.ifscCode || !bankDetails.accountHolderName) {
-      setRedeemError('Please fill in all bank details')
-      return
-    }
-
-    setRedeemLoading(true)
-    setRedeemError(null)
-
-    try {
-      const response = await fetch('/api/customers/wallet/redeem', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          amount_cents: Math.round(parseFloat(redeemAmount) * 100),
-          bank_details: bankDetails
-        })
-      })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        setRedeemSuccess(data.message)
-        setShowRedeemModal(false)
-        setRedeemAmount('')
-        setBankDetails({
-          accountNumber: '',
-          ifscCode: '',
-          accountHolderName: '',
-          bankName: ''
-        })
-        // Reload wallet data to reflect the withdrawal
-        loadWalletData()
-      } else {
-        setRedeemError(data.error || 'Failed to process withdrawal')
-      }
-    } catch {
-      setRedeemError('Failed to process withdrawal')
-    } finally {
-      setRedeemLoading(false)
-    }
-  }
 
   const formatCurrency = (amount: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amount)
   const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
@@ -189,18 +130,13 @@ export default function CustomerWalletDashboard() {
           <div className="flex-1">
             <h2 className="text-lg font-medium opacity-90">Wallet Balance</h2>
             <p className="text-3xl font-bold">{formatCurrency(currentBalance)}</p>
-            <p className="text-sm opacity-80 mt-1">Available for purchases and withdrawals</p>
+            <p className="text-sm opacity-80 mt-1">Available for purchases only</p>
           </div>
           <div className="flex flex-col items-end space-y-3">
             <div className="text-4xl opacity-80">💳</div>
-            {currentBalance >= 100 && (
-              <button
-                onClick={() => setShowRedeemModal(true)}
-                className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors backdrop-blur-sm border border-white/20"
-              >
-                💸 Redeem
-              </button>
-            )}
+            <div className="bg-white/20 text-white px-4 py-2 rounded-lg text-sm font-medium backdrop-blur-sm border border-white/20">
+              🛍️ Shop Now
+            </div>
           </div>
         </div>
       </div>
@@ -315,8 +251,8 @@ export default function CustomerWalletDashboard() {
             <p>Get cashback on every purchase you make. The amount is automatically added to your wallet.</p>
           </div>
           <div>
-            <h4 className="font-medium mb-2">💸 Use Your Balance</h4>
-            <p>Use your wallet balance to pay for future purchases or withdraw to your bank account.</p>
+            <h4 className="font-medium mb-2">🛍️ Use for Shopping</h4>
+            <p>Use your wallet balance to pay for future purchases. Perfect for getting more value from your shopping!</p>
           </div>
           <div>
             <h4 className="font-medium mb-2">🎁 Special Rewards</h4>
@@ -327,146 +263,16 @@ export default function CustomerWalletDashboard() {
             <p>Monitor all your transactions and see how much you&apos;ve earned over time.</p>
           </div>
         </div>
+        
+        <div className="mt-4 p-3 bg-pink-100 rounded-lg">
+          <p className="text-pink-800 text-sm font-medium">
+            💡 <strong>Note:</strong> Wallet balance can only be used for shopping on our platform. 
+            This ensures you get the best value from your cashback rewards!
+          </p>
+        </div>
       </div>
 
-      {/* Success Message */}
-      {redeemSuccess && (
-        <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-          <div className="flex items-center">
-            <svg className="w-5 h-5 text-green-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
-            </svg>
-            <p className="text-green-600 text-sm">{redeemSuccess}</p>
-          </div>
-        </div>
-      )}
 
-      {/* Redeem Modal */}
-      {showRedeemModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-semibold text-gray-900">Withdraw to Bank</h3>
-              <button
-                onClick={() => {
-                  setShowRedeemModal(false)
-                  setRedeemError(null)
-                }}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/>
-                </svg>
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Withdrawal Amount (₹)
-                </label>
-                <input
-                  type="number"
-                  min="100"
-                  max={currentBalance}
-                  step="1"
-                  value={redeemAmount}
-                  onChange={(e) => setRedeemAmount(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500"
-                  placeholder="Minimum ₹100"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Available: {formatCurrency(currentBalance)}
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Account Holder Name
-                </label>
-                <input
-                  type="text"
-                  value={bankDetails.accountHolderName}
-                  onChange={(e) => setBankDetails({...bankDetails, accountHolderName: e.target.value})}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500"
-                  placeholder="Full name as per bank account"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Account Number
-                </label>
-                <input
-                  type="text"
-                  value={bankDetails.accountNumber}
-                  onChange={(e) => setBankDetails({...bankDetails, accountNumber: e.target.value})}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500"
-                  placeholder="Bank account number"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  IFSC Code
-                </label>
-                <input
-                  type="text"
-                  value={bankDetails.ifscCode}
-                  onChange={(e) => setBankDetails({...bankDetails, ifscCode: e.target.value.toUpperCase()})}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500"
-                  placeholder="IFSC Code"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Bank Name (Optional)
-                </label>
-                <input
-                  type="text"
-                  value={bankDetails.bankName}
-                  onChange={(e) => setBankDetails({...bankDetails, bankName: e.target.value})}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500"
-                  placeholder="Bank name"
-                />
-              </div>
-
-              {redeemError && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                  <p className="text-red-600 text-sm">{redeemError}</p>
-                </div>
-              )}
-
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                <p className="text-yellow-800 text-sm">
-                  <strong>Note:</strong> Withdrawals are processed within 3-5 business days. 
-                  A processing fee may apply for amounts below ₹500.
-                </p>
-              </div>
-
-              <div className="flex space-x-3 pt-4">
-                <button
-                  onClick={() => {
-                    setShowRedeemModal(false)
-                    setRedeemError(null)
-                  }}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleRedeem}
-                  disabled={redeemLoading}
-                  className="flex-1 px-4 py-2 bg-gradient-to-r from-pink-600 to-purple-600 text-white rounded-lg hover:from-pink-700 hover:to-purple-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
-                >
-                  {redeemLoading ? 'Processing...' : 'Withdraw'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

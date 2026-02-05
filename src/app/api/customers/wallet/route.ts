@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
 import { validateCustomerFeatureAccess } from '@/server/customerModules'
+import { getAuthenticatedUserId } from '@/server/auth'
 import type { WalletResponse } from '@/types/customer'
 
 // Get wallet balance and transaction history
@@ -30,82 +29,109 @@ export async function GET() {
       )
     }
 
-    // Get authenticated user
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value
-          },
-          set(name: string, value: string, options: Record<string, unknown>) {
-            cookieStore.set(name, value, options)
-          },
-          remove(name: string, options: Record<string, unknown>) {
-            cookieStore.set(name, '', { ...options, maxAge: 0 })
-          },
-        },
-      }
-    )
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
+    // Get authenticated user ID
+    const userId = await getAuthenticatedUserId()
+    if (!userId) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
       )
     }
 
+    console.log('[Wallet API] Request from user:', userId, 'tenant:', tenantId)
+
     // Get customer ID
     const { data: customer } = await supabaseAdmin
       .from('customers')
       .select('id')
       .eq('tenant_id', tenantId)
-      .eq('user_id', user.id)
+      .eq('user_id', userId) // Use user_id to find customer
       .single()
 
     if (!customer) {
+      console.error('[Wallet API] Customer not found for user:', userId)
       return NextResponse.json(
         { error: 'Customer not found' },
         { status: 404 }
       )
     }
 
+    console.log('[Wallet API] Customer found:', customer.id)
+
     // Get wallet account
-    const { data: walletAccount } = await supabaseAdmin
+    const { data: walletAccount, error: walletError } = await supabaseAdmin
       .from('wallet_accounts')
       .select('id')
       .eq('tenant_id', tenantId)
       .eq('customer_id', customer.id)
       .single()
 
-    if (!walletAccount) {
-      return NextResponse.json(
-        { error: 'Wallet account not found' },
-        { status: 404 }
-      )
+    if (walletError || !walletAccount) {
+      console.error('[Wallet API] Wallet account not found:', walletError)
+      
+      // Try to create a wallet account if it doesn't exist
+      const { data: newWallet, error: createError } = await supabaseAdmin
+        .from('wallet_accounts')
+        .insert({
+          tenant_id: tenantId,
+          customer_id: customer.id
+        })
+        .select('id')
+        .single()
+
+      if (createError || !newWallet) {
+        console.error('[Wallet API] Failed to create wallet account:', createError)
+        return NextResponse.json(
+          { error: 'Failed to initialize wallet account' },
+          { status: 500 }
+        )
+      }
+
+      console.log('[Wallet API] Created new wallet account:', newWallet.id)
+      
+      // Return empty wallet for new account
+      const response: WalletResponse = {
+        wallet: {
+          account_id: newWallet.id,
+          balance_cents: 0,
+          currency: 'INR'
+        },
+        transactions: []
+      }
+
+      return NextResponse.json(response)
     }
 
+    console.log('[Wallet API] Wallet account found:', walletAccount.id)
+
     // Calculate current balance from ledger
-    const { data: ledgerEntries } = await supabaseAdmin
+    const { data: ledgerEntries, error: ledgerError } = await supabaseAdmin
       .from('wallet_ledger')
       .select('entry_type, amount_cents, source_key, reference_id, metadata, created_at')
       .eq('tenant_id', tenantId)
       .eq('account_id', walletAccount.id)
       .order('created_at', { ascending: false })
 
-    // Calculate balance and running balance for each transaction
-    let balanceCents = 0
-    const transactions = ledgerEntries?.map(entry => {
-      if (entry.entry_type === 'credit') {
-        balanceCents += entry.amount_cents
-      } else {
-        balanceCents -= entry.amount_cents
-      }
+    if (ledgerError) {
+      console.error('[Wallet API] Error fetching ledger entries:', ledgerError)
+    }
 
-      return {
+    console.log(`[Wallet API] Found ${ledgerEntries?.length || 0} ledger entries`)
+
+    // Calculate total balance first (process all entries)
+    let totalBalanceCents = 0
+    ledgerEntries?.forEach(entry => {
+      if (entry.entry_type === 'credit') {
+        totalBalanceCents += entry.amount_cents
+      } else {
+        totalBalanceCents -= entry.amount_cents
+      }
+    })
+
+    // Create transactions array with running balance (newest first)
+    let runningBalance = totalBalanceCents
+    const transactions = ledgerEntries?.map(entry => {
+      const transaction = {
         id: entry.reference_id || `${entry.created_at}:${entry.source_key}`,
         type: entry.entry_type as 'credit' | 'debit',
         amount_cents: entry.amount_cents,
@@ -114,18 +140,29 @@ export async function GET() {
         metadata: (entry.metadata ?? {}) as unknown as Record<string, unknown>,
         created_at: entry.created_at,
         description: undefined,
-        balance_after: balanceCents / 100, // Calculate running balance
+        balance_after: runningBalance / 100,
       }
+
+      // Update running balance for next iteration (going backwards in time)
+      if (entry.entry_type === 'credit') {
+        runningBalance -= entry.amount_cents
+      } else {
+        runningBalance += entry.amount_cents
+      }
+
+      return transaction
     }) || []
 
     const response: WalletResponse = {
       wallet: {
         account_id: walletAccount.id,
-        balance_cents: balanceCents,
+        balance_cents: totalBalanceCents,
         currency: 'INR'
       },
       transactions
     }
+
+    console.log(`[Wallet API] Returning wallet with balance: ₹${totalBalanceCents / 100}, transactions: ${transactions.length}`)
 
     return NextResponse.json(response)
 

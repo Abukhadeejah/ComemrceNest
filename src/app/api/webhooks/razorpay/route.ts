@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
 import crypto from 'crypto'
+import { processCashbackForOrder } from '@/lib/cashback/cashbackService'
 
 /**
  * Razorpay Webhook Handler
@@ -14,7 +15,79 @@ import crypto from 'crypto'
  * - Coupon usage completion after successful payment
  */
 
-// Helper function to process coupon usage after successful payment
+// Helper function to process cashback after successful payment
+async function processCashbackForCompletedOrder(orderId: string) {
+  try {
+    // Get order details with items for cashback calculation
+    const { data: order, error: orderError } = await supabaseAdmin
+      .from('orders')
+      .select(`
+        id,
+        tenant_id,
+        customer_id,
+        total_cents,
+        wallet_used_cents,
+        cash_paid_cents,
+        order_items (
+          product_id,
+          quantity,
+          unit_price_cents,
+          products (
+            cost_price_cents
+          )
+        )
+      `)
+      .eq('id', orderId)
+      .single()
+
+    if (orderError || !order) {
+      console.error(`Order ${orderId} not found for cashback processing:`, orderError)
+      return
+    }
+
+    // Calculate total purchase price from cost prices
+    let totalPurchasePriceCents = 0
+    if (order.order_items) {
+      for (const item of order.order_items) {
+        const costPrice = item.products?.cost_price_cents || 0
+        totalPurchasePriceCents += costPrice * item.quantity
+      }
+    }
+
+    // Process cashback
+    const cashbackResult = await processCashbackForOrder({
+      tenantId: order.tenant_id,
+      orderId: order.id,
+      customerId: order.customer_id,
+      totalSalePriceCents: order.total_cents,
+      totalPurchasePriceCents,
+      walletUsedCents: order.wallet_used_cents || 0,
+      cashPaidCents: order.cash_paid_cents || order.total_cents
+    })
+
+    // Update order with cashback details
+    await supabaseAdmin
+      .from('orders')
+      .update({
+        total_purchase_price_cents: totalPurchasePriceCents,
+        total_profit_pct: cashbackResult.profitPct,
+        cashback_pct: cashbackResult.cashbackPct,
+        cashback_amount_cents: cashbackResult.cashbackEarned,
+        membership_id: cashbackResult.membershipUsed
+      })
+      .eq('id', orderId)
+
+    console.log(`Cashback processed for order ${orderId}:`, {
+      cashbackEarned: cashbackResult.cashbackEarned,
+      cashbackPct: cashbackResult.cashbackPct,
+      profitPct: cashbackResult.profitPct,
+      membershipUsed: !!cashbackResult.membershipUsed
+    })
+
+  } catch (error) {
+    console.error('Error processing cashback for order:', error)
+  }
+}
 async function processCouponUsage(orderId: string) {
   try {
     // Find pending coupon usage for this order
@@ -157,6 +230,7 @@ export async function POST(request: NextRequest) {
 
       if (order) {
         await processCouponUsage(order.id)
+        await processCashbackForCompletedOrder(order.id)
       }
 
       console.log(`Order ${orderId} marked as paid`)

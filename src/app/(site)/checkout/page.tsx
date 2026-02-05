@@ -78,13 +78,17 @@ export default function CheckoutPage() {
   const [useWallet, setUseWallet] = useState(false)
   const [walletBalance, setWalletBalance] = useState(0)
   const [walletUsedRupees, setWalletUsedRupees] = useState(0)
-  const [cashbackPreview, setCashbackPreview] = useState<{
-    eligible: boolean
-    reason?: string
-    profitPct: number
-    cashbackPct: number
-    cashbackAmount: number
-  } | null>(null)
+  
+  // Membership state
+  const [membershipStatus, setMembershipStatus] = useState<{
+    isActive: boolean
+    membershipType: 'FREE' | 'PREMIUM' | null
+    needsUpgrade: boolean
+  }>({
+    isActive: false,
+    membershipType: null,
+    needsUpgrade: true
+  })
   
   // Coupon state - simplified for CouponSelector
   const [appliedCoupon, setAppliedCoupon] = useState<{
@@ -201,85 +205,60 @@ export default function CheckoutPage() {
     }
   }, [hydrated])
   
-  // Load wallet balance when user is logged in
+  // Load wallet balance and membership status when user is logged in
   useEffect(() => {
-    const loadWalletBalance = async () => {
+    const loadWalletAndMembership = async () => {
       if (!session?.user?.id) return
       
       try {
-        const response = await fetch(`/api/wallet?customerId=${session.user.id}`)
+        // Add cache-busting parameter to ensure fresh data
+        const response = await fetch(`/api/customers/wallet?t=${Date.now()}`, { 
+          credentials: 'include',
+          cache: 'no-cache',
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
+        })
         if (response.ok) {
           const data = await response.json()
-          setWalletBalance(data.balance?.cents || 0)
+          // Store balance in cents (as expected by formatPrice function)
+          const balanceCents = data.wallet?.balance_cents || 0
+          console.log('[Checkout] Wallet API response:', { balance_cents: balanceCents })
+          setWalletBalance(balanceCents)
+        }
+
+        // Load membership status
+        const membershipResponse = await fetch('/api/customers/membership/status', {
+          credentials: 'include',
+          cache: 'no-cache'
+        })
+        
+        if (membershipResponse.ok) {
+          const membershipData = await membershipResponse.json()
+          setMembershipStatus({
+            isActive: membershipData.membership?.isActive || false,
+            membershipType: membershipData.membership?.membershipType || null,
+            needsUpgrade: membershipData.membership?.needsUpgrade || true
+          })
+          console.log('[Checkout] Membership status:', membershipData.membership)
         }
       } catch (error) {
-        console.error('Failed to load wallet balance:', error)
+        console.error('Failed to load wallet/membership data:', error)
       }
     }
     
     if (hydrated && session?.user?.id) {
-      loadWalletBalance()
+      loadWalletAndMembership()
     }
   }, [hydrated, session?.user?.id])
   
-  // Preview cashback when wallet usage or coupon changes
-  useEffect(() => {
-    const previewCashback = async () => {
-      if (!session?.user?.id) {
-        setCashbackPreview(null)
-        return
-      }
-      
-      // Calculate total after discount
-      // grandTotal is already in cents; do not multiply by 100
-      const orderTotalCents = Math.round(grandTotal)
-      const discountCents = appliedCoupon ? Math.round(appliedCoupon.discount * 100) : 0
-      const totalAfterDiscountCents = orderTotalCents - discountCents
-      
-      const totalCostCents = cart.items.reduce((sum, item) => {
-        // Estimate cost price as 70% of sale price (item.price is in cents)
-        const costCents = Math.round(item.price * 0.7)
-        return sum + costCents * item.quantity
-      }, 0)
-      
-      const walletUsedCents = useWallet ? Math.round(walletUsedRupees * 100) : 0
-      // Cash paid = (Order Total - Discount) - Wallet Used
-      const cashPaidCents = totalAfterDiscountCents - walletUsedCents
-      
-      if (cashPaidCents < 0) {
-        setCashbackPreview(null)
-        return
-      }
-      
-      try {
-        const response = await fetch('/api/wallet/preview-cashback', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            customerId: session.user.id,
-            tenantKey: tenantKey || tenant.key,
-            totalSalePriceCents: totalAfterDiscountCents, // Use discounted price
-            totalPurchasePriceCents: totalCostCents,
-            walletUsedCents,
-            cashPaidCents
-          })
-        })
-        
-        if (response.ok) {
-          const data = await response.json()
-          setCashbackPreview(data)
-        }
-      } catch (error) {
-        console.error('Error previewing cashback:', error)
-      }
-    }
-    
-    const debounce = setTimeout(previewCashback, 300)
-    return () => clearTimeout(debounce)
-  }, [walletUsedRupees, useWallet, grandTotal, cart.items, session?.user?.id, appliedCoupon])
-  
   // Coupon handlers for CouponSelector
   const handleCouponSelected = (discount: { amount: number; code: string; description?: string; id: string }) => {
+    // Clear wallet usage when coupon is applied (mutual exclusivity)
+    setUseWallet(false)
+    setWalletUsedRupees(0)
+    
     setAppliedCoupon({
       code: discount.code,
       discount: discount.amount,
@@ -807,7 +786,7 @@ export default function CheckoutPage() {
           </div>
 
           {/* Coupon Section */}
-          {cart.items.length > 0 && (
+          {cart.items.length > 0 && !useWallet && (
             <div className="mb-8">
               <CouponSelector
                 orderTotal={grandTotal / 100} // Convert cents to rupees
@@ -818,8 +797,34 @@ export default function CheckoutPage() {
             </div>
           )}
 
+          {/* Membership Status Notice */}
+          {session?.user?.id && !membershipStatus.isActive && (
+            <div className="mb-8">
+              <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-xl p-6 border-2 border-orange-200">
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0">
+                    <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                      <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 15.5c-.77.833.192 2.5 1.732 2.5z" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className={`${playfair.className} text-xl font-bold text-gray-900 mb-2`}>Membership Required for Cashback</h3>
+                    <p className="text-sm text-gray-700 mb-4">
+                      Only members earn cashback on purchases. You can still use discount coupons, but cashback rewards require an active membership.
+                    </p>
+                    <button className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-sm font-medium rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-200 shadow-sm hover:shadow-md">
+                      Get Premium Membership
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Wallet Payment Section - Optional */}
-          {session?.user?.id && walletBalance > 0 && (
+          {session?.user?.id && walletBalance > 0 && !appliedCoupon && (
             <div className="mb-8">
               <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-6 border-2 border-indigo-200">
                 <div className="flex items-center justify-between mb-4">
@@ -831,7 +836,7 @@ export default function CheckoutPage() {
                     </div>
                     <div>
                       <h3 className={`${playfair.className} text-xl font-bold text-gray-900`}>Use Wallet Balance</h3>
-                      <p className="text-sm text-gray-600">Available: <span className="font-bold text-indigo-600">{formatPrice(walletBalance / 100)}</span></p>
+                      <p className="text-sm text-gray-600">Available: <span className="font-bold text-indigo-600">{formatPrice(walletBalance)}</span></p>
                     </div>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
@@ -839,6 +844,10 @@ export default function CheckoutPage() {
                       type="checkbox"
                       checked={useWallet}
                       onChange={(e) => {
+                        if (e.target.checked && appliedCoupon) {
+                          // Clear coupon when wallet is enabled (mutual exclusivity)
+                          setAppliedCoupon(null)
+                        }
                         setUseWallet(e.target.checked)
                         if (!e.target.checked) {
                           setWalletUsedRupees(0)
@@ -859,14 +868,14 @@ export default function CheckoutPage() {
                           Amount from wallet
                         </label>
                         <span className="text-xl font-bold text-indigo-600">
-                          {formatPrice(walletUsedRupees)}
+                          ₹{walletUsedRupees.toFixed(2)}
                         </span>
                       </div>
                       
                       <input
                         type="range"
                         min="0"
-                        max={Math.min(walletBalance / 100, (grandTotal - (appliedCoupon ? Math.round(appliedCoupon.discount * 100) : 0)) / 100)}
+                        max={Math.min(walletBalance / 100, grandTotal / 100)}
                         step="1"
                         value={walletUsedRupees}
                         onChange={(e) => setWalletUsedRupees(parseFloat(e.target.value))}
@@ -875,7 +884,7 @@ export default function CheckoutPage() {
                       
                       <div className="flex justify-between text-xs text-gray-500 mt-1">
                         <span>₹0</span>
-                        <span>{formatPrice(Math.min(walletBalance / 100, (grandTotal - (appliedCoupon ? Math.round(appliedCoupon.discount * 100) : 0)) / 100))}</span>
+                        <span>{formatPrice(Math.min(walletBalance, grandTotal))}</span>
                       </div>
 
                       {/* Quick Select Buttons */}
@@ -889,14 +898,14 @@ export default function CheckoutPage() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => setWalletUsedRupees(Math.min(walletBalance / 100, (grandTotal - (appliedCoupon ? Math.round(appliedCoupon.discount * 100) : 0)) / 100) / 2)}
+                          onClick={() => setWalletUsedRupees(Math.min(walletBalance / 100, grandTotal / 100) / 2)}
                           className="flex-1 px-3 py-2 text-sm border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-indigo-400 transition-colors"
                         >
                           Half
                         </button>
                         <button
                           type="button"
-                          onClick={() => setWalletUsedRupees(Math.min(walletBalance / 100, (grandTotal - (appliedCoupon ? Math.round(appliedCoupon.discount * 100) : 0)) / 100))}
+                          onClick={() => setWalletUsedRupees(Math.min(walletBalance / 100, grandTotal / 100))}
                           className="flex-1 px-3 py-2 text-sm border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-indigo-400 transition-colors"
                         >
                           Max
@@ -909,7 +918,7 @@ export default function CheckoutPage() {
                       <div className="bg-white rounded-lg p-4 shadow-sm border-2 border-indigo-200">
                         <p className="text-xs font-semibold text-gray-600 mb-1">Wallet Payment</p>
                         <p className="text-2xl font-bold text-indigo-600">
-                          {formatPrice(walletUsedRupees)}
+                          ₹{walletUsedRupees.toFixed(2)}
                         </p>
                         <p className="text-xs text-gray-500 mt-1">
                           {walletUsedRupees > 0 ? '⚠️ No cashback' : 'Not using wallet'}
@@ -919,62 +928,75 @@ export default function CheckoutPage() {
                       <div className="bg-white rounded-lg p-4 shadow-sm border-2 border-green-200">
                         <p className="text-xs font-semibold text-gray-600 mb-1">Cash Payment</p>
                         <p className="text-2xl font-bold text-green-600">
-                          {formatPrice((grandTotal - (appliedCoupon ? Math.round(appliedCoupon.discount * 100) : 0)) - (walletUsedRupees * 100))}
+                          {formatPrice(grandTotal - (walletUsedRupees * 100))}
                         </p>
                         <p className="text-xs text-gray-500 mt-1">
-                          {(((grandTotal - (appliedCoupon ? Math.round(appliedCoupon.discount * 100) : 0)) - (walletUsedRupees * 100)) > 0) ? '✅ Earns cashback' : 'Fully covered'}
+                          {(grandTotal - (walletUsedRupees * 100)) > 0 
+                            ? (membershipStatus.isActive 
+                                ? '✅ Earns cashback' 
+                                : '❌ No cashback (membership required)')
+                            : 'Fully covered'}
                         </p>
                       </div>
-                    </div>
-
-                    {/* Cashback Preview */}
-                    {cashbackPreview && (
-                      <div className={`rounded-lg p-4 shadow-sm ${
-                        cashbackPreview.eligible 
-                          ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300' 
-                          : 'bg-gray-50 border-2 border-gray-300'
-                      }`}>
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <h4 className="font-bold text-lg mb-1">
-                              {cashbackPreview.eligible ? '🎉 Cashback Preview' : 'ℹ️ Cashback Status'}
-                            </h4>
-                            {cashbackPreview.eligible ? (
-                              <>
-                                <p className="text-sm text-gray-700">
-                                  Profit: {cashbackPreview.profitPct.toFixed(1)}% → Cashback: {cashbackPreview.cashbackPct}%
-                                </p>
-                                <p className="text-xs text-gray-500 mt-1">
-                                  Calculated on cash paid only (₹{(grandTotal - walletUsedRupees).toFixed(2)})
-                                </p>
-                              </>
-                            ) : (
-                              <p className="text-sm text-gray-600">
-                                {cashbackPreview.reason || 'No cashback available'}
-                              </p>
-                            )}
-                          </div>
-                          {cashbackPreview.eligible && (
-                            <div className="text-right">
-                              <p className="text-3xl font-bold text-green-600">
-                                {formatPrice(cashbackPreview.cashbackAmount / 100)}
-                              </p>
-                              <p className="text-xs text-gray-500">To be credited</p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Info Tip */}
-                    <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-3">
-                      <p className="text-sm text-blue-900">
-                        <strong>💡 Tip:</strong> Cashback is calculated ONLY on cash paid, not wallet amount. 
-                        Use less wallet to maximize your cashback rewards!
-                      </p>
                     </div>
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* Mutual Exclusivity Notice */}
+          {session?.user?.id && walletBalance > 0 && appliedCoupon && (
+            <div className="mb-8">
+              <div className="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-yellow-400 rounded-full flex items-center justify-center">
+                    <svg className="w-5 h-5 text-yellow-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-bold text-yellow-800 mb-1">Coupon Applied</h4>
+                    <p className="text-sm text-yellow-700">
+                      You can use either a coupon OR wallet balance, not both. 
+                      <button 
+                        onClick={() => setAppliedCoupon(null)}
+                        className="text-yellow-800 underline hover:no-underline ml-1"
+                      >
+                        Remove coupon to use wallet
+                      </button>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {session?.user?.id && walletBalance > 0 && useWallet && (
+            <div className="mb-8">
+              <div className="bg-indigo-50 border-2 border-indigo-300 rounded-xl p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-indigo-400 rounded-full flex items-center justify-center">
+                    <svg className="w-5 h-5 text-indigo-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-bold text-indigo-800 mb-1">Wallet Payment Active</h4>
+                    <p className="text-sm text-indigo-700">
+                      Coupons are disabled when using wallet balance. 
+                      <button 
+                        onClick={() => {
+                          setUseWallet(false)
+                          setWalletUsedRupees(0)
+                        }}
+                        className="text-indigo-800 underline hover:no-underline ml-1"
+                      >
+                        Disable wallet to use coupons
+                      </button>
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -983,8 +1005,7 @@ export default function CheckoutPage() {
             <button 
               disabled={busy || !scriptLoaded || grandTotal <= 0} 
               onClick={() => {
-                const totalAfterDiscount = grandTotal - (appliedCoupon ? Math.round(appliedCoupon.discount * 100) : 0)
-                const finalAmount = totalAfterDiscount - (useWallet ? walletUsedRupees * 100 : 0)
+                const finalAmount = grandTotal - (useWallet ? walletUsedRupees * 100 : 0)
                 handlePayment(finalAmount > 0 ? finalAmount : 0)
               }}
               className={`w-full text-white py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none ${
@@ -1004,15 +1025,17 @@ export default function CheckoutPage() {
               ) : (
                 <>
                   {(() => {
-                    const totalAfterDiscount = grandTotal - (appliedCoupon ? Math.round(appliedCoupon.discount * 100) : 0)
-                    const finalAmount = totalAfterDiscount - (useWallet ? walletUsedRupees * 100 : 0)
+                    const finalAmount = grandTotal - (useWallet ? walletUsedRupees * 100 : 0)
                     
-                    if (appliedCoupon && useWallet && walletUsedRupees > 0) {
-                      return `Pay ${formatPrice(finalAmount)}`
-                    } else if (useWallet && walletUsedRupees > 0) {
-                      return <>Pay {formatPrice(finalAmount)} + Use {formatPrice(walletUsedRupees)} Wallet</>
+                    if (useWallet && walletUsedRupees > 0) {
+                      if (finalAmount <= 0) {
+                        return `Complete Order (Fully Paid with Wallet)`
+                      } else {
+                        return `Pay ${formatPrice(finalAmount)} + Use ₹${walletUsedRupees.toFixed(2)} Wallet`
+                      }
                     } else if (appliedCoupon) {
-                      return `Pay ${formatPrice(finalAmount)} (Coupon Applied)`
+                      const discountedAmount = grandTotal - Math.round(appliedCoupon.discount * 100)
+                      return `Pay ${formatPrice(discountedAmount)} (Coupon Applied)`
                     } else {
                       return `Pay ${formatPrice(grandTotal)} with ${paymentProvider === 'phonepe' ? 'PhonePe' : 'Razorpay'}`
                     }

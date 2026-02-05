@@ -71,9 +71,10 @@ export function OrderFilters({ currentStatus, currentSearch }: OrderFiltersProps
           <option value="all">All Status</option>
           <option value="pending">Pending</option>
           <option value="paid">Paid</option>
-          <option value="failed">Failed</option>
+          <option value="confirmed">Confirmed</option>
           <option value="fulfilled">Fulfilled</option>
           <option value="cancelled">Cancelled</option>
+          <option value="failed">Failed</option>
         </select>
       </div>
     </div>

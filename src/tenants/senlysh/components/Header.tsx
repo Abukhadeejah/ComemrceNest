@@ -1,12 +1,14 @@
 'use client'
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useCart } from '@/lib/cart';
 import { usePathname } from 'next/navigation';
 import { useCustomerAuth } from '@/hooks/useCustomerAuth';
 import { Category, CategoryTree, buildCategoryTree, filterTestCategories } from '@/lib/categories';
+import MembershipStatusIndicator from '@/components/MembershipStatusIndicator';
+import MembershipUpgradeModal from '@/components/MembershipUpgradeModal';
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -14,8 +16,9 @@ export default function Header() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoryTree, setCategoryTree] = useState<CategoryTree[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showMembershipModal, setShowMembershipModal] = useState(false);
   const { state } = useCart();
-  const { isCustomer } = useCustomerAuth();
+  const { isCustomer, user } = useCustomerAuth();
   const pathname = usePathname();
   const cartCount = state.itemCount;
   const wishlistCount = 0;
@@ -181,6 +184,13 @@ export default function Header() {
                 </svg>
               </Link>
 
+              {/* Membership Status Indicator */}
+              <MembershipStatusIndicator 
+                customerId={user?.id}
+                onUpgradeClick={() => setShowMembershipModal(true)}
+                className="hidden sm:block"
+              />
+
               {/* User Account */}
               {isCustomer ? (
                 <div className="relative group">
@@ -190,16 +200,51 @@ export default function Header() {
                     </svg>
                     <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs rounded-full w-3 h-3 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">●</span>
                   </button>
-                  <div className="absolute right-0 top-full mt-2 bg-white shadow-lg border border-gray-200 rounded-md py-2 min-w-[160px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
+                  <div className="absolute right-0 top-full mt-2 bg-white shadow-lg border border-gray-200 rounded-md py-2 min-w-[200px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
                     <Link 
-                      href="/senlysh/profile" 
+                      href="/senlysh/my-account" 
                       className="block px-4 py-2 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-600"
                     >
                       <div className="flex items-center gap-2">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                         </svg>
-                        My Profile
+                        My Account
+                      </div>
+                    </Link>
+                    <Link 
+                      href="/senlysh/orders" 
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-600"
+                    >
+                      <div className="flex items-center gap-2">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                        </svg>
+                        My Orders
+                      </div>
+                    </Link>
+                    <Link 
+                      href="/senlysh/wallet" 
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-600"
+                    >
+                      <div className="flex items-center gap-2">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                        </svg>
+                        My Wallet
+                      </div>
+                    </Link>
+                    <div className="border-t border-gray-100 my-1"></div>
+                    <Link 
+                      href="/senlysh/profile" 
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-600"
+                    >
+                      <div className="flex items-center gap-2">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        Settings
                       </div>
                     </Link>
                     <form action="/api/auth/signout" method="post" className="block">
@@ -407,13 +452,47 @@ export default function Header() {
               </Link>
 
               {isCustomer && (
-                <Link href="/senlysh/wallet" className="flex items-center justify-between py-3 px-4 text-sm font-bold text-gray-900 hover:text-white bg-gray-50 hover:bg-purple-600 rounded-xl transition-all shadow-sm group"
-                  onClick={() => setIsMenuOpen(false)}>
-                  <span>WALLET</span>
-                  <svg className="w-4 h-4 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7a2 2 0 012-2h12a2 2 0 012 2v1h1a1 1 0 010 2h-1v5a2 2 0 01-2 2H5a2 2 0 01-2-2V7zm2-1h12a1 1 0 011 1v1H5V7a1 1 0 011-1z" />
-                  </svg>
-                </Link>
+                <>
+                  <div className="py-2"><div className="h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div></div>
+                  
+                  <Link href="/senlysh/my-account" className="flex items-center justify-between py-3 px-4 text-sm font-bold text-gray-900 hover:text-white bg-gray-50 hover:bg-purple-600 rounded-xl transition-all shadow-sm group"
+                    onClick={() => setIsMenuOpen(false)}>
+                    <span>MY ACCOUNT</span>
+                    <svg className="w-4 h-4 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </Link>
+
+                  <Link href="/senlysh/orders" className="flex items-center justify-between py-3 px-4 text-sm font-bold text-gray-900 hover:text-white bg-gray-50 hover:bg-purple-600 rounded-xl transition-all shadow-sm group"
+                    onClick={() => setIsMenuOpen(false)}>
+                    <span>MY ORDERS</span>
+                    <svg className="w-4 h-4 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                    </svg>
+                  </Link>
+
+                  <Link href="/senlysh/wallet" className="flex items-center justify-between py-3 px-4 text-sm font-bold text-gray-900 hover:text-white bg-gray-50 hover:bg-purple-600 rounded-xl transition-all shadow-sm group"
+                    onClick={() => setIsMenuOpen(false)}>
+                    <span>MY WALLET</span>
+                    <svg className="w-4 h-4 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7a2 2 0 012-2h12a2 2 0 012 2v1h1a1 1 0 010 2h-1v5a2 2 0 01-2 2H5a2 2 0 01-2-2V7zm2-1h12a1 1 0 011 1v1H5V7a1 1 0 011-1z" />
+                    </svg>
+                  </Link>
+                </>
+              )}
+
+              {!isCustomer && (
+                <>
+                  <div className="py-2"><div className="h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div></div>
+                  
+                  <Link href="/senlysh/login" className="flex items-center justify-between py-3 px-4 text-sm font-bold text-gray-900 hover:text-white bg-gray-50 hover:bg-purple-600 rounded-xl transition-all shadow-sm group"
+                    onClick={() => setIsMenuOpen(false)}>
+                    <span>LOGIN / REGISTER</span>
+                    <svg className="w-4 h-4 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1" />
+                    </svg>
+                  </Link>
+                </>
               )}
             </nav>
 
@@ -430,6 +509,13 @@ export default function Header() {
           </div>
         </div>
       )}
+
+      {/* Membership Upgrade Modal */}
+      <MembershipUpgradeModal 
+        isOpen={showMembershipModal}
+        onClose={() => setShowMembershipModal(false)}
+        customerId={user?.id}
+      />
     </>
   );
 }
