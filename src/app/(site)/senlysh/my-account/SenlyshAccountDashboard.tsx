@@ -70,7 +70,7 @@ export default function SenlyshAccountDashboard({ customer }: SenlyshAccountDash
           .reduce((sum: number, t: any) => sum + (t.amount || 0), 0)
         
         const totalRedeemed = transactions
-          .filter((t: any) => t.type === 'debit' || t.source_key?.includes('withdrawal'))
+          .filter((t: any) => t.type === 'debit')
           .reduce((sum: number, t: any) => sum + (t.amount || 0), 0)
 
         setWalletSummary({

@@ -144,7 +144,7 @@ export default function CustomerWalletDashboard() {
           <div>
             <h2 className="text-lg font-medium opacity-90">Wallet Balance</h2>
             <p className="text-3xl font-bold">{formatCurrency(currentBalance)}</p>
-            <p className="text-sm opacity-80 mt-1">Available for purchases and withdrawals</p>
+            <p className="text-sm opacity-80 mt-1">Available for purchases only</p>
           </div>
           <div className="text-4xl opacity-80">💳</div>
         </div>
@@ -266,7 +266,7 @@ export default function CustomerWalletDashboard() {
           </div>
           <div>
             <h4 className="font-medium mb-2">💸 Use Your Balance</h4>
-            <p>Use your wallet balance to pay for future purchases or withdraw to your bank account.</p>
+            <p>Use your wallet balance to pay for future purchases. Perfect for getting more value from your shopping!</p>
           </div>
           <div>
             <h4 className="font-medium mb-2">🎁 Special Rewards</h4>
@@ -276,6 +276,13 @@ export default function CustomerWalletDashboard() {
             <h4 className="font-medium mb-2">📊 Track Everything</h4>
             <p>Monitor all your transactions and see how much you&apos;ve earned over time.</p>
           </div>
+        </div>
+        
+        <div className="mt-4 p-3 bg-blue-100 rounded-lg">
+          <p className="text-blue-800 text-sm font-medium">
+            💡 <strong>Note:</strong> Wallet balance can only be used for shopping on our platform. 
+            This ensures you get the best value from your cashback rewards!
+          </p>
         </div>
       </div>
     </div>
