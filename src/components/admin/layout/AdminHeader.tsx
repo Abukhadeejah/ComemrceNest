@@ -74,14 +74,28 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
               </Menu.Item>
               <Menu.Item>
                 {({ active }: { active: boolean }) => (
-                  <form action="/api/auth/signout" method="post">
-                    <button
-                      type="submit"
-                      className={`${active ? 'bg-gray-50' : ''} block w-full text-left px-4 py-2 text-sm text-gray-900`}
-                    >
-                      Sign out
-                    </button>
-                  </form>
+                  <button
+                    onClick={async () => {
+                      try {
+                        const response = await fetch('/api/auth/signout', {
+                          method: 'POST',
+                          credentials: 'include'
+                        })
+                        const data = await response.json()
+                        if (data.redirectUrl) {
+                          window.location.href = data.redirectUrl
+                        } else {
+                          window.location.href = '/login'
+                        }
+                      } catch (error) {
+                        console.error('Signout error:', error)
+                        window.location.href = '/login'
+                      }
+                    }}
+                    className={`${active ? 'bg-gray-50' : ''} block w-full text-left px-4 py-2 text-sm text-gray-900`}
+                  >
+                    Sign out
+                  </button>
                 )}
               </Menu.Item>
             </Menu.Items>

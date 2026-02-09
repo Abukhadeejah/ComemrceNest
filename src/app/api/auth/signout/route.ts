@@ -59,15 +59,25 @@ export async function POST(request: Request) {
   const referer = (await headers()).get('referer') || ''
   const isAdminSignout = referer.includes('/admin')
   
-  // Admin users always go to /login (global admin login)
-  // Customer users go to /{tenant}/login (tenant customer login)
-  const redirectUrl = isAdminSignout ? '/login' : `/${await getTenantKeyFromRequest() || 'senlysh'}/login`
+  // Determine redirect URL
+  let redirectUrl: string
+  if (isAdminSignout) {
+    // Admin users go to /login (global admin login)
+    redirectUrl = '/login'
+  } else {
+    // Customer users go to /{tenant}/login (tenant customer login)
+    const tenantKey = await getTenantKeyFromRequest()
+    redirectUrl = `/${tenantKey || 'senlysh'}/login`
+  }
   
-  // Get the origin from the request URL to ensure correct domain
-  const requestUrl = new URL(request.url)
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || `${requestUrl.protocol}//${requestUrl.host}`
+  console.log('[Signout] Redirecting to:', redirectUrl, 'isAdmin:', isAdminSignout)
   
-  return NextResponse.redirect(new URL(redirectUrl, baseUrl))
+  return NextResponse.json({ 
+    success: true, 
+    redirectUrl 
+  }, {
+    status: 200
+  })
 }
 
 

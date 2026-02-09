@@ -1252,114 +1252,108 @@ export async function bulkDeleteProducts(productIds: string[]) {
 }
 
 export async function cloneProduct(productId: string) {
-  try {
-    const tenantId = await resolveTenantIdFromRequest()
-    if (!tenantId) {
-      throw new Error('Tenant not found')
-    }
+  const tenantId = await resolveTenantIdFromRequest()
+  if (!tenantId) {
+    throw new Error('Tenant not found')
+  }
 
-    // Validate tenant admin access
-    await assertTenantAdmin(tenantId)
+  // Validate tenant admin access
+  await assertTenantAdmin(tenantId)
 
-    // Validate product ID format
-    if (!productId || typeof productId !== 'string' || productId.length !== 36) {
-      throw new Error('Invalid product ID format')
-    }
+  // Validate product ID format
+  if (!productId || typeof productId !== 'string' || productId.length !== 36) {
+    throw new Error('Invalid product ID format')
+  }
 
-    // Get the original product
-    const { data: originalProduct, error: fetchError } = await supabaseAdmin
-      .from('products')
-      .select('*')
-      .eq('id', productId)
-      .eq('tenant_id', tenantId)
-      .single()
+  // Get the original product
+  const { data: originalProduct, error: fetchError } = await supabaseAdmin
+    .from('products')
+    .select('*')
+    .eq('id', productId)
+    .eq('tenant_id', tenantId)
+    .single()
 
-    if (fetchError || !originalProduct) {
-      throw new Error('Product not found or access denied')
-    }
+  if (fetchError || !originalProduct) {
+    throw new Error('Product not found or access denied')
+  }
 
-    // Get product categories
-    const { data: productCategories } = await supabaseAdmin
+  // Get product categories
+  const { data: productCategories } = await supabaseAdmin
+    .from('product_categories')
+    .select('category_id')
+    .eq('product_id', productId)
+
+  // Get product variants if any
+  const { data: variants } = await supabaseAdmin
+    .from('product_variants')
+    .select('*')
+    .eq('product_id', productId)
+
+  // Create new product with cloned data
+  const timestamp = Date.now()
+  const randomSuffix = Math.floor(Math.random() * 100000000)
+  const newSlug = `${originalProduct.slug}-copy-${randomSuffix}`
+  const newSKU = originalProduct.sku ? `${originalProduct.sku}-COPY` : `COPY-${randomSuffix}`
+
+  const clonedProductData = {
+    ...originalProduct,
+    id: undefined, // Let database generate new ID
+    name: `${originalProduct.name} (Copy)`,
+    slug: newSlug,
+    sku: newSKU,
+    status: 'draft', // Always create clones as draft
+    created_at: undefined,
+    updated_at: undefined,
+  }
+
+  const { data: newProduct, error: insertError } = await supabaseAdmin
+    .from('products')
+    .insert(clonedProductData)
+    .select()
+    .single()
+
+  if (insertError || !newProduct) {
+    throw new Error(`Failed to clone product: ${insertError?.message}`)
+  }
+
+  // Clone product categories
+  if (productCategories && productCategories.length > 0) {
+    const newCategories = productCategories.map(pc => ({
+      product_id: newProduct.id,
+      category_id: pc.category_id,
+      tenant_id: tenantId
+    }))
+
+    await supabaseAdmin
       .from('product_categories')
-      .select('category_id')
-      .eq('product_id', productId)
+      .insert(newCategories)
+  }
 
-    // Get product variants if any
-    const { data: variants } = await supabaseAdmin
-      .from('product_variants')
-      .select('*')
-      .eq('product_id', productId)
-
-    // Create new product with cloned data
-    const timestamp = Date.now()
-    const randomSuffix = Math.floor(Math.random() * 100000000)
-    const newSlug = `${originalProduct.slug}-copy-${randomSuffix}`
-    const newSKU = originalProduct.sku ? `${originalProduct.sku}-COPY` : `COPY-${randomSuffix}`
-
-    const clonedProductData = {
-      ...originalProduct,
-      id: undefined, // Let database generate new ID
-      name: `${originalProduct.name} (Copy)`,
-      slug: newSlug,
-      sku: newSKU,
-      status: 'draft', // Always create clones as draft
+  // Clone variants if any
+  if (variants && variants.length > 0) {
+    const newVariants = variants.map(variant => ({
+      ...variant,
+      id: undefined,
+      product_id: newProduct.id,
+      sku: variant.sku ? `${variant.sku}-COPY` : undefined,
       created_at: undefined,
       updated_at: undefined,
-    }
+    }))
 
-    const { data: newProduct, error: insertError } = await supabaseAdmin
-      .from('products')
-      .insert(clonedProductData)
-      .select()
-      .single()
+    await supabaseAdmin
+      .from('product_variants')
+      .insert(newVariants)
+  }
 
-    if (insertError || !newProduct) {
-      throw new Error(`Failed to clone product: ${insertError?.message}`)
-    }
+  // Force cache invalidation
+  await forceInvalidateProductCaches(tenantId)
 
-    // Clone product categories
-    if (productCategories && productCategories.length > 0) {
-      const newCategories = productCategories.map(pc => ({
-        product_id: newProduct.id,
-        category_id: pc.category_id,
-        tenant_id: tenantId
-      }))
+  console.log(`Product ${productId} cloned successfully as ${newProduct.id}`)
 
-      await supabaseAdmin
-        .from('product_categories')
-        .insert(newCategories)
-    }
-
-    // Clone variants if any
-    if (variants && variants.length > 0) {
-      const newVariants = variants.map(variant => ({
-        ...variant,
-        id: undefined,
-        product_id: newProduct.id,
-        sku: variant.sku ? `${variant.sku}-COPY` : undefined,
-        created_at: undefined,
-        updated_at: undefined,
-      }))
-
-      await supabaseAdmin
-        .from('product_variants')
-        .insert(newVariants)
-    }
-
-    // Force cache invalidation
-    await forceInvalidateProductCaches(tenantId)
-
-    console.log(`Product ${productId} cloned successfully as ${newProduct.id}`)
-
-    return {
-      success: true,
-      newProductId: newProduct.id,
-      newProductSlug: newProduct.slug
-    }
-
-  } catch (error) {
-    console.error('Unexpected error during product cloning:', error)
-    throw error
+  return {
+    success: true,
+    newProductId: newProduct.id,
+    newProductSlug: newProduct.slug
   }
 }
 
