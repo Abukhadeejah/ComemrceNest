@@ -12,6 +12,7 @@ interface Coupon {
   valid_until: string
   is_active: boolean
   created_at: string
+  uses_per_customer?: number
 }
 
 export default function CouponManager() {
@@ -146,6 +147,7 @@ export default function CouponManager() {
                     <tr>
                       <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Code</th>
                       <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Discount</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Uses/User</th>
                       <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Valid Until</th>
                       <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Status</th>
                       <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Actions</th>
@@ -159,6 +161,14 @@ export default function CouponManager() {
                           {coupon.discount_type === 'percentage' 
                             ? `${coupon.discount_value}%` 
                             : `₹${coupon.discount_value}`
+                          }
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          {coupon.uses_per_customer 
+                            ? (coupon.uses_per_customer >= 999 
+                                ? <span className="text-green-600 font-medium">♾️ Unlimited</span>
+                                : <span className="text-gray-700">{coupon.uses_per_customer}x</span>)
+                            : <span className="text-gray-400">1x</span>
                           }
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-600">
@@ -209,7 +219,8 @@ function CreateCouponForm({ onSuccess, onCancel }: { onSuccess: () => void, onCa
     discount_value: '',
     valid_until: '',
     min_order_value: '',
-    max_discount_amount: '' // Only for percentage
+    max_discount_amount: '', // Only for percentage
+    uses_per_customer: '1' // How many times a single user can use this coupon
   })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -228,7 +239,7 @@ function CreateCouponForm({ onSuccess, onCancel }: { onSuccess: () => void, onCa
         max_discount_cents: formData.max_discount_amount ? Math.round(parseFloat(formData.max_discount_amount) * 100) : null,
         min_order_value_cents: formData.min_order_value ? Math.round(parseFloat(formData.min_order_value) * 100) : 0,
         valid_until: formData.valid_until,
-        uses_per_customer: 1 // Default to 1 use per customer
+        uses_per_customer: parseInt(formData.uses_per_customer) || 1
       }
 
       const response = await fetch('/api/admin/coupons', {
@@ -406,6 +417,45 @@ function CreateCouponForm({ onSuccess, onCancel }: { onSuccess: () => void, onCa
           </div>
         </div>
 
+        {/* Step 4: Usage Limit per User */}
+        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+          <h4 className="font-medium text-purple-900 mb-3">🔄 Step 4: Usage Limit per User</h4>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              How many times can a single user use this coupon?
+            </label>
+            <div className="flex gap-3">
+              <input
+                type="number"
+                required
+                min="1"
+                max="999"
+                value={formData.uses_per_customer}
+                onChange={(e) => setFormData({ ...formData, uses_per_customer: e.target.value })}
+                className="w-32 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                placeholder="1"
+              />
+              <div className="flex-1">
+                <p className="text-sm text-gray-700 mb-1">
+                  <strong>Examples:</strong>
+                </p>
+                <ul className="text-xs text-gray-600 space-y-1">
+                  <li>• <strong>1</strong> = One-time use only (most common)</li>
+                  <li>• <strong>3</strong> = User can use this coupon 3 times</li>
+                  <li>• <strong>999</strong> = Unlimited uses per user</li>
+                </ul>
+              </div>
+            </div>
+            <div className="mt-3 bg-purple-100 border border-purple-300 rounded-lg p-3">
+              <p className="text-xs text-purple-900">
+                <strong>💡 Tip:</strong> Set to <strong>1</strong> for first-time customer offers. 
+                Set to <strong>3-5</strong> for loyalty rewards. Set to <strong>999</strong> for unlimited seasonal sales.
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Preview */}
         {formData.code && formData.discount_value && (
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
@@ -418,6 +468,14 @@ function CreateCouponForm({ onSuccess, onCancel }: { onSuccess: () => void, onCa
                   : `₹${formData.discount_value} OFF`
                 }
                 {formData.min_order_value && ` on orders above ₹${formData.min_order_value}`}
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                {parseInt(formData.uses_per_customer) === 1 
+                  ? '🎫 One-time use per customer'
+                  : parseInt(formData.uses_per_customer) >= 999
+                  ? '♾️ Unlimited uses per customer'
+                  : `🔄 ${formData.uses_per_customer} uses per customer`
+                }
               </div>
             </div>
           </div>
