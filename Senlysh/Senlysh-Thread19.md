@@ -616,4 +616,109 @@ The ghost variants are now **DEAD** 💀 and will never haunt users again!
 **Lines Changed:** ~100 lines modified, ~50 lines added  
 **Issue Status:** ✅ Resolved  
 **Production Ready:** ✅ Yes  
-**Ghost Status:** 💀 ELIMINATED
+**Ghost Status:** 💀 ELIMINATED-
+--
+
+## 🚨 CRITICAL UPDATE: Frontend Ghost Variants Still Present
+
+### Additional Issue Discovered
+After fixing the admin edit pages, **ghost variants were still appearing on the frontend** (shop pages, product cards, quick view modal). The issue was in the **product data loading for the frontend**.
+
+### Root Cause (Frontend)
+The `fetchPublishedProductsPagedWithVariants()` function in `src/server/modules/products/service.ts` was loading ALL variant option values for each product, just like the admin edit pages were doing.
+
+**Problematic Query:**
+```sql
+SELECT 
+  products.*,
+  product_variant_options(
+    variant_options(
+      id, name, display_name, type, sort_order,
+      variant_option_values(*)  -- ❌ ALL VALUES FOR EACH OPTION
+    )
+  )
+FROM products
+```
+
+This meant that frontend components like `ProductGrid.tsx` and `QuickViewModal.tsx` were receiving ALL variant option values, including the ghost variants from other products.
+
+---
+
+## 🛠️ ADDITIONAL FIX APPLIED
+
+### 3. **UPDATED: `src/server/modules/products/service.ts`** - Frontend Product Loading
+
+**Problem:** Both `fetchPublishedProductsWithVariants()` and `fetchPublishedProductsPagedWithVariants()` were loading ALL variant option values.
+
+**Solution:** Applied the same fix as admin edit pages:
+
+#### A. Modified Base Query
+```typescript
+// BEFORE (BROKEN)
+product_variant_options(
+  variant_options(
+    id, name, display_name, type, sort_order,
+    variant_option_values(*)  // ❌ ALL VALUES
+  )
+)
+
+// AFTER (FIXED)
+product_variant_options(
+  variant_options(
+    id, name, display_name, type, sort_order  // ✅ NO VALUES
+  )
+)
+```
+
+#### B. Added Smart Value Loading
+```typescript
+// Fix ghost variants: Load only variant option values that are actually used
+const productsWithCleanVariants = await Promise.all(
+  products.map(async (product) => {
+    if (!product.product_variant_options || product.product_variant_options.length === 0) {
+      return product
+    }
+
+    // Get variant combinations for this product
+    const { data: variants } = await supabaseAdmin
+      .from('product_variants')
+      .select('attributes')
+      .eq('product_id', product.id)
+      .eq('tenant_id', tenantId)
+
+    if (!variants || variants.length === 0) {
+      // No variants exist, return empty values
+      const cleanedOptions = product.product_variant_options.map((pvo) => ({
+        ...pvo,
+        variant_options: {
+          ...pvo.variant_options,
+          variant_option_values: []  // ✅ EMPTY - NO GHOSTS
+        }
+      }))
+      return { ...product, product_variant_options: cleanedOptions }
+    }
+
+    // Extract used option-value pairs from variant combinations
+    const usedOptionValues = new Map<string, Set<string>>()
+    variants.forEach((variant) => {
+      const attributes = variant.attributes || {}
+      Object.entries(attributes).forEach(([optionId, valueId]) => {
+        if (!usedOptionValues.has(optionId)) {
+          usedOptionValues.set(optionId, new Set())
+        }
+        usedOptionValues.get(optionId)!.add(valueId)
+      })
+    })
+
+    // Load only used values
+    const cleanedOptions = await Promise.all(
+      product.product_variant_options.map(async (pvo) => {
+        const option = pvo.variant_options
+        const usedValueIds = usedOptionValues.get(option.id)
+
+        if (!usedValueIds || usedValueIds.size === 0) {
+          return {
+            ...pvo,
+            variant_options: {
+              ...option,
+              variant_option_values: []  // ✅ EMPTY - NO GHOST

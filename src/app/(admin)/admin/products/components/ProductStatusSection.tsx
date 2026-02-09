@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import { ProductFormData } from '@/types/product'
 import { FieldErrors } from 'react-hook-form'
 
@@ -26,7 +27,7 @@ export function ProductStatusSection({ formData, errors, onInputChange }: Produc
                 name="status"
                 value="draft"
                 checked={formData.status === 'draft'}
-                onChange={(e) => onInputChange?.('status', e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => onInputChange?.('status', e.target.value)}
                 className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
               />
               <div>
@@ -46,7 +47,7 @@ export function ProductStatusSection({ formData, errors, onInputChange }: Produc
                 name="status"
                 value="published"
                 checked={formData.status === 'published'}
-                onChange={(e) => onInputChange?.('status', e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => onInputChange?.('status', e.target.value)}
                 className="mr-3 h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300"
               />
               <div>

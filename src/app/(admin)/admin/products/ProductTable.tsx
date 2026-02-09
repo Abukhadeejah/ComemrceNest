@@ -85,9 +85,11 @@ export function ProductTable({ products }: ProductTableProps) {
         // router.push(ADMIN_URLS.productEdit(result.newProductId, tenantKey))
       }
     } catch (error: any) {
-      // Ignore NEXT_REDIRECT errors (auth redirects)
-      if (error?.message?.includes('NEXT_REDIRECT')) {
-        return
+      // Check if this is a Next.js redirect error (auth redirect)
+      // These errors have a digest property starting with "NEXT_REDIRECT"
+      if (error?.digest?.startsWith?.('NEXT_REDIRECT')) {
+        // Let the redirect happen - don't show error
+        throw error
       }
       
       console.error('Failed to clone product:', error)
