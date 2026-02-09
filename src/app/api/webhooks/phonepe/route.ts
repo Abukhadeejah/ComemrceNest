@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyPhonePeWebhook } from '@/lib/payments/phonepe';
 import { supabaseAdmin } from '@/server/supabaseAdmin';
 import { processCashbackForOrder } from '@/lib/cashback/cashbackService';
+import type { Order } from '@/types/order';
 
 /**
- * PhonePe Webhook Handler
+ * PhonePe Webhook Handler - WITH IDEMPOTENCY PROTECTION
  * 
  * This webhook is specifically for Senlysh tenant which uses PhonePe.
  * Bluebell tenant uses Razorpay and has its own webhook handler.
@@ -13,6 +14,12 @@ import { processCashbackForOrder } from '@/lib/cashback/cashbackService';
  * - COMPLETED payment states (successful payments)
  * - FAILED payment states (failed payments)
  * - Coupon usage completion after successful payment
+ * 
+ * IDEMPOTENCY PROTECTION:
+ * - Checks post_payment_processed flag before processing
+ * - Returns 200 OK if already processed (prevents duplicate cashback)
+ * - Sets flag to true after successful processing
+ * - Critical for preventing money loss from webhook retries
  */
 
 // Helper function to process wallet deduction and cashback after successful payment
@@ -33,7 +40,7 @@ async function processWalletAndCashbackForCompletedOrder(orderId: string) {
           quantity,
           unit_price_cents,
           products (
-            cost_price_cents
+            cost_per_item_cents
           )
         )
       `)
@@ -87,7 +94,7 @@ async function processWalletAndCashbackForCompletedOrder(orderId: string) {
     let totalPurchasePriceCents = 0
     if (order.order_items) {
       for (const item of order.order_items) {
-        const costPrice = item.products?.cost_price_cents || 0
+        const costPrice = item.products?.cost_per_item_cents || 0
         totalPurchasePriceCents += costPrice * item.quantity
       }
     }
@@ -180,7 +187,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    console.log('PhonePe Webhook received:', {
+    console.log('[PhonePe Webhook] Received:', {
       hasXVerify: !!body['X-VERIFY'],
       hasResponse: !!body.response,
     });
@@ -194,14 +201,35 @@ export async function POST(request: NextRequest) {
     const amount = webhookData.data?.amount || webhookData.amount;
     const state = webhookData.data?.state || webhookData.state;
     
-    console.log('PhonePe Webhook data:', {
+    console.log('[PhonePe Webhook] Data:', {
       merchantTransactionId,
       transactionId,
       state,
       amount
     });
     
-    // Update order status based on payment state
+    // 🔥 CRITICAL: IDEMPOTENCY CHECK - Fetch order first
+    const { data: order, error: fetchError } = await supabaseAdmin
+      .from('orders')
+      .select('*')
+      .eq('order_number', merchantTransactionId)
+      .single();
+    
+    if (fetchError || !order) {
+      console.error('[PhonePe Webhook] Order not found:', merchantTransactionId, fetchError);
+      return NextResponse.json({ error: 'order_not_found' }, { status: 404 });
+    }
+    
+    // 🔥 CRITICAL: Check if already processed (idempotency protection)
+    if (order.post_payment_processed) {
+      console.log('[PhonePe Webhook] ⚠️ Already processed, skipping:', merchantTransactionId);
+      return NextResponse.json({ 
+        success: true, 
+        message: 'Already processed' 
+      }, { status: 200 });
+    }
+    
+    // Determine order status based on payment state
     let orderStatus: 'paid' | 'failed' | 'pending' = 'pending';
     
     if (state === 'COMPLETED') {
@@ -210,33 +238,54 @@ export async function POST(request: NextRequest) {
       orderStatus = 'failed';
     }
     
-    // Update order in database
-    const { error } = await supabaseAdmin
+    // Update order status
+    const { error: updateError } = await supabaseAdmin
       .from('orders')
       .update({
         status: orderStatus,
         phonepe_transaction_id: transactionId,
-        updated_at: new Date().toISOString(),
       })
       .eq('order_number', merchantTransactionId);
     
-    if (error) {
-      console.error('Failed to update order:', error);
+    if (updateError) {
+      console.error('[PhonePe Webhook] ❌ Failed to update order:', updateError);
       return NextResponse.json({ error: 'database_update_failed' }, { status: 500 });
     }
     
-    console.log(`Order ${merchantTransactionId} updated to status: ${orderStatus}`);
+    console.log(`[PhonePe Webhook] Order ${merchantTransactionId} updated to status: ${orderStatus}`);
 
     // If payment successful, process coupon usage, wallet deduction, and cashback
     if (orderStatus === 'paid') {
-      await processCouponUsage(merchantTransactionId);
-      await processWalletAndCashbackForCompletedOrder(merchantTransactionId);
+      try {
+        // Process coupon usage
+        await processCouponUsage(merchantTransactionId);
+        
+        // Process wallet deduction and cashback
+        await processWalletAndCashbackForCompletedOrder(merchantTransactionId);
+        
+        // 🔥 CRITICAL: Mark as processed (idempotency flag)
+        const { error: flagError } = await supabaseAdmin
+          .from('orders')
+          .update({ post_payment_processed: true })
+          .eq('order_number', merchantTransactionId);
+        
+        if (flagError) {
+          console.error('[PhonePe Webhook] ❌ Failed to set post_payment_processed flag:', flagError);
+          // Don't fail the request - processing was successful
+        } else {
+          console.log('[PhonePe Webhook] ✅ Processed successfully:', merchantTransactionId);
+        }
+      } catch (processingError) {
+        console.error('[PhonePe Webhook] ❌ Post-payment processing failed:', processingError);
+        // Don't fail the webhook - order status is already updated
+        // This allows manual retry or admin intervention
+      }
     }
     
     return NextResponse.json({ success: true });
     
   } catch (error: any) {
-    console.error('PhonePe webhook error:', error);
+    console.error('[PhonePe Webhook] ❌ Unexpected error:', error);
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 }

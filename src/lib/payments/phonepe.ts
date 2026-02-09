@@ -19,6 +19,24 @@ export async function createPhonePePayment(
   customerPhone: string,
   config?: PhonePeConfig // Made optional since we now use SDK config
 ) {
+  // Verify credentials are loaded
+  const clientId = process.env.PHONEPE_CLIENT_ID;
+  const clientSecret = process.env.PHONEPE_CLIENT_SECRET;
+  const merchantId = process.env.PHONEPE_MERCHANT_ID;
+  
+  console.log('PhonePe Credentials Check:', {
+    hasClientId: !!clientId,
+    hasClientSecret: !!clientSecret,
+    hasMerchantId: !!merchantId,
+    clientIdLength: clientId?.length,
+    merchantId: merchantId,
+    env: process.env.PHONEPE_ENV
+  });
+  
+  if (!clientId || !clientSecret || !merchantId) {
+    throw new Error('PhonePe credentials not configured in environment variables');
+  }
+
   // Create SDK payment request using builder pattern
   const payRequest = StandardCheckoutPayRequest.builder()
     .merchantOrderId(orderId)
@@ -28,6 +46,7 @@ export async function createPhonePePayment(
 
   console.log('PhonePe SDK Payment Request:', {
     merchantId: phonepeConfig.merchantId,
+    clientId: process.env.PHONEPE_CLIENT_ID?.substring(0, 10) + '...',
     orderId: orderId,
     amount: amountCents,
     env: phonepeConfig.env
@@ -55,7 +74,13 @@ export async function createPhonePePayment(
       orderId,
     };
   } catch (error: any) {
-    console.error('PhonePe SDK payment error:', error);
+    console.error('PhonePe SDK payment error details:', {
+      message: error.message,
+      code: error.code,
+      response: error.response?.data,
+      status: error.response?.status,
+      stack: error.stack
+    });
     throw new Error(`PhonePe SDK payment failed: ${error.message}`);
   }
 }

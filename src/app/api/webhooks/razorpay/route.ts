@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
 import crypto from 'crypto'
 import { processCashbackForOrder } from '@/lib/cashback/cashbackService'
+import type { Order } from '@/types/order'
 
 /**
- * Razorpay Webhook Handler
+ * Razorpay Webhook Handler - WITH IDEMPOTENCY PROTECTION
  * 
  * This webhook is specifically for Bluebell tenant which uses Razorpay.
  * Senlysh tenant uses PhonePe and has its own webhook handler.
@@ -13,6 +14,12 @@ import { processCashbackForOrder } from '@/lib/cashback/cashbackService'
  * - payment.captured events (successful payments)
  * - payment.failed events (failed payments)
  * - Coupon usage completion after successful payment
+ * 
+ * IDEMPOTENCY PROTECTION:
+ * - Checks post_payment_processed flag before processing
+ * - Returns 200 OK if already processed (prevents duplicate cashback)
+ * - Sets flag to true after successful processing
+ * - Critical for preventing money loss from webhook retries
  */
 
 // Helper function to process cashback after successful payment
@@ -194,17 +201,38 @@ export async function POST(request: NextRequest) {
     // Handle payment.captured event
     if (event.event === 'payment.captured') {
       const payment = event.payload.payment.entity
-      const orderId = payment.order_id
+      const razorpayOrderId = payment.order_id
       const paymentId = payment.id
       const amount = payment.amount
       const status = payment.status
 
-      console.log('Payment captured:', {
-        orderId,
+      console.log('[Razorpay Webhook] Payment captured:', {
+        razorpayOrderId,
         paymentId,
         amount,
         status
       })
+
+      // 🔥 CRITICAL: IDEMPOTENCY CHECK - Fetch order first
+      const { data: order, error: fetchError } = await supabaseAdmin
+        .from('orders')
+        .select('*')
+        .eq('razorpay_order_id', razorpayOrderId)
+        .single()
+
+      if (fetchError || !order) {
+        console.error('[Razorpay Webhook] Order not found:', razorpayOrderId, fetchError)
+        return NextResponse.json({ error: 'order_not_found' }, { status: 404 })
+      }
+
+      // 🔥 CRITICAL: Check if already processed (idempotency protection)
+      if (order.post_payment_processed) {
+        console.log('[Razorpay Webhook] ⚠️ Already processed, skipping:', razorpayOrderId)
+        return NextResponse.json({ 
+          success: true, 
+          message: 'Already processed' 
+        }, { status: 200 })
+      }
 
       // Update order status
       const { error: updateError } = await supabaseAdmin
@@ -212,28 +240,36 @@ export async function POST(request: NextRequest) {
         .update({
           status: 'paid',
           razorpay_payment_id: paymentId,
-          updated_at: new Date().toISOString()
         })
-        .eq('razorpay_order_id', orderId)
+        .eq('razorpay_order_id', razorpayOrderId)
 
       if (updateError) {
-        console.error('Failed to update order:', updateError)
-        return NextResponse.json({ error: 'Database update failed' }, { status: 500 })
+        console.error('[Razorpay Webhook] ❌ Failed to update order:', updateError)
+        return NextResponse.json({ error: 'database_update_failed' }, { status: 500 })
       }
 
-      // Get the internal order ID for coupon processing
-      const { data: order } = await supabaseAdmin
-        .from('orders')
-        .select('id')
-        .eq('razorpay_order_id', orderId)
-        .single()
+      console.log(`[Razorpay Webhook] Order ${razorpayOrderId} marked as paid`)
 
-      if (order) {
+      // Process post-payment actions
+      try {
         await processCouponUsage(order.id)
         await processCashbackForCompletedOrder(order.id)
+        
+        // 🔥 CRITICAL: Mark as processed (idempotency flag)
+        const { error: flagError } = await supabaseAdmin
+          .from('orders')
+          .update({ post_payment_processed: true })
+          .eq('id', order.id)
+        
+        if (flagError) {
+          console.error('[Razorpay Webhook] ❌ Failed to set post_payment_processed flag:', flagError)
+        } else {
+          console.log('[Razorpay Webhook] ✅ Processed successfully:', razorpayOrderId)
+        }
+      } catch (processingError) {
+        console.error('[Razorpay Webhook] ❌ Post-payment processing failed:', processingError)
+        // Don't fail the webhook - order status is already updated
       }
-
-      console.log(`Order ${orderId} marked as paid`)
     }
 
     // Handle payment.failed event
@@ -253,7 +289,6 @@ export async function POST(request: NextRequest) {
         .update({
           status: 'failed',
           razorpay_payment_id: paymentId,
-          updated_at: new Date().toISOString()
         })
         .eq('razorpay_order_id', orderId)
 

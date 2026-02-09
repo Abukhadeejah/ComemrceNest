@@ -390,6 +390,13 @@ export function ProductForm({
         router.refresh()
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error)
+        
+        // Ignore Next.js redirect "errors" - these are normal and handled by the framework
+        if (errorMessage.includes('NEXT_REDIRECT')) {
+          console.log('[ProductForm] Redirect triggered (this is normal)')
+          return
+        }
+        
         console.error('[ProductForm] Error during submission:', errorMessage, error)
         
         if (errorMessage.includes('duplicate key value violates unique constraint "products_tenant_id_slug_key"')) {

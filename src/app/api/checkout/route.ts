@@ -245,13 +245,34 @@ async function handlePhonePeCheckout(
   const totalAfterDiscount = Math.max(0, originalTotalCents - discountCents);
   const cashPaidCents = Math.max(0, totalAfterDiscount - walletUsedCents);
 
+  // Get customer ID - try from body first, then lookup by email
+  let customerId = body.customerId;
+  
+  if (!customerId && customerEmail && customerEmail !== 'guest@example.com') {
+    console.log('[PhonePe] Looking up customer by email:', customerEmail);
+    const { data: customer } = await supabaseAdmin
+      .from('customers')
+      .select('id')
+      .eq('email', customerEmail)
+      .eq('tenant_id', tenantId)
+      .single();
+    
+    if (customer) {
+      customerId = customer.id;
+      console.log('[PhonePe] Found customer ID:', customerId);
+    } else {
+      console.warn('[PhonePe] No customer found for email:', customerEmail);
+    }
+  }
+
   console.log('PhonePe Order Creation:', {
     orderId,
     tenantId,
     totalAfterDiscount,
     walletUsedCents,
     cashPaidCents,
-    customerId: body.customerId
+    customerId,
+    hasCustomerId: !!customerId
   });
 
   // Create order record in database (with conflict handling)
@@ -261,12 +282,18 @@ async function handlePhonePeCheckout(
     .insert({
       order_number: orderId,
       tenant_id: tenantId,
+      customer_id: customerId, // ✅ Include customer_id from the start
       status: 'pending',
       total_cents: totalAfterDiscount,
+      wallet_used_cents: walletUsedCents,
+      cash_paid_cents: cashPaidCents,
       payment_provider: 'phonepe',
       payment_env: process.env.PHONEPE_ENV === 'SANDBOX' ? 'test' : 'live',
       email: customerEmail,
-      currency: 'INR'
+      currency: 'INR',
+      coupon_id: body.coupon_id,
+      coupon_code: body.coupon_code,
+      discount_amount_cents: discountCents
     })
     .select()
     .single();
@@ -302,21 +329,14 @@ async function handlePhonePeCheckout(
     throw new Error('Order creation failed: No order returned');
   }
 
-  // Update order with additional fields (these might be added by migrations)
-  if (body.customerId) {
-    await supabaseAdmin
-      .from('orders')
-      .update({
-        customer_id: body.customerId,
-        wallet_used_cents: walletUsedCents,
-        cash_paid_cents: cashPaidCents,
-        coupon_id: body.coupon_id,
-        coupon_code: body.coupon_code,
-        discount_amount_cents: discountCents,
-        phone: customerPhone
-      })
-      .eq('id', order.id);
-  }
+  console.log('[PhonePe] Order created successfully:', {
+    orderId: order.id,
+    orderNumber: order.order_number,
+    customerId: order.customer_id,
+    hasCustomerId: !!order.customer_id
+  });
+
+  // No need to update order - all fields already set in insert above
 
   // Use SDK-based payment creation (no config needed, uses global phonepeConfig)
   const { redirectUrl } = await createPhonePePayment(
@@ -329,6 +349,15 @@ async function handlePhonePeCheckout(
 
   // Persist order items
   const items = body.items || [];
+  console.log('[PhonePe] 🔥 RECOMPILED CODE RUNNING - v2.0 🔥');
+  console.log('[PhonePe] Preparing to insert order items:', {
+    orderIdExists: !!order?.id,
+    orderId: order?.id,
+    itemsCount: items.length,
+    items: items.map(it => ({ productId: it.productId, quantity: it.quantity, unitPrice: it.unitPriceCents })),
+    timestamp: new Date().toISOString()
+  });
+  
   if (Array.isArray(items) && items.length > 0) {
     const itemsPayload = items.map((it) => ({
       tenant_id: tenantId,
@@ -336,21 +365,40 @@ async function handlePhonePeCheckout(
       product_id: it.productId,
       quantity: it.quantity,
       unit_price_cents: it.unitPriceCents ?? 0,
-      total_price_cents: (it.unitPriceCents ?? 0) * it.quantity,
-      tax_cents: body.totals ? Math.round((body.totals.taxCents / Math.max(items.length, 1))) : undefined,
+      subtotal_cents: (it.unitPriceCents ?? 0) * it.quantity, // ✅ Changed from total_price_cents
     }));
     
-    await supabaseAdmin.from('order_items').insert(itemsPayload);
+    console.log('[PhonePe] Inserting order items payload:', itemsPayload);
+    
+    const { data: insertedItems, error: itemsError } = await supabaseAdmin
+      .from('order_items')
+      .insert(itemsPayload)
+      .select();
+    
+    if (itemsError) {
+      console.error('[PhonePe] ❌ Failed to insert order items:', {
+        error: itemsError,
+        code: itemsError.code,
+        message: itemsError.message,
+        details: itemsError.details
+      });
+      // Don't fail the order, but log prominently
+      console.error('[PhonePe] ⚠️ ORDER CREATED BUT ITEMS NOT SAVED - CASHBACK WILL NOT WORK!');
+    } else {
+      console.log(`[PhonePe] ✅ Successfully inserted ${insertedItems?.length || 0} order items`);
+    }
+  } else {
+    console.warn('[PhonePe] ⚠️ No items to insert - order will have no items!');
   }
 
   // Store pending coupon data for webhook processing
-  if (body.coupon_id && body.coupon_code && body.customerId) {
+  if (body.coupon_id && body.coupon_code && customerId) {
     await supabaseAdmin.from('pending_coupon_usage').insert({
       tenant_id: tenantId,
       order_id: order.id,
       coupon_id: body.coupon_id,
       coupon_code: body.coupon_code,
-      customer_id: body.customerId,
+      customer_id: customerId,
       discount_amount_cents: body.discount_amount_cents || 0,
       created_at: new Date().toISOString()
     });
@@ -397,11 +445,41 @@ async function handleRazorpayCheckout(
   const totalAfterDiscount = Math.max(0, originalTotalCents - discountCents);
   const cashPaidCents = Math.max(0, totalAfterDiscount - walletUsedCents);
 
+  // Get customer ID - try from body first, then lookup by email
+  let customerId = body.customerId;
+  
+  if (!customerId && customerEmail && customerEmail !== 'guest@example.com') {
+    console.log('[Razorpay] Looking up customer by email:', customerEmail);
+    const { data: customer } = await supabaseAdmin
+      .from('customers')
+      .select('id')
+      .eq('email', customerEmail)
+      .eq('tenant_id', tenantId)
+      .single();
+    
+    if (customer) {
+      customerId = customer.id;
+      console.log('[Razorpay] Found customer ID:', customerId);
+    } else {
+      console.warn('[Razorpay] No customer found for email:', customerEmail);
+    }
+  }
+
   // Create Razorpay order
   const rzpOrder = await razorpay.orders.create({
     amount: amountPaise,
     currency: 'INR',
     receipt: `rcpt_${Date.now()}`,
+  });
+
+  console.log('[Razorpay] Order Creation:', {
+    rzpOrderId: rzpOrder.id,
+    tenantId,
+    totalAfterDiscount,
+    walletUsedCents,
+    cashPaidCents,
+    customerId,
+    hasCustomerId: !!customerId
   });
 
   // Create order in database (with conflict handling)
@@ -411,13 +489,19 @@ async function handleRazorpayCheckout(
     .insert({
       order_number: rzpOrder.id,
       tenant_id: tenantId,
+      customer_id: customerId, // ✅ Include customer_id from the start
       status: 'pending',
       total_cents: totalAfterDiscount,
+      wallet_used_cents: walletUsedCents,
+      cash_paid_cents: cashPaidCents,
       payment_provider: 'razorpay',
       razorpay_order_id: rzpOrder.id,
       email: customerEmail,
       payment_env: credentials.env,
-      currency: 'INR'
+      currency: 'INR',
+      coupon_id: body.coupon_id,
+      coupon_code: body.coupon_code,
+      discount_amount_cents: discountCents
     })
     .select()
     .single();
@@ -453,20 +537,14 @@ async function handleRazorpayCheckout(
     throw new Error('Order creation failed: No order returned');
   }
 
-  // Update order with additional fields (these might be added by migrations)
-  if (body.customerId) {
-    await supabaseAdmin
-      .from('orders')
-      .update({
-        customer_id: body.customerId,
-        wallet_used_cents: walletUsedCents,
-        cash_paid_cents: cashPaidCents,
-        coupon_id: body.coupon_id,
-        coupon_code: body.coupon_code,
-        discount_amount_cents: discountCents
-      })
-      .eq('id', order.id);
-  }
+  console.log('[Razorpay] Order created successfully:', {
+    orderId: order.id,
+    orderNumber: order.order_number,
+    customerId: order.customer_id,
+    hasCustomerId: !!order.customer_id
+  });
+
+  // No need to update order - all fields already set in insert above
 
   if (error || !order) {
     throw new Error(`Order creation failed: ${error?.message}`);
@@ -474,6 +552,14 @@ async function handleRazorpayCheckout(
 
   // Persist order items
   const items = body.items || [];
+  console.log('[Razorpay] 🔥 RECOMPILED CODE RUNNING - v2.0 🔥');
+  console.log('[Razorpay] Preparing to insert order items:', {
+    orderIdExists: !!order?.id,
+    orderId: order?.id,
+    itemsCount: items.length,
+    items: items.map(it => ({ productId: it.productId, quantity: it.quantity, unitPrice: it.unitPriceCents }))
+  });
+  
   if (Array.isArray(items) && items.length > 0) {
     const itemsPayload = items.map((it) => ({
       tenant_id: tenantId,
@@ -481,21 +567,40 @@ async function handleRazorpayCheckout(
       product_id: it.productId,
       quantity: it.quantity,
       unit_price_cents: it.unitPriceCents ?? 0,
-      total_price_cents: (it.unitPriceCents ?? 0) * it.quantity,
-      tax_cents: body.totals ? Math.round((body.totals.taxCents / Math.max(items.length, 1))) : undefined,
+      subtotal_cents: (it.unitPriceCents ?? 0) * it.quantity, // ✅ Changed from total_price_cents
     }));
     
-    await supabaseAdmin.from('order_items').insert(itemsPayload);
+    console.log('[Razorpay] Inserting order items payload:', itemsPayload);
+    
+    const { data: insertedItems, error: itemsError } = await supabaseAdmin
+      .from('order_items')
+      .insert(itemsPayload)
+      .select();
+    
+    if (itemsError) {
+      console.error('[Razorpay] ❌ Failed to insert order items:', {
+        error: itemsError,
+        code: itemsError.code,
+        message: itemsError.message,
+        details: itemsError.details
+      });
+      // Don't fail the order, but log prominently
+      console.error('[Razorpay] ⚠️ ORDER CREATED BUT ITEMS NOT SAVED - CASHBACK WILL NOT WORK!');
+    } else {
+      console.log(`[Razorpay] ✅ Successfully inserted ${insertedItems?.length || 0} order items`);
+    }
+  } else {
+    console.warn('[Razorpay] ⚠️ No items to insert - order will have no items!');
   }
 
   // Store pending coupon data for webhook processing
-  if (body.coupon_id && body.coupon_code && body.customerId) {
+  if (body.coupon_id && body.coupon_code && customerId) {
     await supabaseAdmin.from('pending_coupon_usage').insert({
       tenant_id: tenantId,
       order_id: order.id,
       coupon_id: body.coupon_id,
       coupon_code: body.coupon_code,
-      customer_id: body.customerId,
+      customer_id: customerId,
       discount_amount_cents: body.discount_amount_cents || 0,
       created_at: new Date().toISOString()
     });

@@ -8,6 +8,7 @@ import { useTenant } from '@/hooks/useTenant'
 import { SITE_URLS } from '@/utils/site-urls'
 import { useSupabaseSession } from '@/hooks/useSupabaseSession'
 import CouponSelector from '@/components/checkout/CouponSelector'
+import { LoginPrompt } from '@/components/LoginPrompt'
 
 const playfair = Playfair_Display({ subsets: ['latin'], weight: ['700','800','900'] })
 
@@ -150,6 +151,7 @@ export default function CheckoutPage() {
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null)
   const [showNewAddressForm, setShowNewAddressForm] = useState(false)
   const [saveAsDefault, setSaveAsDefault] = useState(false)
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false)
 
 
   // Load existing addresses and user profile
@@ -423,6 +425,12 @@ export default function CheckoutPage() {
   }
 
   async function handlePayment(amountPaise: number) {
+    // Check if user is logged in - show prompt if not
+    if (!session?.user?.id) {
+      setShowLoginPrompt(true)
+      return
+    }
+    
     setBusy(true)
     setMessage(null)
     
@@ -447,10 +455,11 @@ export default function CheckoutPage() {
             quantity: it.quantity,
             unitPriceCents: it.price
           })),
+          // ALWAYS include customerId if user is logged in (required for cashback)
+          customerId: session?.user?.id,
           // Include wallet information if being used
           ...(useWallet && walletUsedRupees > 0 && {
-            walletUsedRupees,
-            customerId: session?.user?.id
+            walletUsedRupees
           }),
           // Include coupon information if applied
           ...(appliedCoupon && {
@@ -1072,6 +1081,14 @@ export default function CheckoutPage() {
           </div>
         </div>
       </div>
+      
+      {/* Login Prompt Modal */}
+      <LoginPrompt
+        isOpen={showLoginPrompt}
+        onClose={() => setShowLoginPrompt(false)}
+        message="Please sign in to complete your purchase"
+        redirectTo={`/${tenantKey}/checkout`}
+      />
     </main>
   )
 }

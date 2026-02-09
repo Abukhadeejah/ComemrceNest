@@ -11,6 +11,7 @@ export default function CheckoutSuccessPage() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get('orderId');
   const [status, setStatus] = useState<'loading' | 'success' | 'failed'>('loading');
+  const [verificationAttempted, setVerificationAttempted] = useState(false);
 
   useEffect(() => {
     if (!orderId) {
@@ -18,15 +19,18 @@ export default function CheckoutSuccessPage() {
       return;
     }
 
-    // Poll order status for a few seconds to wait for webhook
     let attempts = 0;
-    const maxAttempts = 10;
+    const maxAttempts = 5; // Reduced from 10
+    let verifyAttempted = false;
     
     const checkStatus = async () => {
       try {
+        // First, check if webhook already updated the order
         const res = await fetch(`/api/orders/${orderId}/status`);
         if (res.ok) {
           const data = await res.json();
+          console.log(`[CheckoutSuccess] Order status check attempt ${attempts + 1}:`, data.status);
+          
           if (data.status === 'paid') {
             setStatus('success');
             return true;
@@ -36,7 +40,39 @@ export default function CheckoutSuccessPage() {
           }
         }
       } catch (error) {
-        console.error('Failed to check order status:', error);
+        console.error('[CheckoutSuccess] Failed to check order status:', error);
+      }
+      return false;
+    };
+
+    const verifyWithPhonePe = async () => {
+      if (verifyAttempted) return false;
+      verifyAttempted = true;
+      setVerificationAttempted(true);
+      
+      try {
+        console.log('[CheckoutSuccess] Webhook not received, verifying with PhonePe API...');
+        
+        const res = await fetch(`/api/orders/${orderId}/verify-payment`, {
+          method: 'POST'
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          console.log('[CheckoutSuccess] PhonePe verification result:', data);
+          
+          if (data.status === 'paid') {
+            setStatus('success');
+            return true;
+          } else if (data.status === 'failed') {
+            setStatus('failed');
+            return true;
+          }
+        } else {
+          console.error('[CheckoutSuccess] Verification failed:', await res.text());
+        }
+      } catch (error) {
+        console.error('[CheckoutSuccess] Verification error:', error);
       }
       return false;
     };
@@ -45,11 +81,21 @@ export default function CheckoutSuccessPage() {
       attempts++;
       const done = await checkStatus();
       
-      if (done || attempts >= maxAttempts) {
+      // After 5 attempts (5 seconds), try direct PhonePe verification
+      if (!done && attempts >= maxAttempts && !verifyAttempted) {
+        console.log('[CheckoutSuccess] Polling timeout, attempting PhonePe verification...');
+        clearInterval(pollInterval);
+        
+        const verified = await verifyWithPhonePe();
+        if (!verified) {
+          // If verification also fails, assume success (payment page showed success)
+          console.log('[CheckoutSuccess] Verification inconclusive, assuming success');
+          setStatus('success');
+        }
+      } else if (done || attempts >= maxAttempts * 2) {
         clearInterval(pollInterval);
         if (!done) {
-          // Assume success if we can't verify (webhook might be delayed)
-          setStatus('success');
+          setStatus('success'); // Fallback
         }
       }
     }, 1000);
@@ -62,7 +108,12 @@ export default function CheckoutSuccessPage() {
       <main className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Verifying your payment...</p>
+          <p className="text-gray-600">
+            {verificationAttempted 
+              ? 'Verifying payment with PhonePe...' 
+              : 'Confirming your payment...'}
+          </p>
+          <p className="text-sm text-gray-500 mt-2">This may take a few seconds</p>
         </div>
       </main>
     );
@@ -121,7 +172,7 @@ export default function CheckoutSuccessPage() {
               View Order Details
             </Link>
             <Link
-              href="/products"
+              href="/senlysh/products"
               className="block w-full bg-gray-100 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-200 transition-colors"
             >
               Continue Shopping

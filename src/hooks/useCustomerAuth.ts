@@ -23,7 +23,10 @@ export function useCustomerAuth(): CustomerAuthState {
         const { data: { user }, error } = await supabaseClient.auth.getUser()
         
         if (error) {
-          console.error('[useCustomerAuth] Error:', error)
+          // Suppress "Auth session missing" errors - this is expected when not logged in
+          if (!error.message?.includes('Auth session missing')) {
+            console.error('[useCustomerAuth] Error:', error)
+          }
           setAuthState({ user: null, isLoading: false, isCustomer: false })
           return
         }
@@ -42,8 +45,11 @@ export function useCustomerAuth(): CustomerAuthState {
           isLoading: false,
           isCustomer: Boolean(isCustomer)
         })
-      } catch (error) {
-        console.error('[useCustomerAuth] Auth check failed:', error)
+      } catch (error: any) {
+        // Suppress "Auth session missing" errors - this is expected when not logged in
+        if (!error?.message?.includes('Auth session missing')) {
+          console.error('[useCustomerAuth] Auth check failed:', error)
+        }
         setAuthState({ user: null, isLoading: false, isCustomer: false })
       }
     }
