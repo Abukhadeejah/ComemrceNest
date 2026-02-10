@@ -40,7 +40,7 @@ async function processCashbackForCompletedOrder(orderId: string) {
           quantity,
           unit_price_cents,
           products (
-            cost_price_cents
+            cost_per_item_cents
           )
         )
       `)
@@ -56,7 +56,7 @@ async function processCashbackForCompletedOrder(orderId: string) {
     let totalPurchasePriceCents = 0
     if (order.order_items) {
       for (const item of order.order_items) {
-        const costPrice = item.products?.cost_price_cents || 0
+        const costPrice = (item.products as any)?.cost_per_item_cents || 0
         totalPurchasePriceCents += costPrice * item.quantity
       }
     }

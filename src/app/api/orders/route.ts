@@ -68,7 +68,7 @@ async function calculateOrderTotals(
   
   const { data: products, error } = await supabaseAdmin
     .from('products')
-    .select('id, name, price_cents, cost_price_cents')
+    .select('id, name, price_cents, cost_per_item_cents')
     .eq('tenant_id', tenantId)
     .in('id', productIds)
   
@@ -87,7 +87,7 @@ async function calculateOrderTotals(
     }
     
     const unitPriceCents = product.price_cents || 0
-    const unitCostCents = product.cost_price_cents || 0
+    const unitCostCents = (product as any).cost_per_item_cents || 0
     
     if (unitCostCents === 0) {
       throw new Error(`Product ${product.name} has no cost price set. Cannot calculate cashback.`)

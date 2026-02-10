@@ -13,22 +13,35 @@ interface PricingSectionProps {
 
 export function PricingSection({ formData, errors, onInputChange }: PricingSectionProps) {
   const [validationError, setValidationError] = useState<string>('')
-  const [inputValues, setInputValues] = useState({
-    mrp: '',
-    salePrice: '',
-    costPrice: ''
+  const [touched, setTouched] = useState({
+    mrp: false,
+    salePrice: false,
+    costPrice: false
   })
+  
+  // Convert formData cents to rupee strings for display
+  const formDataAsStrings = {
+    mrp: formData.compare_at_price_cents != null && formData.compare_at_price_cents >= 0 
+      ? (formData.compare_at_price_cents / 100).toString() 
+      : '',
+    salePrice: formData.price_cents != null && formData.price_cents >= 0 
+      ? (formData.price_cents / 100).toString() 
+      : '',
+    costPrice: formData.cost_price_cents != null && formData.cost_price_cents >= 0 
+      ? (formData.cost_price_cents / 100).toString() 
+      : ''
+  }
+  
+  const [inputValues, setInputValues] = useState(formDataAsStrings)
 
-  // Initialize input values ONLY on mount, not on every formData change
-  // This prevents re-render loops when user is typing
+  // Sync from formData only for untouched fields (for edit mode initialization)
   useEffect(() => {
-    setInputValues({
-      mrp: formData.compare_at_price_cents ? (formData.compare_at_price_cents / 100).toString() : '',
-      salePrice: formData.price_cents ? (formData.price_cents / 100).toString() : '',
-      costPrice: formData.cost_price_cents ? (formData.cost_price_cents / 100).toString() : ''
-    })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []) // Only run on mount to initialize values
+    setInputValues(prev => ({
+      mrp: touched.mrp ? prev.mrp : formDataAsStrings.mrp,
+      salePrice: touched.salePrice ? prev.salePrice : formDataAsStrings.salePrice,
+      costPrice: touched.costPrice ? prev.costPrice : formDataAsStrings.costPrice
+    }))
+  }, [formData.compare_at_price_cents, formData.price_cents, formData.cost_price_cents])
 
 
 
@@ -55,6 +68,9 @@ export function PricingSection({ formData, errors, onInputChange }: PricingSecti
 
   // Handle input changes while preserving user typing
   const handlePriceInput = (field: 'mrp' | 'salePrice' | 'costPrice', value: string) => {
+    // Mark field as touched
+    setTouched(prev => ({ ...prev, [field]: true }))
+    
     // Update local input state immediately
     setInputValues(prev => ({ ...prev, [field]: value }))
     
@@ -65,8 +81,10 @@ export function PricingSection({ formData, errors, onInputChange }: PricingSecti
       salePrice: 'price_cents',
       costPrice: 'cost_price_cents'
     }
-    const formField = fieldMap[field]
-    onInputChange?.(formField as keyof ProductFormData, cents)
+    const formField = fieldMap[field]    
+    // Debug logging to track field mappings
+    console.log(`💰 PricingSection: ${field} → ${formField}: ₹${value} → ${cents} cents`)
+        onInputChange?.(formField as keyof ProductFormData, cents)
   }
 
   // Calculate profit margin: (Sale Price - Cost) / Sale Price * 100
