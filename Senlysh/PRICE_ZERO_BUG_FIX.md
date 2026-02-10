@@ -58,17 +58,22 @@ price_cents: finalPriceCents,
 ### Part 3: Backend - Update Product
 **File:** `src/app/(admin)/admin/products/actions.ts` (updateProduct function)
 
-Added same logic for product updates:
+Added same logic for product updates with proper form value detection:
 
 ```typescript
-// If sale price is not provided or is 0, use MRP as the selling price
-if (productData.price_cents === 0 || productData.price_cents === null || productData.price_cents === undefined) {
-  if (productData.compare_at_price_cents && productData.compare_at_price_cents > 0) {
-    productData.price_cents = productData.compare_at_price_cents
-    console.log('💰 Update: No sale price provided, using MRP as selling price:', productData.price_cents)
+// Only apply fallback if price was explicitly sent as 0 or null
+const priceCentsFromForm = parseIntOrUndefined('price_cents')
+const comparePriceFromForm = parseIntOrUndefined('compare_at_price_cents')
+
+if (priceCentsFromForm !== undefined && (priceCentsFromForm === 0 || priceCentsFromForm === null)) {
+  if (comparePriceFromForm && comparePriceFromForm > 0) {
+    productData.price_cents = comparePriceFromForm
+    console.log('💰 Update: Sale price is 0, using MRP as selling price:', productData.price_cents)
   }
 }
 ```
+
+**Important:** Only applies fallback when price is explicitly sent as 0, not when the field is omitted from the form.
 
 ## How It Works Now
 
