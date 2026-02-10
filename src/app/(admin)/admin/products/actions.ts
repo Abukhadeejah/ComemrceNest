@@ -295,6 +295,13 @@ export async function createProduct(formData: FormData) {
 
   console.log('📝 Attempting to insert product into database...')
   console.log('💰 Cost per item cents value:', productData.cost_per_item_cents, 'Type:', typeof productData.cost_per_item_cents)
+  
+  // If sale price (price_cents) is not provided or is 0, use MRP (compare_at_price_cents) as the selling price
+  const finalPriceCents = productData.price_cents && productData.price_cents > 0 
+    ? productData.price_cents 
+    : productData.compare_at_price_cents || 0
+  
+  console.log('💰 Price logic: sale_price =', productData.price_cents, ', mrp =', productData.compare_at_price_cents, ', final_price =', finalPriceCents)
 
   let product, error
   try {
@@ -305,7 +312,7 @@ export async function createProduct(formData: FormData) {
       name: productData.name,
       slug: productData.slug,
       description: productData.description,
-      price_cents: productData.price_cents,
+      price_cents: finalPriceCents, // Use calculated final price
       compare_at_price_cents: productData.compare_at_price_cents,
       cost_per_item_cents: productData.cost_per_item_cents,
       stock: productData.stock,
@@ -898,6 +905,14 @@ export async function updateProduct(productId: string, formData: FormData) {
 
   if (lengthErrors.length > 0) {
     throw new Error(`Validation failed - Field length exceeded:\n${lengthErrors.join('\n')}`)
+  }
+
+  // If sale price (price_cents) is not provided or is 0, use MRP (compare_at_price_cents) as the selling price
+  if (productData.price_cents === 0 || productData.price_cents === null || productData.price_cents === undefined) {
+    if (productData.compare_at_price_cents && productData.compare_at_price_cents > 0) {
+      productData.price_cents = productData.compare_at_price_cents
+      console.log('💰 Update: No sale price provided, using MRP as selling price:', productData.price_cents)
+    }
   }
 
   // Build the update payload conditionally to avoid clobbering existing values with undefined/zeros

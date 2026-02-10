@@ -46,8 +46,8 @@ export function PricingSection({ formData, errors, onInputChange }: PricingSecti
 
 
   // Convert rupees (with optional paise) to integer cents with stable rounding
-  const rupeesToCents = (rupees: string): number => {
-    if (!rupees || rupees.trim() === '') return 0
+  const rupeesToCents = (rupees: string): number | null => {
+    if (!rupees || rupees.trim() === '') return null // Return null for empty input
 
     const cleaned = rupees.replace(/[^\d.]/g, '')
     const numeric = Number.parseFloat(cleaned)
