@@ -147,6 +147,29 @@ export function ProductForm({
   const productName = watch('name')
   const debouncedName = useDebounce(productName, 500)
 
+  // CRITICAL FIX: Sync initialData with form values in edit mode
+  // This ensures images, attributes, and all other fields load correctly when editing
+  useEffect(() => {
+    if (mode === 'edit' && initialData) {
+      console.log('🔄 Syncing initialData with form in edit mode...')
+      
+      // Sync all fields from initialData
+      Object.entries(initialData).forEach(([key, value]) => {
+        if (value !== undefined) {
+          setValue(key as keyof ProductFormData, value as any, { shouldValidate: false })
+        }
+      })
+      
+      // Sync images state
+      if (initialData.images && Array.isArray(initialData.images)) {
+        console.log('📸 Syncing images:', initialData.images.length, 'images')
+        setImageFiles(initialData.images)
+      }
+      
+      console.log('✅ Form sync complete')
+    }
+  }, [mode, initialData, setValue])
+
   useEffect(() => {
     // Only auto-generate slug in create mode, not when editing
     if (mode === 'create' && debouncedName.trim() && !initialData.slug) {

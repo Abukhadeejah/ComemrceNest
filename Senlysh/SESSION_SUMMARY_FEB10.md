@@ -94,6 +94,42 @@ All issues have been fixed and tested. The system now correctly:
 2. Updates products without Server Components render errors
 3. Preserves existing prices during updates
 
+## Current Session New Issue: Product Edit Form Not Loading Data
+
+### Problem
+When editing a product, images and attributes (filters) were not showing in the form.
+
+### Root Cause
+React Hook Form's `defaultValues` only applies on initial mount. When async data arrives later, the form doesn't automatically sync.
+
+### Solution
+Added a `useEffect` hook that syncs `initialData` with form values when in edit mode:
+
+```typescript
+useEffect(() => {
+  if (mode === 'edit' && initialData) {
+    // Sync all fields from initialData
+    Object.entries(initialData).forEach(([key, value]) => {
+      if (value !== undefined) {
+        setValue(key as keyof ProductFormData, value as any, { shouldValidate: false })
+      }
+    })
+    
+    // Sync images state
+    if (initialData.images && Array.isArray(initialData.images)) {
+      setImageFiles(initialData.images)
+    }
+  }
+}, [mode, initialData, setValue])
+```
+
+### Files Modified
+- ✅ `src/app/(admin)/admin/products/ProductForm.tsx` - Added initialData sync in edit mode
+- ✅ `Senlysh/PRODUCT_EDIT_FORM_FIX.md` - Detailed documentation
+
+### Status
+✅ **FIXED** - Product edit form now loads all data including images and attributes
+
 ## Deployment Notes
 - No database changes required
 - No migration needed
