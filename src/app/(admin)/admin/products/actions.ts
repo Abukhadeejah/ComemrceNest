@@ -907,26 +907,6 @@ export async function updateProduct(productId: string, formData: FormData) {
     throw new Error(`Validation failed - Field length exceeded:\n${lengthErrors.join('\n')}`)
   }
 
-  // If sale price (price_cents) is not provided or is 0, use MRP (compare_at_price_cents) as the selling price
-  // Only apply this logic if price_cents was explicitly sent in the form (not undefined from parseIntOrUndefined)
-  try {
-    const priceCentsFromForm = parseIntOrUndefined('price_cents')
-    const comparePriceFromForm = parseIntOrUndefined('compare_at_price_cents')
-    
-    // Only apply fallback if:
-    // 1. Price was explicitly sent as 0 or null, AND
-    // 2. MRP is available and > 0
-    if (priceCentsFromForm !== undefined && (priceCentsFromForm === 0 || priceCentsFromForm === null)) {
-      if (comparePriceFromForm && comparePriceFromForm > 0) {
-        productData.price_cents = comparePriceFromForm
-        console.log('💰 Update: Sale price is 0, using MRP as selling price:', productData.price_cents)
-      }
-    }
-  } catch (priceError) {
-    console.error('Error in price fallback logic:', priceError)
-    // Don't throw - just log and continue with original values
-  }
-
   // Build the update payload conditionally to avoid clobbering existing values with undefined/zeros
   // CRITICAL FIX: Only include values that were explicitly sent from the form
   // If a field is undefined, it means it wasn't sent, so we shouldn't update it
