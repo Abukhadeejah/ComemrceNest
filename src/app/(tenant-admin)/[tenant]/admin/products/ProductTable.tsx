@@ -5,11 +5,12 @@ import Link from 'next/link'
 import {
   EyeIcon,
   PencilIcon,
-  TrashIcon
+  TrashIcon,
+  DocumentDuplicateIcon
 } from '@heroicons/react/24/outline'
 import { ADMIN_URLS } from '@/utils/admin-urls'
 import { useAdminTenantKey } from '@/components/admin/AdminBrandingWrapper'
-import { deleteProduct } from '@/app/(admin)/admin/products/actions'
+import { deleteProduct, cloneProduct } from '@/app/(admin)/admin/products/actions'
 import { forcePageRefresh } from '@/utils/cacheBusting'
 
 interface Product {
@@ -30,6 +31,7 @@ interface ProductTableProps {
 export function ProductTable({ products }: ProductTableProps) {
   const [selectedProducts, setSelectedProducts] = useState<string[]>([])
   const [deletingProductId, setDeletingProductId] = useState<string | null>(null)
+  const [cloningProductId, setCloningProductId] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const tenantKey = useAdminTenantKey()
   // const router = useRouter()
@@ -47,6 +49,34 @@ export function ProductTable({ products }: ProductTableProps) {
       setSelectedProducts(prev => [...prev, productId])
     } else {
       setSelectedProducts(prev => prev.filter(id => id !== productId))
+    }
+  }
+
+  const handleCloneProduct = async (productId: string, productName: string) => {
+    if (!confirm(`Clone "${productName}"? A copy will be created as a draft.`)) {
+      return
+    }
+
+    try {
+      setCloningProductId(productId)
+      const result = await cloneProduct(productId)
+      
+      if (result.success) {
+        alert(`Product cloned successfully! The copy has been created as a draft.`)
+        setTimeout(() => {
+          forcePageRefresh()
+        }, 100)
+      }
+    } catch (error: any) {
+      // Check if this is a Next.js redirect error (auth redirect)
+      if (error?.digest?.startsWith?.('NEXT_REDIRECT')) {
+        throw error
+      }
+      
+      console.error('Failed to clone product:', error)
+      alert(`Failed to clone product: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setCloningProductId(null)
     }
   }
 
@@ -221,9 +251,22 @@ export function ProductTable({ products }: ProductTableProps) {
                   <Link
                     href={ADMIN_URLS.productEdit(product.id, tenantKey)}
                     className="text-gray-600 hover:text-gray-900"
+                    title="Edit product"
                   >
                     <PencilIcon className="h-4 w-4" />
                   </Link>
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      handleCloneProduct(product.id, product.name)
+                    }}
+                    disabled={cloningProductId === product.id}
+                    className="text-blue-600 hover:text-blue-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Clone product"
+                  >
+                    <DocumentDuplicateIcon className="h-4 w-4" />
+                  </button>
                   <button
                     onClick={(e) => {
                       e.preventDefault()
