@@ -79,6 +79,7 @@ export function ProductForm({
     watch,
     setError,
     control,
+    reset,
     formState: { errors },
   } = useForm<ProductFormData>({
     mode: 'onChange',
@@ -150,25 +151,98 @@ export function ProductForm({
   // CRITICAL FIX: Sync initialData with form values in edit mode
   // This ensures images, attributes, and all other fields load correctly when editing
   useEffect(() => {
-    if (mode === 'edit' && initialData) {
-      console.log('🔄 Syncing initialData with form in edit mode...')
-      
-      // Sync all fields from initialData
-      Object.entries(initialData).forEach(([key, value]) => {
-        if (value !== undefined) {
-          setValue(key as keyof ProductFormData, value as any, { shouldValidate: false })
-        }
+    if (mode === 'edit' && initialData && Object.keys(initialData).length > 0) {
+      console.log('🔄 ========== SYNCING EDIT FORM DATA ==========')
+      console.log('📋 initialData received:', {
+        id: initialData.id,
+        name: initialData.name,
+        images_count: initialData.images?.length || 0,
+        attributes_count: initialData.attributes?.length || 0,
+        description_length: initialData.description?.length || 0,
+        category_ids: initialData.category_ids,
       })
       
-      // Sync images state
+      // Use reset() to properly sync all form values
+      // This is the correct way to update form values after initial mount
+      const formValues = {
+        name: initialData.name ?? '',
+        slug: initialData.slug ?? '',
+        description: initialData.description ?? '',
+        short_description: initialData.short_description ?? '',
+        price_cents: initialData.price_cents ?? null,
+        compare_at_price_cents: initialData.compare_at_price_cents ?? null,
+        cost_price_cents: initialData.cost_price_cents ?? null,
+        currency: initialData.currency ?? 'INR',
+        stock: initialData.stock ?? 0,
+        sku: initialData.sku ?? '',
+        barcode: initialData.barcode ?? '',
+        weight: initialData.weight ?? null,
+        dimensions: initialData.dimensions ?? '',
+        has_variants: initialData.has_variants ?? false,
+        track_inventory: initialData.track_inventory ?? true,
+        low_stock_threshold: initialData.low_stock_threshold ?? 5,
+        meta_title: initialData.meta_title ?? '',
+        meta_description: initialData.meta_description ?? '',
+        allow_backorders: initialData.allow_backorders ?? false,
+        requires_shipping: initialData.requires_shipping ?? true,
+        taxable: initialData.taxable ?? true,
+        hs_code: initialData.hs_code ?? '',
+        seo_url: initialData.seo_url ?? '',
+        material_composition: initialData.material_composition ?? '',
+        care_instructions: initialData.care_instructions ?? '',
+        fit_type: initialData.fit_type ?? '',
+        model_height_cm: initialData.model_height_cm ?? null,
+        model_weight_kg: initialData.model_weight_kg ?? null,
+        model_wearing_size: initialData.model_wearing_size ?? '',
+        is_gift_card: initialData.is_gift_card ?? false,
+        gift_card_amount_cents: initialData.gift_card_amount_cents ?? null,
+        gift_card_expiry_days: initialData.gift_card_expiry_days ?? null,
+        category_id: initialData.category_id ?? null,
+        category_ids: initialData.category_ids ?? [],
+        status: initialData.status ?? 'draft',
+        tax_class_id: initialData.tax_class_id ?? '',
+        images: initialData.images ?? [],
+        variantOptions: (initialData.variantOptions as VariantOption[]) ?? [],
+        variantCombinations: initialData.variantCombinations ?? [],
+        sizeGuides: initialData.sizeGuides ?? [],
+        sizeGuideId: initialData.sizeGuideId ?? '',
+        brand: initialData.brand ?? '',
+        color: initialData.color ?? '',
+        material: initialData.material ?? '',
+        is_featured: initialData.is_featured ?? false,
+        is_bestseller: initialData.is_bestseller ?? false,
+        is_new_arrival: initialData.is_new_arrival ?? false,
+        is_on_sale: initialData.is_on_sale ?? false,
+        is_limited_edition: initialData.is_limited_edition ?? false,
+        is_sold_out: initialData.is_sold_out ?? false,
+        custom_badge_text: initialData.custom_badge_text ?? '',
+        badge_color: initialData.badge_color ?? '#ef4444',
+        badge_priority: initialData.badge_priority ?? 0,
+        badge_display_until: initialData.badge_display_until ?? '',
+        badge_display_from: initialData.badge_display_from ?? '',
+        tags: initialData.tags ?? [],
+        attributes: initialData.attributes ?? [],
+      }
+      
+      console.log('📝 Resetting form with values:', {
+        attributes: formValues.attributes,
+        images: formValues.images,
+        description: formValues.description?.substring(0, 50) + '...',
+      })
+      
+      // Reset form with new values (keeps form dirty state)
+      reset(formValues, { keepDirty: false })
+      
+      // Sync images state separately for MediaSection
       if (initialData.images && Array.isArray(initialData.images)) {
-        console.log('📸 Syncing images:', initialData.images.length, 'images')
+        console.log('📸 Syncing images state:', initialData.images.length, 'images')
         setImageFiles(initialData.images)
       }
       
       console.log('✅ Form sync complete')
+      console.log('========================================')
     }
-  }, [mode, initialData, setValue])
+  }, [mode, initialData?.id, reset]) // Use initialData.id as dependency to trigger on data load
 
   useEffect(() => {
     // Only auto-generate slug in create mode, not when editing

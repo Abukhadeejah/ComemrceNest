@@ -97,38 +97,61 @@ All issues have been fixed and tested. The system now correctly:
 ## Current Session New Issue: Product Edit Form Not Loading Data
 
 ### Problem
-When editing a product, images and attributes (filters) were not showing in the form.
+When editing a product, images, attributes (filters), and description were not showing in the form.
 
-### Root Cause
-React Hook Form's `defaultValues` only applies on initial mount. When async data arrives later, the form doesn't automatically sync.
+### Root Causes
+1. **Attributes:** `AttributesSection` had its own `defaultValue` in `useController` that overrode form values
+2. **All fields:** React Hook Form's `defaultValues` only applies on initial mount, not when async data arrives
+3. **Images:** `imageFiles` state wasn't syncing with `initialData.images`
 
 ### Solution
-Added a `useEffect` hook that syncs `initialData` with form values when in edit mode:
+1. **Removed `defaultValue` from AttributesSection** - Now uses form control value
+2. **Implemented proper form reset** - Uses `reset()` method when `initialData` loads
+3. **Added image state sync** - `setImageFiles(initialData.images)` in useEffect
+4. **Fixed image warnings** - Added `unoptimized` flag in next.config.ts for development
+
+### Files Modified
+- ✅ `src/app/(admin)/admin/products/ProductForm.tsx` - Added form reset with `reset()` method
+- ✅ `src/app/(admin)/admin/products/components/AttributesSection.tsx` - Removed defaultValue override
+- ✅ `next.config.ts` - Added unoptimized flag to suppress image warnings
+- ✅ `Senlysh/EDIT_FORM_COMPLETE_FIX.md` - Comprehensive technical documentation
+
+### Status
+✅ **FULLY FIXED** - All fields now load correctly in edit mode:
+- ✅ Attributes (filters) are checked
+- ✅ Description loads
+- ✅ Images display
+- ✅ All other fields populate correctly
+
+## Minor Issue: Sale Price Shows MRP Value in Edit Form
+
+### Problem
+When creating a product with only MRP (leaving sale price blank), the edit form showed the same value in both MRP and Sale Price fields.
+
+### Root Cause
+Backend uses MRP as selling price when sale price is blank, saving it to `price_cents`. Edit form couldn't distinguish between "user set sale price = MRP" vs "user left sale price blank".
+
+### Solution
+Added logic in edit page to detect when `price_cents` equals `compare_at_price_cents` and treat it as "no sale price":
 
 ```typescript
-useEffect(() => {
-  if (mode === 'edit' && initialData) {
-    // Sync all fields from initialData
-    Object.entries(initialData).forEach(([key, value]) => {
-      if (value !== undefined) {
-        setValue(key as keyof ProductFormData, value as any, { shouldValidate: false })
-      }
-    })
-    
-    // Sync images state
-    if (initialData.images && Array.isArray(initialData.images)) {
-      setImageFiles(initialData.images)
-    }
+price_cents: (() => {
+  const price = product.price_cents ?? 0
+  const mrp = product.compare_at_price_cents ?? 0
+  // If equal and both > 0, user didn't set a sale price
+  if (price === mrp && price > 0) {
+    return null // Show empty sale price field
   }
-}, [mode, initialData, setValue])
+  return price
+})(),
 ```
 
 ### Files Modified
-- ✅ `src/app/(admin)/admin/products/ProductForm.tsx` - Added initialData sync in edit mode
-- ✅ `Senlysh/PRODUCT_EDIT_FORM_FIX.md` - Detailed documentation
+- ✅ `src/app/(admin)/admin/products/[id]/edit/page.tsx` - Added price equality detection
+- ✅ `Senlysh/SALE_PRICE_EDIT_FIX.md` - Detailed documentation
 
 ### Status
-✅ **FIXED** - Product edit form now loads all data including images and attributes
+✅ **FIXED** - Edit form now shows blank sale price when only MRP was set during creation
 
 ## Deployment Notes
 - No database changes required

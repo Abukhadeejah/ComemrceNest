@@ -17,10 +17,7 @@ export function AttributesSection<T extends FieldValues>({
 	const { field } = useController({
 		control,
 		name,
-		defaultValue: (attributes.map((attr) => ({
-				attributeId: attr.id,
-				valueIds: [],
-			})) as unknown) as T[Path<T>],
+		// Don't set defaultValue here - it should come from the form's defaultValues/reset
 	})
 
 	const handleValueToggle = (attributeId: string, valueId: string | null) => {
@@ -61,6 +58,14 @@ export function AttributesSection<T extends FieldValues>({
 	}
 
 	const currentSelections = (field.value || []) as AttributeSelection[]
+	
+	// Debug logging
+	console.log('🎨 AttributesSection render:', {
+		attributes_count: attributes.length,
+		currentSelections_count: currentSelections.length,
+		currentSelections: currentSelections,
+		field_value: field.value,
+	})
 
 	return (
 		<div className="bg-white border border-gray-200 rounded-lg p-6 space-y-6">

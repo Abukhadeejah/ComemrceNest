@@ -61,6 +61,8 @@ const nextConfig: NextConfig = {
         pathname: "/**",
       },
     ],
+    // Disable image optimization warnings for IPv6 DNS resolution
+    unoptimized: process.env.NODE_ENV === 'development',
   },
   ...(process.env.NODE_ENV === 'production'
     ? {

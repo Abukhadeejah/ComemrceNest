@@ -244,7 +244,18 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
       slug: product.slug || '',
       description: product.description || '',
       status: product.status || 'draft',
-      price_cents: product.price_cents ?? 0,
+      // PRICING FIX: If price_cents equals compare_at_price_cents, it means no sale price was set
+      // (the backend used MRP as selling price). Show sale price as null/empty in edit form.
+      price_cents: (() => {
+        const price = product.price_cents ?? 0
+        const mrp = product.compare_at_price_cents ?? 0
+        // If they're equal and both > 0, user didn't set a sale price (backend used MRP)
+        if (price === mrp && price > 0) {
+          console.log('💰 Edit form: price_cents equals MRP, treating as no sale price')
+          return null // Show empty sale price field
+        }
+        return price
+      })(),
       compare_at_price_cents: product.compare_at_price_cents ?? 0,
       cost_price_cents: product.cost_per_item_cents ?? 0,
       stock: product.stock ?? 0,
