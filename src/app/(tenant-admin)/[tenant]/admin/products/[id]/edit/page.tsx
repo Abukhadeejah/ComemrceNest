@@ -30,7 +30,7 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
     }
 
     // Get related data separately to avoid query corruption
-    const [categoriesResult, imagesResult, variantOptionsResult, variantsResult] = await Promise.all([
+    const [categoriesResult, imagesResult, variantOptionsResult, variantsResult, attributeSelectionsResult] = await Promise.all([
       // Categories
       supabaseAdmin
         .from('product_categories')
@@ -62,7 +62,14 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
       supabaseAdmin
         .from('product_variants')
         .select('id, name, sku, price_cents, stock, attributes')
+        .eq('product_id', id),
+      
+      // CRITICAL FIX: Attribute selections (multiple values per attribute)
+      supabaseAdmin
+        .from('product_attribute_values')
+        .select('attribute_value_id, attribute_values(attribute_id)')
         .eq('product_id', id)
+        .eq('tenant_id', tenantId)
     ])
 
     // First, extract used option-value pairs from variant combinations
@@ -185,6 +192,22 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
     console.log('🔍 Fetched attributes for edit product form (tenant-admin):', attributes)
     console.log('🔍 Attributes count (tenant-admin):', attributes?.length)
 
+    // CRITICAL FIX: Build attribute selections from database query
+    const attributeSelectionMap = new Map<string, string[]>()
+    ;(attributeSelectionsResult.data || []).forEach((row: any) => {
+      const attributeId = row?.attribute_values?.attribute_id as string | undefined
+      const valueId = row?.attribute_value_id as string | undefined
+      if (!attributeId || !valueId) return
+      const existing = attributeSelectionMap.get(attributeId) || []
+      attributeSelectionMap.set(attributeId, existing.concat(valueId))
+    })
+    const attributeSelections = Array.from(attributeSelectionMap.entries()).map(([attributeId, valueIds]) => ({
+      attributeId,
+      valueIds
+    }))
+    
+    console.log('✅ Attribute selections loaded (tenant-admin):', attributeSelections)
+
     // Transform product data to match ProductForm expectations
     const categoryId = (() => {
       const first = Array.isArray(productWithRelations.categories) ? productWithRelations.categories[0] as unknown : undefined
@@ -266,7 +289,9 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
       badge_color: '',
       badge_priority: 0,
       badge_display_until: '',
-      badge_display_from: ''
+      badge_display_from: '',
+      // CRITICAL FIX: Add loaded attribute selections
+      attributes: attributeSelections
     }
 
     return (
