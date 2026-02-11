@@ -11,13 +11,13 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ produc
 
   const { data, error } = await supabaseAdmin
     .from('product_drafts')
-    .select('draft_data')
+    .select('data')
     .eq('tenant_id', tenantId)
     .eq('product_id', productId)
     .maybeSingle()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data?.draft_data || null)
+  return NextResponse.json(data?.data || null)
 }
 
 export async function PUT(req: NextRequest, context: { params: Promise<{ productId: string }> }) {
@@ -27,15 +27,13 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ product
   await assertTenantAdmin(tenantId)
 
   const payload = await req.json()
-  const userId = await getAuthenticatedUserId()
 
   const { error } = await supabaseAdmin
     .from('product_drafts')
     .upsert({
       tenant_id: tenantId,
       product_id: productId,
-      draft_data: payload,
-      created_by: userId || null
+      data: payload,
     } as any, { onConflict: 'tenant_id,product_id' })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -57,5 +55,3 @@ export async function DELETE(_req: NextRequest, context: { params: Promise<{ pro
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }
-
-

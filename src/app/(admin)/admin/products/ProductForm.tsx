@@ -455,14 +455,17 @@ export function ProductForm({
             console.log('✅ EDIT MODE: Variants updated successfully')
           }
 
-          // CRITICAL: Delete draft AFTER successful update to prevent draft from persisting
+          // OPTIONAL: Try to delete draft (non-blocking - don't fail if this errors)
           try {
             const deleteRes = await fetch(`/api/product-drafts/${initialData.id}`, { method: 'DELETE' })
             if (deleteRes.ok) {
               console.log('✅ Draft deleted after successful product update')
+            } else {
+              console.warn('⚠️ Draft deletion returned non-OK status:', deleteRes.status)
             }
           } catch (err) {
-            console.warn('⚠️ Failed to delete draft after update:', err)
+            // Silently fail - draft deletion is not critical
+            console.warn('⚠️ Failed to delete draft after update (non-critical):', err)
           }
           
           console.log('✅ ========== EDIT COMPLETE - REDIRECTING ==========')
