@@ -1040,11 +1040,19 @@ export async function updateProduct(productId: string, formData: FormData) {
     .eq('product_id', productId)
 
   // Then, insert new attribute assignments
+  console.log('🎨 ========== ATTRIBUTES UPDATE DEBUG ==========')
+  console.log('🎨 productData.attributes:', JSON.stringify(productData.attributes, null, 2))
+  console.log('🎨 Is array:', Array.isArray(productData.attributes))
+  console.log('🎨 Length:', productData.attributes?.length)
+  
   if (Array.isArray(productData.attributes) && productData.attributes.length > 0) {
     // Keep attributes that have one or more selected valueIds
     const attributesToSave = productData.attributes.filter(
       (attr) => attr && attr.attributeId && Array.isArray((attr as any).valueIds) && (attr as any).valueIds.length > 0
     ) as Array<{ attributeId: string; valueIds: string[] }>
+
+    console.log('🎨 Attributes to save:', JSON.stringify(attributesToSave, null, 2))
+    console.log('🎨 Count to save:', attributesToSave.length)
 
     if (attributesToSave.length > 0) {
       // Insert into product_attributes for each selected attribute
@@ -1054,9 +1062,16 @@ export async function updateProduct(productId: string, formData: FormData) {
         tenant_id: tenantId!
       }))
 
-      await supabaseAdmin
+      console.log('🎨 Inserting product_attributes:', JSON.stringify(productAttributeInserts, null, 2))
+      const { error: attrError } = await supabaseAdmin
         .from('product_attributes')
         .insert(productAttributeInserts)
+      
+      if (attrError) {
+        console.error('❌ Error inserting product_attributes:', attrError)
+        throw new Error(`Failed to save product attributes: ${attrError.message}`)
+      }
+      console.log('✅ product_attributes inserted successfully')
 
       // Insert into product_attribute_values for each selected value (flatten multiple values)
       const productAttributeValueInserts = attributesToSave.flatMap((attr) =>
@@ -1067,13 +1082,25 @@ export async function updateProduct(productId: string, formData: FormData) {
         }))
       )
 
+      console.log('🎨 Inserting product_attribute_values:', JSON.stringify(productAttributeValueInserts, null, 2))
       if (productAttributeValueInserts.length > 0) {
-        await supabaseAdmin
+        const { error: valuesError } = await supabaseAdmin
           .from('product_attribute_values')
           .insert(productAttributeValueInserts)
+        
+        if (valuesError) {
+          console.error('❌ Error inserting product_attribute_values:', valuesError)
+          throw new Error(`Failed to save product attribute values: ${valuesError.message}`)
+        }
+        console.log('✅ product_attribute_values inserted successfully')
       }
+    } else {
+      console.log('⚠️ No attributes to save (all filtered out)')
     }
+  } else {
+    console.log('⚠️ No attributes provided or not an array')
   }
+  console.log('=========================================')
 
   // Handle image uploads (using UPSERT to prevent duplicates)
   const normalizedImagesUpdate = normalizeImageInputs(productData.images || [])

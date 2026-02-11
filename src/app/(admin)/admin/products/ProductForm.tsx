@@ -360,6 +360,18 @@ export function ProductForm({
           // Map cost_price_cents to cost_per_item_cents for backend compatibility
           const formKey = key === 'cost_price_cents' ? 'cost_per_item_cents' : key
 
+          // Special handling for attributes - always append even if empty array
+          if (key === 'attributes') {
+            console.log('🎨 ATTRIBUTES FORM DATA:', {
+              value,
+              isArray: Array.isArray(value),
+              length: Array.isArray(value) ? value.length : 'N/A',
+              stringified: JSON.stringify(value)
+            })
+            form.append(formKey, JSON.stringify(value || []))
+            continue
+          }
+
           if (Array.isArray(value)) {
             if (value.length > 0) form.append(formKey, JSON.stringify(value))
           } else if (value !== null && value !== undefined) {
