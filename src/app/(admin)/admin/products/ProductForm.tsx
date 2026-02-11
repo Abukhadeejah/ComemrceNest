@@ -429,21 +429,30 @@ export function ProductForm({
         // Remove primary category logic - products can belong to multiple categories equally
 
         if (mode === 'edit' && initialData?.id) {
+          console.log('🔴 EDIT MODE: Updating product', initialData.id)
           console.log('🔴 EDIT MODE: cost_price_cents from form data:', form.get('cost_per_item_cents'), '[Before updateProduct]')
+          console.log('🔴 EDIT MODE: attributes from form data:', form.get('attributes'))
           
-          await updateProduct(initialData.id, form)
+          const updateResult = await updateProduct(initialData.id, form)
+          console.log('✅ EDIT MODE: Product updated successfully', updateResult)
 
           const files = imageFiles.filter((i) => i instanceof File) as File[]
-          for (const file of files) {
-            await uploadProductImage(file, initialData.id)
+          if (files.length > 0) {
+            console.log('📸 EDIT MODE: Uploading', files.length, 'new image files')
+            for (const file of files) {
+              await uploadProductImage(file, initialData.id)
+            }
+            console.log('✅ EDIT MODE: Images uploaded successfully')
           }
 
           if (data.variantOptions && data.variantCombinations) {
+            console.log('🔧 EDIT MODE: Updating variants')
             await updateProductVariants(initialData.id, {
               hasVariants: data.has_variants || false,
               variantOptions: data.variantOptions,
               variantCombinations: data.variantCombinations,
             })
+            console.log('✅ EDIT MODE: Variants updated successfully')
           }
 
           // CRITICAL: Delete draft AFTER successful update to prevent draft from persisting
@@ -455,6 +464,8 @@ export function ProductForm({
           } catch (err) {
             console.warn('⚠️ Failed to delete draft after update:', err)
           }
+          
+          console.log('✅ ========== EDIT COMPLETE - REDIRECTING ==========')
         } else {
           console.log('Creating product with form data:', Object.fromEntries(form.entries())) // Debug log
           const result = await createProduct(form)
