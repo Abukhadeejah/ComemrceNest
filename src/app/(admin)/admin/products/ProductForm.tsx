@@ -242,7 +242,7 @@ export function ProductForm({
       console.log('✅ Form sync complete')
       console.log('========================================')
     }
-  }, [mode, initialData?.id, reset]) // Use initialData.id as dependency to trigger on data load
+  }, [mode, initialData?.id, initialData?.images?.length, reset]) // Track images length for re-sync on subsequent edits
 
   useEffect(() => {
     // Only auto-generate slug in create mode, not when editing
