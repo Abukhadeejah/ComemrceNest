@@ -830,3 +830,28 @@ export async function fetchPublishedProductsPagedWithVariants(
   
   return { data: productsWithCleanVariants, count, error }
 }
+
+// Fetch random products for related products section
+export async function fetchRandomProducts(tenantId: string, excludeProductId?: string, limit: number = 4) {
+  let query = supabaseAdmin
+    .from('products')
+    .select('id, name, slug, hero_image_url, price_cents, compare_at_price_cents, currency')
+    .eq('tenant_id', tenantId)
+    .eq('status', 'published')
+    .limit(limit * 3) // Fetch more to allow for filtering
+
+  if (excludeProductId) {
+    query = query.neq('id', excludeProductId)
+  }
+
+  const { data, error } = await query
+
+  if (error || !data) {
+    console.error('[fetchRandomProducts] query error', error)
+    return []
+  }
+
+  // Shuffle and return limited results
+  const shuffled = [...data].sort(() => Math.random() - 0.5)
+  return shuffled.slice(0, limit)
+}

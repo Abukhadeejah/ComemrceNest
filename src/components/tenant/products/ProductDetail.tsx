@@ -75,6 +75,15 @@ interface ProductDetailProps {
     name: string
     values: Array<{ id: string; value: string }>
   }>
+  relatedProducts?: Array<{
+    id: string
+    name: string
+    slug: string
+    hero_image_url: string | null
+    price_cents: number
+    compare_at_price_cents?: number | null
+    currency?: string
+  }>
 }
 
 export function ProductDetail({ 
@@ -83,6 +92,7 @@ export function ProductDetail({
   variantOptions = [], 
   variantCombinations = [],
   attributes = [],
+  relatedProducts = [],
 }: ProductDetailProps) {
   const { addItem } = useCart()
   const tenant = useTenant()
@@ -742,17 +752,60 @@ export function ProductDetail({
           </div>
 
           {/* Related Products */}
-          <div className="border-t border-gray-200 py-8">
-            <h3 className="text-xl font-bold text-gray-900 mb-6">Related Products</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {/* Placeholder for related products */}
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="bg-gray-100 rounded-lg aspect-square flex items-center justify-center">
-                  <span className="text-gray-400">Related Product {i}</span>
-                </div>
-              ))}
+          {relatedProducts && relatedProducts.length > 0 && (
+            <div className="border-t border-gray-200 py-8">
+              <h3 className="text-xl font-bold text-gray-900 mb-6">Related Products</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {relatedProducts.map((relatedProduct) => (
+                  <Link
+                    key={relatedProduct.id}
+                    href={SITE_URLS.productDetail(relatedProduct.slug, tenant.key)}
+                    className="group"
+                  >
+                    <div className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                      <div className="aspect-square relative bg-gray-100">
+                        {relatedProduct.hero_image_url ? (
+                          <Image
+                            src={relatedProduct.hero_image_url}
+                            alt={relatedProduct.name}
+                            fill
+                            className="object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-gray-400">
+                            <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                              />
+                            </svg>
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-4">
+                        <h4 className="text-sm font-medium text-gray-900 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
+                          {relatedProduct.name}
+                        </h4>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-lg font-bold text-gray-900">
+                            ₹{(relatedProduct.price_cents / 100).toFixed(2)}
+                          </span>
+                          {relatedProduct.compare_at_price_cents && 
+                           relatedProduct.compare_at_price_cents > relatedProduct.price_cents && (
+                            <span className="text-sm text-gray-500 line-through">
+                              ₹{(relatedProduct.compare_at_price_cents / 100).toFixed(2)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Size Guide Modal */}
