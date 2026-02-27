@@ -47,12 +47,20 @@ export async function POST(request: NextRequest) {
     )
 
     // Initiate PhonePe payment
+    const forwardedProto = request.headers.get('x-forwarded-proto')
+    const forwardedHost = request.headers.get('x-forwarded-host') || request.headers.get('host')
+    const requestBaseUrl = forwardedProto && forwardedHost
+      ? `${forwardedProto}://${forwardedHost}`
+      : new URL(request.url).origin
+
     const paymentResult = await createPhonePePayment(
       tenantId,
       paymentReference,
       amountCents,
       customerEmail,
-      customerPhone || ''
+      customerPhone || '',
+      undefined,
+      requestBaseUrl
     )
 
     if (!paymentResult.redirectUrl) {

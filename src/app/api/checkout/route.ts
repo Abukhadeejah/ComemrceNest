@@ -175,6 +175,12 @@ export async function POST(request: NextRequest) {
 
     // Route to appropriate payment provider
     if (provider === 'phonepe') {
+      const forwardedProto = request.headers.get('x-forwarded-proto');
+      const forwardedHost = request.headers.get('x-forwarded-host') || request.headers.get('host');
+      const requestBaseUrl = forwardedProto && forwardedHost
+        ? `${forwardedProto}://${forwardedHost}`
+        : new URL(request.url).origin;
+
       return await handlePhonePeCheckout(tenantId, amountPaise, customerEmail, customerPhone, { 
         ...body, 
         items: itemPayload, 
@@ -184,7 +190,7 @@ export async function POST(request: NextRequest) {
         discount_amount_cents: body.discount_amount_cents,
         walletUsedRupees: body.walletUsedRupees,
         customerId: body.customerId
-      });
+      }, requestBaseUrl);
     } else if (provider === 'razorpay') {
       return await handleRazorpayCheckout(tenantId, amountPaise, customerEmail, customerPhone, { 
         ...body, 
@@ -223,7 +229,8 @@ async function handlePhonePeCheckout(
     discount_amount_cents?: number;
     walletUsedRupees?: number;
     customerId?: string;
-  }
+  },
+  requestBaseUrl?: string
 ) {
   // Check if SDK credentials are configured
   const clientId = process.env.PHONEPE_CLIENT_ID;
@@ -344,7 +351,9 @@ async function handlePhonePeCheckout(
     orderId,
     amountPaise,
     customerEmail,
-    customerPhone
+    customerPhone,
+    undefined,
+    requestBaseUrl
   );
 
   // Persist order items

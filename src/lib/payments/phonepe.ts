@@ -11,13 +11,41 @@ export interface PhonePeConfig {
   baseUrl: string;
 }
 
+function resolvePhonePeRedirectBaseUrl(overrideBaseUrl?: string): string {
+  const rawBaseUrl = (
+    overrideBaseUrl ||
+    process.env.PHONEPE_REDIRECT_BASE_URL ||
+    process.env.NEXT_PUBLIC_BASE_URL ||
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    ''
+  ).trim();
+
+  if (!rawBaseUrl) {
+    throw new Error('Missing redirect base URL. Set PHONEPE_REDIRECT_BASE_URL or NEXT_PUBLIC_BASE_URL');
+  }
+
+  const normalizedBaseUrl = rawBaseUrl.replace(/\/+$/, '');
+
+  if (!/^https?:\/\//i.test(normalizedBaseUrl)) {
+    throw new Error(`Invalid redirect base URL: ${normalizedBaseUrl}`);
+  }
+
+  const isProductionPhonePe = String(process.env.PHONEPE_ENV || '').trim().toUpperCase() === 'PRODUCTION';
+  if (isProductionPhonePe && normalizedBaseUrl.startsWith('http://')) {
+    throw new Error('PhonePe production requires an HTTPS redirect base URL');
+  }
+
+  return normalizedBaseUrl;
+}
+
 export async function createPhonePePayment(
   tenantId: string,
   orderId: string,
   amountCents: number,
   customerEmail: string,
   customerPhone: string,
-  config?: PhonePeConfig // Made optional since we now use SDK config
+  config?: PhonePeConfig,
+  redirectBaseUrl?: string
 ) {
   // Verify credentials are loaded
   const clientId = process.env.PHONEPE_CLIENT_ID;
@@ -37,11 +65,13 @@ export async function createPhonePePayment(
     throw new Error('PhonePe credentials not configured in environment variables');
   }
 
+  const resolvedBaseUrl = resolvePhonePeRedirectBaseUrl(redirectBaseUrl);
+
   // Create SDK payment request using builder pattern
   const payRequest = StandardCheckoutPayRequest.builder()
     .merchantOrderId(orderId)
     .amount(amountCents) // Amount in paise
-    .redirectUrl(`${process.env.NEXT_PUBLIC_BASE_URL}/checkout/success?orderId=${orderId}`)
+    .redirectUrl(`${resolvedBaseUrl}/checkout/success?orderId=${orderId}`)
     .build();
 
   console.log('PhonePe SDK Payment Request:', {
@@ -49,7 +79,8 @@ export async function createPhonePePayment(
     clientId: process.env.PHONEPE_CLIENT_ID?.substring(0, 10) + '...',
     orderId: orderId,
     amount: amountCents,
-    env: phonepeConfig.env
+    env: phonepeConfig.env,
+    redirectBaseUrl: resolvedBaseUrl
   });
 
   // Use SDK to create payment
