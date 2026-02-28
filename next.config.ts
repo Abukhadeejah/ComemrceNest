@@ -5,12 +5,18 @@ declare const process: {
     [key: string]: string | undefined;
     NODE_ENV: 'development' | 'production' | 'test';
     NEXT_PUBLIC_SUPABASE_URL?: string;
+    NEXT_SERVER_ACTIONS_ALLOWED_ORIGINS?: string;
   };
 };
 
 const storageHostname = process.env.NEXT_PUBLIC_SUPABASE_URL
   ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname
   : undefined;
+
+const serverActionAllowedOrigins = process.env.NEXT_SERVER_ACTIONS_ALLOWED_ORIGINS
+  ?.split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
 const nextConfig: NextConfig = {
   typescript: {
@@ -74,6 +80,12 @@ const nextConfig: NextConfig = {
   // Production optimizations
   experimental: {
     optimizePackageImports: ['lucide-react', 'framer-motion'],
+    serverActions: {
+      bodySizeLimit: '12mb',
+      ...(serverActionAllowedOrigins && serverActionAllowedOrigins.length > 0
+        ? { allowedOrigins: serverActionAllowedOrigins }
+        : {}),
+    },
   },
   // Disable caching during development
   ...(process.env.NODE_ENV === 'development'

@@ -9,13 +9,14 @@ Set these variables in the shell/process manager that starts Next.js:
 - `NODE_ENV=production`
 - `NEXT_PUBLIC_SUPABASE_URL=...`
 - `SUPABASE_SERVICE_ROLE_KEY=...`
+- `NEXT_SERVER_ACTIONS_ALLOWED_ORIGINS=admin.example.com,www.admin.example.com` (comma-separated hostnames used to access admin)
 - `NEXTAUTH_URL=...` (if auth routes are used)
 - `NEXTAUTH_SECRET=...` (if auth routes are used)
 
 ### Quick verify
 
 ```bash
-printenv | grep -E 'NODE_ENV|NEXT_PUBLIC_SUPABASE_URL|SUPABASE_SERVICE_ROLE_KEY|NEXTAUTH_URL|NEXTAUTH_SECRET'
+printenv | grep -E 'NODE_ENV|NEXT_PUBLIC_SUPABASE_URL|SUPABASE_SERVICE_ROLE_KEY|NEXT_SERVER_ACTIONS_ALLOWED_ORIGINS|NEXTAUTH_URL|NEXTAUTH_SECRET'
 ```
 
 ## 2) Install and build
@@ -95,7 +96,25 @@ Notes:
 
 - Ensure proxy forwards to app port (commonly `3000`).
 - Ensure `Host` header is forwarded.
+- Increase request body size to allow admin product image uploads (avoid `413 Payload Too Large`).
 - Reload proxy config after changes.
+
+### Nginx example
+
+```nginx
+server {
+   # ...existing config...
+
+   client_max_body_size 20m;
+
+   location / {
+      proxy_pass http://127.0.0.1:3000;
+      proxy_set_header Host $host;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header X-Forwarded-Proto $scheme;
+   }
+}
+```
 
 ## 6) If you still see route build errors
 

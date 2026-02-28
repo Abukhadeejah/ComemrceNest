@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
-import { assertTenantAdmin } from '@/server/auth'
+import { assertTenantAdminApi, TenantAdminAuthError } from '@/server/auth'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
 import { revalidateTag } from 'next/cache'
 import { tenantProductsTag } from '@/server/cacheTags'
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Tenant not found' }, { status: 400 });
       }
   
-      await assertTenantAdmin(tenantId);
+      await assertTenantAdminApi(tenantId);
   
       // Validate optional parentId under same tenant
       let parent_id: string | null = null;
@@ -57,6 +57,9 @@ export async function POST(request: NextRequest) {
   
       return NextResponse.json({ data }, { status: 201 });
     } catch (err: unknown) {
+      if (err instanceof TenantAdminAuthError) {
+        return NextResponse.json({ error: err.message }, { status: err.status });
+      }
       console.error('Create category error:', err);
       return NextResponse.json({ error: 'Failed to create category' }, { status: 500 });
     }
@@ -75,7 +78,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Tenant not found' }, { status: 400 });
       }
   
-      await assertTenantAdmin(tenantId);
+      await assertTenantAdminApi(tenantId);
   
       let parent_id: string | null = null;
       if (typeof parentId === 'string' && parentId.trim() !== '') {
@@ -120,6 +123,9 @@ export async function POST(request: NextRequest) {
   
       return NextResponse.json({ data });
     } catch (err: unknown) {
+      if (err instanceof TenantAdminAuthError) {
+        return NextResponse.json({ error: err.message }, { status: err.status });
+      }
       console.error('Update category error:', err);
       return NextResponse.json({ error: 'Failed to update category' }, { status: 500 });
     }
@@ -147,7 +153,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Tenant not found' }, { status: 400 });
       }
   
-      await assertTenantAdmin(tenantId);
+      await assertTenantAdminApi(tenantId);
   
       // 1) Clean join table references for this tenant/category
       const { error: joinErr } = await supabaseAdmin
@@ -184,6 +190,9 @@ export async function POST(request: NextRequest) {
       // Children auto-set parent_id = null via FK ON DELETE SET NULL (ensure constraint exists)
       return NextResponse.json({ success: true });
     } catch (error) {
+      if (error instanceof TenantAdminAuthError) {
+        return NextResponse.json({ error: error.message }, { status: error.status });
+      }
       console.error('Delete category error:', error);
       return NextResponse.json({ error: 'Failed to delete category' }, { status: 500 });
     }

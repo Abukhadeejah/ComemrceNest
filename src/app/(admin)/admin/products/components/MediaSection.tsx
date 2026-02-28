@@ -10,7 +10,8 @@ interface MediaSectionProps {
   productId?: string
 }
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB in bytes
+const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB in bytes
+const MAX_IMAGE_COUNT = 10
 const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif']
 
 export function MediaSection({ images, onImagesChange }: MediaSectionProps) {
@@ -31,12 +32,21 @@ export function MediaSection({ images, onImagesChange }: MediaSectionProps) {
     
     if (event.target.files && event.target.files.length > 0) {
       const newFiles = Array.from(event.target.files)
+
+      if (images.length >= MAX_IMAGE_COUNT) {
+        setUploadError(`Maximum ${MAX_IMAGE_COUNT} images allowed.`)
+        event.target.value = ''
+        return
+      }
+
+      const availableSlots = MAX_IMAGE_COUNT - images.length
+      const filesToValidate = newFiles.slice(0, availableSlots)
       
       // Validate each file
       const validFiles: File[] = []
       const errors: string[] = []
 
-      newFiles.forEach(file => {
+      filesToValidate.forEach(file => {
         // Check file type
         if (!ALLOWED_TYPES.includes(file.type)) {
           errors.push(`${file.name}: Invalid file type. Only PNG, JPG, WebP, GIF allowed.`)
@@ -45,12 +55,16 @@ export function MediaSection({ images, onImagesChange }: MediaSectionProps) {
         
         // Check file size
         if (file.size > MAX_FILE_SIZE) {
-          errors.push(`${file.name}: File too large. Max size is 10MB.`)
+          errors.push(`${file.name}: File too large. Max size is 5MB.`)
           return
         }
         
         validFiles.push(file)
       })
+
+      if (newFiles.length > filesToValidate.length) {
+        errors.push(`Only ${availableSlots} more image(s) can be added (max ${MAX_IMAGE_COUNT}).`)
+      }
 
       if (errors.length > 0) {
         setUploadError(errors.join(' '))
@@ -110,7 +124,7 @@ export function MediaSection({ images, onImagesChange }: MediaSectionProps) {
             <p className="mb-2 text-sm text-gray-500">
               <span className="font-semibold">Click to upload</span> or drag and drop
             </p>
-            <p className="text-xs text-gray-500">PNG, JPG, WebP, GIF up to 5MB each</p>
+            <p className="text-xs text-gray-500">PNG, JPG, WebP, GIF up to 5MB each, max 10 images</p>
           </div>
           <input
             id={inputId}

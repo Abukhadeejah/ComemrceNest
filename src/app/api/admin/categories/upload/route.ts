@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
-import { assertTenantAdmin } from '@/server/auth'
+import { assertTenantAdminApi, TenantAdminAuthError } from '@/server/auth'
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
     if (!tenantId) {
       return NextResponse.json({ error: 'Tenant not found' }, { status: 400 })
     }
-    await assertTenantAdmin(tenantId)
+    await assertTenantAdminApi(tenantId)
 
     const formData = await request.formData()
     const file = formData.get('file') as unknown as File | null
@@ -37,6 +37,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ url: data.publicUrl, path: objectPath })
   } catch (error) {
+    if (error instanceof TenantAdminAuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('Category image upload error:', error)
     return NextResponse.json({ error: 'Failed to upload image' }, { status: 500 })
   }

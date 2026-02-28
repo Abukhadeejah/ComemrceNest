@@ -1,17 +1,19 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Playfair_Display } from 'next/font/google';
 
 const playfair = Playfair_Display({ subsets: ['latin'], weight: ['700', '800', '900'] });
 
 export default function CheckoutSuccessPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const orderId = searchParams.get('orderId');
   const [status, setStatus] = useState<'loading' | 'success' | 'failed'>('loading');
   const [verificationAttempted, setVerificationAttempted] = useState(false);
+  const [redirectSeconds, setRedirectSeconds] = useState<number | null>(null);
 
   useEffect(() => {
     if (!orderId) {
@@ -103,6 +105,28 @@ export default function CheckoutSuccessPage() {
     return () => clearInterval(pollInterval);
   }, [orderId]);
 
+  useEffect(() => {
+    if (!orderId || (status !== 'success' && status !== 'failed')) {
+      setRedirectSeconds(null);
+      return;
+    }
+
+    setRedirectSeconds(5);
+    const interval = setInterval(() => {
+      setRedirectSeconds((prev) => {
+        if (prev === null) return null;
+        if (prev <= 1) {
+          clearInterval(interval);
+          router.push(`/orders/${orderId}`);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [status, orderId, router]);
+
   if (status === 'loading') {
     return (
       <main className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center">
@@ -133,6 +157,11 @@ export default function CheckoutSuccessPage() {
             <p className="text-gray-600 mb-6">
               We couldn't process your payment. Please try again or contact support if the issue persists.
             </p>
+            {orderId && (
+              <p className="text-sm text-gray-500 mb-6">
+                Redirecting to your order details in {redirectSeconds ?? 5}s...
+              </p>
+            )}
             <Link
               href="/checkout"
               className="inline-block bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors"
@@ -158,6 +187,11 @@ export default function CheckoutSuccessPage() {
           <p className="text-gray-600 mb-6">
             Thank you for your order. Your payment has been processed successfully.
           </p>
+          {orderId && (
+            <p className="text-sm text-gray-500 mb-6">
+              Redirecting to your order details in {redirectSeconds ?? 5}s...
+            </p>
+          )}
           {orderId && (
             <div className="bg-gray-50 rounded-lg p-4 mb-6">
               <p className="text-sm text-gray-600 mb-1">Order ID</p>

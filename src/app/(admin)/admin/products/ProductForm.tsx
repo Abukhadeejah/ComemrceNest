@@ -30,6 +30,9 @@ import { ProductFormData, VariantOption, CategoryTreeNode, ProductAttributeDefin
 
 import { useForm, SubmitHandler } from 'react-hook-form'
 
+const MAX_PRODUCT_IMAGE_SIZE_BYTES = 5 * 1024 * 1024
+const MAX_PRODUCT_IMAGE_COUNT = 10
+
 
 
 // ProductForm - Main product creation/editing form - Updated: ${new Date().toISOString()}
@@ -331,6 +334,27 @@ export function ProductForm({
     }
     console.log('✅ Categories validation passed')
 
+    // Validation 3: Image size hard guard (5MB per image)
+    const oversizedImages = imageFiles.filter(
+      (image): image is File => image instanceof File && image.size > MAX_PRODUCT_IMAGE_SIZE_BYTES
+    )
+
+    if (oversizedImages.length > 0) {
+      const errorMsg = `❌ ${oversizedImages.length} image(s) exceed 5MB. Please compress or remove them before submitting.`
+      console.error('❌ VALIDATION FAILED: Oversized images detected', oversizedImages.map((file) => ({ name: file.name, size: file.size })))
+      setFormError(errorMsg)
+      setIsSubmitting(false)
+      return
+    }
+
+    if (imageFiles.length > MAX_PRODUCT_IMAGE_COUNT) {
+      const errorMsg = `❌ Maximum ${MAX_PRODUCT_IMAGE_COUNT} images allowed. Please remove extra images before submitting.`
+      console.error('❌ VALIDATION FAILED: Too many images', { count: imageFiles.length })
+      setFormError(errorMsg)
+      setIsSubmitting(false)
+      return
+    }
+
     console.log('✅ ========== ALL VALIDATIONS PASSED ==========')
     console.log('📤 Proceeding with form submission...')
 
@@ -538,6 +562,16 @@ export function ProductForm({
           setFormError('❌ Tenant not found. Please refresh and try again.')
         } else if (errorMessage.includes('category')) {
           setFormError('❌ Category error: ' + errorMessage)
+        } else if (
+          errorMessage.includes('413') ||
+          errorMessage.toLowerCase().includes('payload too large')
+        ) {
+          setFormError('❌ Upload failed: request body is too large. Reduce image size/count and try again.')
+        } else if (
+          errorMessage.includes('403') ||
+          errorMessage.toLowerCase().includes('forbidden')
+        ) {
+          setFormError('❌ Upload blocked (403). Server action origin/proxy is not allowed in production configuration.')
         } else {
           setFormError('❌ ' + (errorMessage || 'An unexpected error occurred. Please try again or contact support.'))
         }
