@@ -135,19 +135,24 @@ export default function CheckoutPage() {
     pincode: '',
     gstin: ''
   })
-  const [addresses, setAddresses] = useState<Array<{
+  type CheckoutAddress = {
     id: string
+    name?: string
     full_name?: string
     phone?: string
+    line1?: string
+    line2?: string
     email?: string
     address_line_1?: string
     address_line_2?: string
     city: string
     state: string
+    pincode?: string
     postal_code?: string
     gstin?: string
     is_default: boolean
-  }>>([])
+  }
+  const [addresses, setAddresses] = useState<CheckoutAddress[]>([])
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null)
   const [showNewAddressForm, setShowNewAddressForm] = useState(false)
   const [saveAsDefault, setSaveAsDefault] = useState(false)
@@ -177,10 +182,17 @@ export default function CheckoutPage() {
         const response = await fetch('/api/customers/addresses', { credentials: 'include' })
         if (response.ok) {
           const data = await response.json()
-          setAddresses(data.addresses || [])
+          const normalizedAddresses: CheckoutAddress[] = (data.addresses || []).map((addr: CheckoutAddress) => ({
+            ...addr,
+            full_name: addr.full_name || addr.name || '',
+            address_line_1: addr.address_line_1 || addr.line1 || '',
+            address_line_2: addr.address_line_2 || addr.line2 || '',
+            postal_code: addr.postal_code || addr.pincode || ''
+          }))
+          setAddresses(normalizedAddresses)
           
           // Auto-select default address if available
-          const defaultAddress = data.addresses?.find((addr: { is_default: boolean }) => addr.is_default)
+          const defaultAddress = normalizedAddresses.find((addr: { is_default: boolean }) => addr.is_default)
           if (defaultAddress) {
             setSelectedAddressId(defaultAddress.id)
             setCustomer(prev => ({
@@ -374,53 +386,71 @@ export default function CheckoutPage() {
     const selectedAddress = addresses.find(addr => addr.id === addressId)
     if (selectedAddress) {
       setCustomer({
-        name: selectedAddress.full_name || '',
+        name: selectedAddress.full_name || selectedAddress.name || '',
         email: selectedAddress.email || '',
         phone: selectedAddress.phone || '',
-        address1: selectedAddress.address_line_1 || '',
-        address2: selectedAddress.address_line_2 || '',
+        address1: selectedAddress.address_line_1 || selectedAddress.line1 || '',
+        address2: selectedAddress.address_line_2 || selectedAddress.line2 || '',
         city: selectedAddress.city || '',
         state: selectedAddress.state || '',
-        pincode: selectedAddress.postal_code || '',
+        pincode: selectedAddress.postal_code || selectedAddress.pincode || '',
         gstin: selectedAddress.gstin || ''
       })
     }
   }
 
-  const handleNewAddress = async () => {
-    if (saveAsDefault) {
-      // Create new address and save as default
-      try {
-        const response = await fetch('/api/customers/addresses', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({
-            full_name: customer.name,
-            email: customer.email,
-            phone: customer.phone,
-            address_line_1: customer.address1,
-            address_line_2: customer.address2,
-            city: customer.city,
-            state: customer.state,
-            postal_code: customer.pincode,
-            gstin: customer.gstin,
-            is_default: true
-          })
+  const hasAddressFields = !!(
+    customer.name.trim() &&
+    customer.phone.trim() &&
+    customer.address1.trim() &&
+    customer.city.trim() &&
+    customer.state.trim() &&
+    customer.pincode.trim()
+  )
+
+  const handleNewAddress = async (forceDefault = false) => {
+    const shouldSaveAddress = forceDefault || saveAsDefault || addresses.length === 0
+    if (!shouldSaveAddress || !hasAddressFields) {
+      return
+    }
+
+    try {
+      const response = await fetch('/api/customers/addresses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          name: customer.name,
+          phone: customer.phone,
+          line1: customer.address1,
+          line2: customer.address2,
+          city: customer.city,
+          state: customer.state,
+          pincode: customer.pincode,
+          isDefault: forceDefault || saveAsDefault || addresses.length === 0
         })
-        
-        if (response.ok) {
-          // Reload addresses to get the new one
-          const addressesResponse = await fetch('/api/customers/addresses', { credentials: 'include' })
-          if (addressesResponse.ok) {
-            const data = await addressesResponse.json()
-            setAddresses(data.addresses || [])
-            setSelectedAddressId(data.addresses?.[0]?.id || null)
-          }
-        }
-      } catch (error) {
-        console.error('Failed to save address:', error)
+      })
+
+      if (!response.ok) {
+        return
       }
+
+      const addressesResponse = await fetch('/api/customers/addresses', { credentials: 'include' })
+      if (addressesResponse.ok) {
+        const data = await addressesResponse.json()
+        const normalizedAddresses: CheckoutAddress[] = (data.addresses || []).map((addr: CheckoutAddress) => ({
+          ...addr,
+          full_name: addr.full_name || addr.name || '',
+          address_line_1: addr.address_line_1 || addr.line1 || '',
+          address_line_2: addr.address_line_2 || addr.line2 || '',
+          postal_code: addr.postal_code || addr.pincode || ''
+        }))
+        setAddresses(normalizedAddresses)
+        const defaultAddress = normalizedAddresses.find((addr) => addr.is_default)
+        setSelectedAddressId(defaultAddress?.id || normalizedAddresses?.[0]?.id || null)
+      }
+    } catch (error) {
+      console.error('Failed to save address:', error)
     }
   }
 
@@ -435,8 +465,8 @@ export default function CheckoutPage() {
     setMessage(null)
     
     // Save address if needed
-    if (saveAsDefault && showNewAddressForm) {
-      await handleNewAddress()
+    if (showNewAddressForm || addresses.length === 0) {
+      await handleNewAddress(addresses.length === 0)
     }
     
     try {

@@ -12,30 +12,36 @@ export interface PhonePeConfig {
 }
 
 function resolvePhonePeRedirectBaseUrl(overrideBaseUrl?: string): string {
-  const rawBaseUrl = (
-    overrideBaseUrl ||
-    process.env.PHONEPE_REDIRECT_BASE_URL ||
-    process.env.NEXT_PUBLIC_BASE_URL ||
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    ''
-  ).trim();
-
-  if (!rawBaseUrl) {
-    throw new Error('Missing redirect base URL. Set PHONEPE_REDIRECT_BASE_URL or NEXT_PUBLIC_BASE_URL');
-  }
-
-  const normalizedBaseUrl = rawBaseUrl.replace(/\/+$/, '');
-
-  if (!/^https?:\/\//i.test(normalizedBaseUrl)) {
-    throw new Error(`Invalid redirect base URL: ${normalizedBaseUrl}`);
-  }
-
   const isProductionPhonePe = String(process.env.PHONEPE_ENV || '').trim().toUpperCase() === 'PRODUCTION';
-  if (isProductionPhonePe && normalizedBaseUrl.startsWith('http://')) {
-    throw new Error('PhonePe production requires an HTTPS redirect base URL');
+
+  const candidates = [
+    overrideBaseUrl,
+    process.env.PHONEPE_REDIRECT_BASE_URL,
+    process.env.NEXT_PUBLIC_BASE_URL,
+    process.env.NEXT_PUBLIC_SITE_URL,
+  ];
+
+  for (const candidate of candidates) {
+    const raw = (candidate || '').trim();
+    if (!raw) continue;
+
+    const normalizedBaseUrl = raw.replace(/\/+$/, '');
+    if (!/^https?:\/\//i.test(normalizedBaseUrl)) {
+      continue;
+    }
+
+    if (isProductionPhonePe && normalizedBaseUrl.startsWith('http://')) {
+      continue;
+    }
+
+    return normalizedBaseUrl;
   }
 
-  return normalizedBaseUrl;
+  if (isProductionPhonePe) {
+    throw new Error('PhonePe production requires an HTTPS redirect base URL. Set PHONEPE_REDIRECT_BASE_URL to an HTTPS URL');
+  }
+
+  throw new Error('Missing or invalid redirect base URL. Set PHONEPE_REDIRECT_BASE_URL or NEXT_PUBLIC_BASE_URL');
 }
 
 export async function createPhonePePayment(
