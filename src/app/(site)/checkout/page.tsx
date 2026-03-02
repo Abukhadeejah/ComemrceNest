@@ -455,10 +455,9 @@ export default function CheckoutPage() {
   }
 
   async function handlePayment(amountPaise: number) {
-    // Check if user is logged in - show prompt if not
+    // Allow guest checkout when user is not logged in
     if (!session?.user?.id) {
-      setShowLoginPrompt(true)
-      return
+      console.log('[Checkout] Proceeding as guest checkout (no authenticated session)')
     }
     
     setBusy(true)

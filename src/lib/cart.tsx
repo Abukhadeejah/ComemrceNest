@@ -1,7 +1,8 @@
 'use client'
 
-import { createContext, useContext, useReducer, useEffect, ReactNode } from 'react'
+import { createContext, useContext, useReducer, useEffect, ReactNode, useRef } from 'react'
 import { useTenant } from '@/hooks/useTenant'
+import { useSupabaseSession } from '@/hooks/useSupabaseSession'
 
 export interface CartItem {
   id: string
@@ -146,6 +147,37 @@ function cartReducer(state: CartState, action: CartAction): CartState {
   }
 }
 
+function isSameCartLine(a: CartItem, b: CartItem): boolean {
+  return (
+    a.productId === b.productId &&
+    JSON.stringify(a.variant ?? null) === JSON.stringify(b.variant ?? null)
+  )
+}
+
+function mergeCartItems(primary: CartItem[], secondary: CartItem[]): CartItem[] {
+  const merged = [...primary]
+
+  secondary.forEach((incoming) => {
+    const idx = merged.findIndex((existing) => isSameCartLine(existing, incoming))
+    if (idx >= 0) {
+      merged[idx] = {
+        ...merged[idx],
+        quantity: (Number(merged[idx].quantity) || 0) + (Number(incoming.quantity) || 0),
+      }
+      return
+    }
+
+    merged.push({
+      ...incoming,
+      id: incoming.id || `cart_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      price: Number(incoming.price) || 0,
+      quantity: Number(incoming.quantity) || 0,
+    })
+  })
+
+  return merged.filter((item) => item.quantity > 0)
+}
+
 interface CartContextType {
   state: CartState
   addItem: (item: Omit<CartItem, 'id'>) => void
@@ -165,7 +197,16 @@ function getCartStorageKey(tenantKey: string | undefined) {
 export function CartProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(cartReducer, initialState)
   const tenant = useTenant()
+  const { data: session } = useSupabaseSession()
   const storageKey = getCartStorageKey(tenant.key)
+  const hydratedRef = useRef(false)
+  const remoteReadyRef = useRef(false)
+  const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const stateItemsRef = useRef<CartItem[]>([])
+
+  useEffect(() => {
+    stateItemsRef.current = state.items
+  }, [state.items])
 
   // Load cart from localStorage on mount
   useEffect(() => {
@@ -178,12 +219,95 @@ export function CartProvider({ children }: { children: ReactNode }) {
         console.error('Failed to load cart from localStorage:', error)
       }
     }
+    hydratedRef.current = true
+    remoteReadyRef.current = false
   }, [storageKey])
+
+  // Load and merge server-side customer cart after login
+  useEffect(() => {
+    if (!hydratedRef.current) return
+
+    if (!session?.user?.id) {
+      remoteReadyRef.current = false
+      return
+    }
+
+    let cancelled = false
+
+    const syncFromServer = async () => {
+      try {
+        const response = await fetch('/api/customers/cart', {
+          method: 'GET',
+          credentials: 'include',
+          cache: 'no-store',
+        })
+
+        if (!response.ok) {
+          remoteReadyRef.current = true
+          return
+        }
+
+        const json = await response.json()
+        const serverItems = Array.isArray(json?.items) ? json.items : []
+        const localItems = stateItemsRef.current
+        const mergedItems = mergeCartItems(serverItems, localItems)
+
+        dispatch({ type: 'LOAD_CART', payload: mergedItems })
+
+        await fetch('/api/customers/cart', {
+          method: 'PUT',
+          headers: { 'content-type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ items: mergedItems }),
+        })
+      } catch (error) {
+        console.error('Failed to sync cart from server:', error)
+      } finally {
+        if (!cancelled) {
+          remoteReadyRef.current = true
+        }
+      }
+    }
+
+    syncFromServer()
+
+    return () => {
+      cancelled = true
+    }
+  }, [session?.user?.id, storageKey])
 
   // Save cart to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem(storageKey, JSON.stringify(state.items))
   }, [state.items, storageKey])
+
+  // Persist cart to DB for authenticated users
+  useEffect(() => {
+    if (!session?.user?.id || !remoteReadyRef.current) return
+
+    if (syncTimerRef.current) {
+      clearTimeout(syncTimerRef.current)
+    }
+
+    syncTimerRef.current = setTimeout(async () => {
+      try {
+        await fetch('/api/customers/cart', {
+          method: 'PUT',
+          headers: { 'content-type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ items: state.items }),
+        })
+      } catch (error) {
+        console.error('Failed to persist cart to server:', error)
+      }
+    }, 400)
+
+    return () => {
+      if (syncTimerRef.current) {
+        clearTimeout(syncTimerRef.current)
+      }
+    }
+  }, [state.items, session?.user?.id])
 
   const addItem = (item: Omit<CartItem, 'id'>) => {
     dispatch({ type: 'ADD_ITEM', payload: item })
