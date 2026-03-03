@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { cookies, headers } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 
+type CookieOptions = Record<string, unknown>
+
 async function getTenantKeyFromRequest(): Promise<string | null> {
   const h = await headers()
   const pathname = h.get('x-pathname') || h.get('referer')?.split('://')[1]?.split('/').slice(1).join('/') || '/'
@@ -43,10 +45,10 @@ export async function POST(request: Request) {
         get(name: string) {
           return cookieStore.get(name)?.value
         },
-        set(name: string, value: string, options: any) {
+        set(name: string, value: string, options: CookieOptions) {
           cookieStore.set({ name, value, ...options })
         },
-        remove(name: string, options: any) {
+        remove(name: string, options: CookieOptions) {
           cookieStore.set({ name, value: '', ...options })
         },
       },
@@ -62,22 +64,33 @@ export async function POST(request: Request) {
   // Determine redirect URL
   let redirectUrl: string
   if (isAdminSignout) {
-    // Admin users go to /login (global admin login)
-    redirectUrl = '/login'
+    // Admin users go to global home page
+    redirectUrl = '/'
   } else {
-    // Customer users go to /{tenant}/login (tenant customer login)
+    // Customer users go to tenant home page
     const tenantKey = await getTenantKeyFromRequest()
-    redirectUrl = `/${tenantKey || 'senlysh'}/login`
+    redirectUrl = tenantKey ? `/${tenantKey}` : '/'
   }
   
   console.log('[Signout] Redirecting to:', redirectUrl, 'isAdmin:', isAdminSignout)
-  
-  return NextResponse.json({ 
-    success: true, 
-    redirectUrl 
-  }, {
-    status: 200
-  })
+
+  const acceptHeader = request.headers.get('accept') || ''
+  const requestedWith = request.headers.get('x-requested-with') || ''
+  const prefersJson = acceptHeader.includes('application/json') || requestedWith.toLowerCase() === 'xmlhttprequest'
+
+  if (prefersJson) {
+    return NextResponse.json(
+      {
+        success: true,
+        redirectUrl,
+      },
+      {
+        status: 200,
+      }
+    )
+  }
+
+  return NextResponse.redirect(new URL(redirectUrl, request.url), { status: 303 })
 }
 
 

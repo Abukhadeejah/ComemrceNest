@@ -1,34 +1,75 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
 import { getAuthenticatedUserId } from '@/server/auth'
+import { resolveTenantIdFromRequest } from '@/server/tenant'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 
-export async function GET(request: NextRequest) {
+type OrderItemRow = {
+  id: string
+  order_id: string
+  product_id: string
+  quantity: number
+  unit_price_cents: number | null
+  subtotal_cents: number | null
+}
+
+export async function GET() {
   try {
-    const customerId = await getAuthenticatedUserId()
+    const userId = await getAuthenticatedUserId()
     
-    if (!customerId) {
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    const tenantId = request.headers.get('x-tenant-id') || 'senlysh'
 
-    console.log('[Orders API] Request from:', customerId, 'tenant:', tenantId)
+    const tenantId = await resolveTenantIdFromRequest()
+    if (!tenantId) {
+      return NextResponse.json({ error: 'Tenant context required' }, { status: 400 })
+    }
 
-    // First, ensure customer exists and is linked properly
+    const cookieStore = await cookies()
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value
+          },
+          set() {},
+          remove() {},
+        },
+      }
+    )
+
+    const { data: { user } } = await supabase.auth.getUser()
+    const userEmail = user?.email || null
+
+    console.log('[Orders API] Request from user:', userId, 'tenant:', tenantId)
+
+    // Resolve customer by authenticated user linkage
     const { data: customer, error: customerError } = await supabaseAdmin
       .from('customers')
       .select('id, email')
-      .eq('id', customerId)
-      .single()
+      .eq('tenant_id', tenantId)
+      .eq('user_id', userId)
+      .maybeSingle()
 
-    if (customerError || !customer) {
-      console.error('[GET /api/customers/orders] Customer not found:', customerError)
-      return NextResponse.json({ error: 'Customer not found' }, { status: 404 })
+    if (customerError) {
+      console.error('[GET /api/customers/orders] Customer lookup failed:', customerError)
+      return NextResponse.json({ error: 'Failed to resolve customer' }, { status: 500 })
     }
 
-    console.log('[Orders API] Customer found:', customer.email)
+    const matchedCustomerId = customer?.id || null
+    const matchedEmail = customer?.email || userEmail
+
+    if (!matchedCustomerId && !matchedEmail) {
+      console.warn('[Orders API] No customer/email mapping found, returning empty orders', { userId, tenantId })
+      return NextResponse.json({ success: true, orders: [] })
+    }
 
     // Fetch orders with basic schema (avoiding missing columns)
-    const { data: orders, error } = await supabaseAdmin
+    let ordersQuery = supabaseAdmin
       .from('orders')
       .select(`
         id,
@@ -41,8 +82,17 @@ export async function GET(request: NextRequest) {
         currency,
         customer_id
       `)
-      .or(`customer_id.eq.${customerId},email.eq.${customer.email}`)
-      .order('created_at', { ascending: false })
+      .eq('tenant_id', tenantId)
+
+    if (matchedCustomerId && matchedEmail) {
+      ordersQuery = ordersQuery.or(`customer_id.eq.${matchedCustomerId},email.eq.${matchedEmail}`)
+    } else if (matchedCustomerId) {
+      ordersQuery = ordersQuery.eq('customer_id', matchedCustomerId)
+    } else if (matchedEmail) {
+      ordersQuery = ordersQuery.eq('email', matchedEmail)
+    }
+
+    const { data: orders, error } = await ordersQuery.order('created_at', { ascending: false })
 
     if (error) {
       console.error('[GET /api/customers/orders] Database error:', error)
@@ -53,7 +103,7 @@ export async function GET(request: NextRequest) {
 
     // Get order items separately
     const orderIds = orders?.map(order => order.id) || []
-    let orderItems: any[] = []
+    let orderItems: OrderItemRow[] = []
     
     if (orderIds.length > 0) {
       const { data: items } = await supabaseAdmin

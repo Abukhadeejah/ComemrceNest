@@ -79,17 +79,16 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
                       try {
                         const response = await fetch('/api/auth/signout', {
                           method: 'POST',
-                          credentials: 'include'
+                          credentials: 'include',
+                          headers: {
+                            accept: 'application/json',
+                          },
                         })
-                        const data = await response.json()
-                        if (data.redirectUrl) {
-                          window.location.href = data.redirectUrl
-                        } else {
-                          window.location.href = '/login'
-                        }
+                        const data = await response.json().catch(() => null)
+                        window.location.href = data?.redirectUrl || '/'
                       } catch (error) {
                         console.error('Signout error:', error)
-                        window.location.href = '/login'
+                        window.location.href = '/'
                       }
                     }}
                     className={`${active ? 'bg-gray-50' : ''} block w-full text-left px-4 py-2 text-sm text-gray-900`}
