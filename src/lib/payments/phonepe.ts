@@ -1,7 +1,7 @@
 // PhonePe Payment Gateway - SDK Implementation
 import crypto from 'crypto';
 import { supabaseAdmin } from '@/server/supabaseAdmin';
-import { phonepeClient, phonepeConfig, legacyPhonepeConfig } from '@/config/phonepe';
+import { getPhonePeClient, phonepeConfig, legacyPhonepeConfig } from '@/config/phonepe';
 import { StandardCheckoutPayRequest } from 'pg-sdk-node';
 
 export interface PhonePeConfig {
@@ -71,6 +71,8 @@ export async function createPhonePePayment(
     throw new Error('PhonePe credentials not configured in environment variables');
   }
 
+  const sdkClient = getPhonePeClient();
+
   const resolvedBaseUrl = resolvePhonePeRedirectBaseUrl(redirectBaseUrl);
 
   // Create SDK payment request using builder pattern
@@ -91,7 +93,7 @@ export async function createPhonePePayment(
 
   // Use SDK to create payment
   try {
-    const response = await phonepeClient.pay(payRequest);
+    const response = await sdkClient.pay(payRequest);
     
     console.log('PhonePe SDK Response:', {
       orderId: response.orderId,
@@ -156,6 +158,8 @@ export async function checkPhonePePaymentStatus(
   merchantTransactionId: string,
   config?: PhonePeConfig // Made optional since we now use SDK
 ): Promise<any> {
+  const sdkClient = getPhonePeClient();
+
   console.log('PhonePe SDK Status Check:', {
     merchantId: phonepeConfig.merchantId,
     merchantTransactionId,
@@ -164,7 +168,7 @@ export async function checkPhonePePaymentStatus(
 
   try {
     // Use SDK to check payment status
-    const response = await phonepeClient.getOrderStatus(merchantTransactionId);
+    const response = await sdkClient.getOrderStatus(merchantTransactionId);
 
     console.log('PhonePe SDK Status Response:', {
       orderId: response.orderId,

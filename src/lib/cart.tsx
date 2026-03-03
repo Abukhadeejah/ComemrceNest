@@ -160,9 +160,14 @@ function mergeCartItems(primary: CartItem[], secondary: CartItem[]): CartItem[] 
   secondary.forEach((incoming) => {
     const idx = merged.findIndex((existing) => isSameCartLine(existing, incoming))
     if (idx >= 0) {
+      const existingQty = Number(merged[idx].quantity) || 0
+      const incomingQty = Number(incoming.quantity) || 0
       merged[idx] = {
         ...merged[idx],
-        quantity: (Number(merged[idx].quantity) || 0) + (Number(incoming.quantity) || 0),
+        ...incoming,
+        id: merged[idx].id || incoming.id || `cart_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        price: Number(incoming.price ?? merged[idx].price) || 0,
+        quantity: Math.max(existingQty, incomingQty),
       }
       return
     }

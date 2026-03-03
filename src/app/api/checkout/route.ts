@@ -102,6 +102,63 @@ async function calculateCartTotals(tenantId: string, items: CheckoutItem[]) {
   };
 }
 
+async function resolveOrderCustomerId(
+  tenantId: string,
+  providedCustomerId: string | undefined,
+  customerEmail: string,
+  providerLabel: 'PhonePe' | 'Razorpay'
+): Promise<string | null> {
+  const normalizedProvidedId = providedCustomerId?.trim();
+
+  if (normalizedProvidedId) {
+    const { data: customerById, error: customerByIdError } = await supabaseAdmin
+      .from('customers')
+      .select('id')
+      .eq('id', normalizedProvidedId)
+      .eq('tenant_id', tenantId)
+      .maybeSingle();
+
+    if (!customerByIdError && customerById?.id) {
+      return customerById.id;
+    }
+
+    console.warn(`[${providerLabel}] Provided customerId is not a valid tenant customer, falling back to email lookup`, {
+      tenantId,
+      customerId: normalizedProvidedId,
+      error: customerByIdError?.message,
+    });
+  }
+
+  if (!customerEmail || customerEmail === 'guest@example.com') {
+    return null;
+  }
+
+  console.log(`[${providerLabel}] Looking up customer by email:`, customerEmail);
+  const { data: customerByEmail, error: customerByEmailError } = await supabaseAdmin
+    .from('customers')
+    .select('id')
+    .eq('email', customerEmail)
+    .eq('tenant_id', tenantId)
+    .maybeSingle();
+
+  if (!customerByEmailError && customerByEmail?.id) {
+    console.log(`[${providerLabel}] Found customer ID:`, customerByEmail.id);
+    return customerByEmail.id;
+  }
+
+  if (customerByEmailError) {
+    console.warn(`[${providerLabel}] Customer email lookup failed`, {
+      tenantId,
+      customerEmail,
+      error: customerByEmailError.message,
+    });
+  } else {
+    console.warn(`[${providerLabel}] No customer found for email:`, customerEmail);
+  }
+
+  return null;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const resolvedTenantId = await resolveTenantIdFromRequest();
@@ -235,11 +292,19 @@ async function handlePhonePeCheckout(
   // Check if SDK credentials are configured
   const clientId = process.env.PHONEPE_CLIENT_ID;
   const clientSecret = process.env.PHONEPE_CLIENT_SECRET;
+  const merchantId = process.env.PHONEPE_MERCHANT_ID;
   
-  if (!clientId || !clientSecret || clientId.includes('TODO') || clientSecret.includes('TODO')) {
+  if (
+    !clientId ||
+    !clientSecret ||
+    !merchantId ||
+    clientId.includes('TODO') ||
+    clientSecret.includes('TODO') ||
+    merchantId.includes('TODO')
+  ) {
     return NextResponse.json({ 
       error: 'phonepe_sdk_credentials_not_configured',
-      message: 'Please configure PHONEPE_CLIENT_ID and PHONEPE_CLIENT_SECRET in environment variables'
+      message: 'Please configure PHONEPE_CLIENT_ID, PHONEPE_CLIENT_SECRET, and PHONEPE_MERCHANT_ID in environment variables'
     }, { status: 500 });
   }
 
@@ -252,25 +317,7 @@ async function handlePhonePeCheckout(
   const totalAfterDiscount = Math.max(0, originalTotalCents - discountCents);
   const cashPaidCents = Math.max(0, totalAfterDiscount - walletUsedCents);
 
-  // Get customer ID - try from body first, then lookup by email
-  let customerId = body.customerId;
-  
-  if (!customerId && customerEmail && customerEmail !== 'guest@example.com') {
-    console.log('[PhonePe] Looking up customer by email:', customerEmail);
-    const { data: customer } = await supabaseAdmin
-      .from('customers')
-      .select('id')
-      .eq('email', customerEmail)
-      .eq('tenant_id', tenantId)
-      .single();
-    
-    if (customer) {
-      customerId = customer.id;
-      console.log('[PhonePe] Found customer ID:', customerId);
-    } else {
-      console.warn('[PhonePe] No customer found for email:', customerEmail);
-    }
-  }
+  const customerId = await resolveOrderCustomerId(tenantId, body.customerId, customerEmail, 'PhonePe');
 
   console.log('PhonePe Order Creation:', {
     orderId,
@@ -454,25 +501,7 @@ async function handleRazorpayCheckout(
   const totalAfterDiscount = Math.max(0, originalTotalCents - discountCents);
   const cashPaidCents = Math.max(0, totalAfterDiscount - walletUsedCents);
 
-  // Get customer ID - try from body first, then lookup by email
-  let customerId = body.customerId;
-  
-  if (!customerId && customerEmail && customerEmail !== 'guest@example.com') {
-    console.log('[Razorpay] Looking up customer by email:', customerEmail);
-    const { data: customer } = await supabaseAdmin
-      .from('customers')
-      .select('id')
-      .eq('email', customerEmail)
-      .eq('tenant_id', tenantId)
-      .single();
-    
-    if (customer) {
-      customerId = customer.id;
-      console.log('[Razorpay] Found customer ID:', customerId);
-    } else {
-      console.warn('[Razorpay] No customer found for email:', customerEmail);
-    }
-  }
+  const customerId = await resolveOrderCustomerId(tenantId, body.customerId, customerEmail, 'Razorpay');
 
   // Create Razorpay order
   const rzpOrder = await razorpay.orders.create({

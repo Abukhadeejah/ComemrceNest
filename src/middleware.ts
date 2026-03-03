@@ -13,7 +13,10 @@ export function middleware(request: NextRequest) {
 
   // Known global routes that skip tenant logic
   const globalRoutes = new Set(['/login', '/checkout', '/cart']);
-  const isGlobalRoute = globalRoutes.has(pathname);
+  const isGlobalRoute =
+    globalRoutes.has(pathname) ||
+    pathname.startsWith('/checkout/') ||
+    pathname.startsWith('/cart/');
 
   const isAdminRoute = pathname === '/admin' || pathname.startsWith('/admin/');
 
@@ -142,7 +145,12 @@ export function middleware(request: NextRequest) {
       return response;
     }
 
-    if (pathname === `/${tenantFromPath}/checkout` || pathname === `/${tenantFromPath}/cart`) {
+    if (
+      pathname === `/${tenantFromPath}/checkout` ||
+      pathname === `/${tenantFromPath}/cart` ||
+      pathname.startsWith(`/${tenantFromPath}/checkout/`) ||
+      pathname.startsWith(`/${tenantFromPath}/cart/`)
+    ) {
       const globalTarget = `/${segments.slice(1).join('/')}`;
       const response = NextResponse.rewrite(new URL(globalTarget, request.url), { request: { headers } });
       response.headers.set('x-pathname', pathname);

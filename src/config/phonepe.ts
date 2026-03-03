@@ -1,30 +1,37 @@
 import { StandardCheckoutClient, Env } from 'pg-sdk-node';
 
-function requiredEnv(name: string): string {
-  const value = process.env[name]?.trim();
-  if (!value) {
-    throw new Error(`Missing required PhonePe environment variable: ${name}`);
-  }
-  return value;
-}
-
 const rawEnv = (process.env.PHONEPE_ENV || 'SANDBOX').trim().toUpperCase();
-
-const clientId = requiredEnv('PHONEPE_CLIENT_ID');
-const clientSecret = requiredEnv('PHONEPE_CLIENT_SECRET');
+const clientId = process.env.PHONEPE_CLIENT_ID?.trim() || '';
+const clientSecret = process.env.PHONEPE_CLIENT_SECRET?.trim() || '';
 const clientVersion = parseInt(process.env.PHONEPE_CLIENT_VERSION || '1', 10);
-const merchantId = requiredEnv('PHONEPE_MERCHANT_ID');
+const merchantId = process.env.PHONEPE_MERCHANT_ID?.trim() || '';
 
 // Map environment string to SDK Env enum
 const env = ['PRODUCTION', 'PROD', 'LIVE'].includes(rawEnv) ? Env.PRODUCTION : Env.SANDBOX;
 
-// Initialize PhonePe SDK client
-export const phonepeClient = StandardCheckoutClient.getInstance(
-  clientId,
-  clientSecret,
-  clientVersion,
-  env
-);
+let clientInstance: ReturnType<typeof StandardCheckoutClient.getInstance> | null = null;
+
+export function getPhonePeClient() {
+  if (!clientId || !clientSecret) {
+    throw new Error('Missing PHONEPE_CLIENT_ID or PHONEPE_CLIENT_SECRET');
+  }
+
+  if (!clientInstance) {
+    clientInstance = StandardCheckoutClient.getInstance(
+      clientId,
+      clientSecret,
+      clientVersion,
+      env
+    );
+  }
+
+  return clientInstance;
+}
+
+// Backward-compatible export used by existing imports
+export const phonepeClient = clientId && clientSecret
+  ? getPhonePeClient()
+  : null;
 
 export const phonepeConfig = {
   merchantId,
