@@ -13,8 +13,32 @@ interface RouteParams {
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params
-    const body = await request.json()
-    const { name, phone, line1, line2, city, state, pincode, country, isDefault } = body
+    const body = await request.json() as {
+      name?: string
+      full_name?: string
+      phone?: string
+      line1?: string
+      address_line_1?: string
+      line2?: string
+      address_line_2?: string
+      city?: string
+      state?: string
+      pincode?: string
+      postal_code?: string
+      country?: string
+      isDefault?: boolean
+      is_default?: boolean
+    }
+
+    const name = (body.name ?? body.full_name ?? '').trim()
+    const phone = (body.phone ?? '').trim()
+    const line1 = (body.line1 ?? body.address_line_1 ?? '').trim()
+    const line2 = (body.line2 ?? body.address_line_2 ?? '').trim()
+    const city = (body.city ?? '').trim()
+    const state = (body.state ?? '').trim()
+    const pincode = String(body.pincode ?? body.postal_code ?? '').trim()
+    const country = (body.country ?? 'IN').trim() || 'IN'
+    const isDefault = Boolean(body.isDefault ?? body.is_default ?? false)
 
     // Validate required fields
     if (!line1 || !city || !state || !pincode) {

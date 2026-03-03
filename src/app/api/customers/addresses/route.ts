@@ -104,8 +104,23 @@ export async function GET() {
 // Create new address
 export async function POST(request: NextRequest) {
   try {
-    const body: AddressCreateRequest = await request.json()
-    const { name, phone, line1, line2, city, state, pincode, country = 'IN', isDefault = false } = body
+    const body = await request.json() as AddressCreateRequest & {
+      full_name?: string
+      address_line_1?: string
+      address_line_2?: string
+      postal_code?: string
+      is_default?: boolean
+    }
+
+    const name = (body.name ?? body.full_name ?? '').trim()
+    const phone = (body.phone ?? '').trim()
+    const line1 = (body.line1 ?? body.address_line_1 ?? '').trim()
+    const line2 = (body.line2 ?? body.address_line_2 ?? '').trim()
+    const city = (body.city ?? '').trim()
+    const state = (body.state ?? '').trim()
+    const pincode = String(body.pincode ?? body.postal_code ?? '').trim()
+    const country = (body.country ?? 'IN').trim() || 'IN'
+    const isDefault = Boolean(body.isDefault ?? body.is_default ?? false)
 
     // Validate required fields
     if (!line1 || !city || !state || !pincode) {
