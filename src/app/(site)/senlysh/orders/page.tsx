@@ -315,7 +315,12 @@ export default function OrdersPage() {
                           View Details
                         </Link>
                         {order.status === 'paid' && (
-                          <button className="text-gray-600 hover:text-gray-800 text-sm font-medium">
+                          <button
+                            onClick={() => {
+                              window.open(`/api/customers/orders/${order.order_number}/invoice`, '_blank')
+                            }}
+                            className="text-gray-600 hover:text-gray-800 text-sm font-medium"
+                          >
                             Download Invoice
                           </button>
                         )}

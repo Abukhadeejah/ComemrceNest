@@ -82,13 +82,16 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
                           credentials: 'include',
                           headers: {
                             accept: 'application/json',
+                            'content-type': 'application/json',
+                            'x-signout-context': 'admin',
                           },
+                          body: JSON.stringify({ context: 'admin', redirectTo: '/login' }),
                         })
                         const data = await response.json().catch(() => null)
-                        window.location.href = data?.redirectUrl || '/'
+                        window.location.href = data?.redirectUrl || '/login'
                       } catch (error) {
                         console.error('Signout error:', error)
-                        window.location.href = '/'
+                        window.location.href = '/login'
                       }
                     }}
                     className={`${active ? 'bg-gray-50' : ''} block w-full text-left px-4 py-2 text-sm text-gray-900`}

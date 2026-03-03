@@ -247,7 +247,7 @@ export default function Header() {
                         Settings
                       </div>
                     </Link>
-                    <form action="/api/auth/signout" method="post" className="block">
+                    <form action="/api/auth/signout?context=storefront&redirectTo=/senlysh/login" method="post" className="block">
                       <button 
                         type="submit" 
                         className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-600"
