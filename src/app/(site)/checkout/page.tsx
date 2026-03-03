@@ -560,7 +560,7 @@ export default function CheckoutPage() {
         setMessage(
           `Payment successful! ID: ${response.razorpay_payment_id}. Redirecting...`
         )
-        window.location.href = `/orders/${orderId}`
+        window.location.href = tenantKey ? `/${tenantKey}/orders` : '/senlysh/orders'
       }
     }
 
@@ -568,7 +568,7 @@ export default function CheckoutPage() {
     
     razorpay.on('payment.failed', function(response) {
       setMessage(`Payment failed: ${response.error.description}`)
-      setBusy(false)
+      window.location.href = tenantKey ? `/${tenantKey}/orders` : '/senlysh/orders'
     })
     
     razorpay.open()

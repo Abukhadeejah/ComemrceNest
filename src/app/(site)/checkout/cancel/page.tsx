@@ -1,14 +1,57 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useSearchParams } from 'next/navigation'
 import { Playfair_Display } from 'next/font/google'
 
 const playfair = Playfair_Display({ subsets: ['latin'], weight: ['700', '800', '900'] })
 
+function getOrdersPath(): string {
+  if (typeof window !== 'undefined') {
+    const pathSegments = window.location.pathname.split('/').filter(Boolean)
+    if (pathSegments.length > 0 && (pathSegments[0] === 'bluebell' || pathSegments[0] === 'senlysh')) {
+      return `/${pathSegments[0]}/orders`
+    }
+
+    const cookies = document.cookie || ''
+    const tenantCookie = /(?:^|; )tenant=([^;]+)/.exec(cookies)?.[1]
+    if (tenantCookie === 'bluebell' || tenantCookie === 'senlysh') {
+      return `/${tenantCookie}/orders`
+    }
+  }
+
+  return '/senlysh/orders'
+}
+
 export default function CheckoutCancelPage() {
+  const router = useRouter()
   const searchParams = useSearchParams()
   const orderId = searchParams.get('orderId')
+  const [redirectSeconds, setRedirectSeconds] = useState(5)
+  const ordersPath = getOrdersPath()
+
+  useEffect(() => {
+    if (!orderId) return
+
+    fetch(`/api/orders/${orderId}/verify-payment`, { method: 'POST' }).catch(() => null)
+  }, [orderId])
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRedirectSeconds((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval)
+          router.push(ordersPath)
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    return () => clearInterval(interval)
+  }, [router, ordersPath])
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center">
@@ -23,6 +66,9 @@ export default function CheckoutCancelPage() {
           <p className="text-gray-600 mb-6">
             Your payment was cancelled. No amount has been charged.
           </p>
+          <p className="text-sm text-gray-500 mb-6">
+            Redirecting to your orders in {redirectSeconds}s...
+          </p>
           {orderId && (
             <div className="bg-gray-50 rounded-lg p-4 mb-6">
               <p className="text-sm text-gray-600 mb-1">Order ID</p>
@@ -31,10 +77,10 @@ export default function CheckoutCancelPage() {
           )}
           <div className="space-y-3">
             <Link
-              href="/checkout"
+              href={ordersPath}
               className="block w-full bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors"
             >
-              Try Payment Again
+              View My Orders
             </Link>
             <Link
               href="/cart"

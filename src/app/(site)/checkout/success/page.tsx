@@ -7,6 +7,23 @@ import { Playfair_Display } from 'next/font/google';
 
 const playfair = Playfair_Display({ subsets: ['latin'], weight: ['700', '800', '900'] });
 
+function getOrdersPath(): string {
+  if (typeof window !== 'undefined') {
+    const pathSegments = window.location.pathname.split('/').filter(Boolean)
+    if (pathSegments.length > 0 && (pathSegments[0] === 'bluebell' || pathSegments[0] === 'senlysh')) {
+      return `/${pathSegments[0]}/orders`
+    }
+
+    const cookies = document.cookie || ''
+    const tenantCookie = /(?:^|; )tenant=([^;]+)/.exec(cookies)?.[1]
+    if (tenantCookie === 'bluebell' || tenantCookie === 'senlysh') {
+      return `/${tenantCookie}/orders`
+    }
+  }
+
+  return '/senlysh/orders'
+}
+
 export default function CheckoutSuccessPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -14,6 +31,7 @@ export default function CheckoutSuccessPage() {
   const [status, setStatus] = useState<'loading' | 'success' | 'failed'>('loading');
   const [verificationAttempted, setVerificationAttempted] = useState(false);
   const [redirectSeconds, setRedirectSeconds] = useState<number | null>(null);
+  const ordersPath = getOrdersPath();
 
   useEffect(() => {
     if (!orderId) {
@@ -22,12 +40,11 @@ export default function CheckoutSuccessPage() {
     }
 
     let attempts = 0;
-    const maxAttempts = 5; // Reduced from 10
+    const maxAttempts = 8;
     let verifyAttempted = false;
     
     const checkStatus = async () => {
       try {
-        // First, check if webhook already updated the order
         const res = await fetch(`/api/orders/${orderId}/status`);
         if (res.ok) {
           const data = await res.json();
@@ -83,21 +100,20 @@ export default function CheckoutSuccessPage() {
       attempts++;
       const done = await checkStatus();
       
-      // After 5 attempts (5 seconds), try direct PhonePe verification
-      if (!done && attempts >= maxAttempts && !verifyAttempted) {
-        console.log('[CheckoutSuccess] Polling timeout, attempting PhonePe verification...');
-        clearInterval(pollInterval);
-        
+      // Periodically verify directly so status/cashback gets finalized quickly
+      if (!done && !verifyAttempted && attempts >= 3) {
         const verified = await verifyWithPhonePe();
-        if (!verified) {
-          // If verification also fails, assume success (payment page showed success)
-          console.log('[CheckoutSuccess] Verification inconclusive, assuming success');
-          setStatus('success');
+        if (verified) {
+          clearInterval(pollInterval);
+          return;
         }
-      } else if (done || attempts >= maxAttempts * 2) {
+      }
+
+      if (done || attempts >= maxAttempts) {
         clearInterval(pollInterval);
         if (!done) {
-          setStatus('success'); // Fallback
+          // Do not assume success silently; route user to orders where final status can be tracked
+          setStatus('failed');
         }
       }
     }, 1000);
@@ -117,7 +133,7 @@ export default function CheckoutSuccessPage() {
         if (prev === null) return null;
         if (prev <= 1) {
           clearInterval(interval);
-          router.push(`/orders/${orderId}`);
+          router.push(ordersPath);
           return 0;
         }
         return prev - 1;
@@ -125,7 +141,7 @@ export default function CheckoutSuccessPage() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [status, orderId, router]);
+  }, [status, orderId, router, ordersPath]);
 
   if (status === 'loading') {
     return (
@@ -155,18 +171,18 @@ export default function CheckoutSuccessPage() {
             </div>
             <h1 className={`${playfair.className} text-3xl font-bold text-gray-900 mb-4`}>Payment Failed</h1>
             <p className="text-gray-600 mb-6">
-              We couldn't process your payment. Please try again or contact support if the issue persists.
+              We could not process your payment. Please try again or contact support if the issue persists.
             </p>
             {orderId && (
               <p className="text-sm text-gray-500 mb-6">
-                Redirecting to your order details in {redirectSeconds ?? 5}s...
+                Redirecting to your orders in {redirectSeconds ?? 5}s...
               </p>
             )}
             <Link
-              href="/checkout"
+              href={ordersPath}
               className="inline-block bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors"
             >
-              Try Again
+              View My Orders
             </Link>
           </div>
         </div>
@@ -189,7 +205,7 @@ export default function CheckoutSuccessPage() {
           </p>
           {orderId && (
             <p className="text-sm text-gray-500 mb-6">
-              Redirecting to your order details in {redirectSeconds ?? 5}s...
+              Redirecting to your orders in {redirectSeconds ?? 5}s...
             </p>
           )}
           {orderId && (
@@ -200,10 +216,10 @@ export default function CheckoutSuccessPage() {
           )}
           <div className="space-y-3">
             <Link
-              href={`/orders/${orderId}`}
+              href={ordersPath}
               className="block w-full bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors"
             >
-              View Order Details
+              View My Orders
             </Link>
             <Link
               href="/senlysh/products"

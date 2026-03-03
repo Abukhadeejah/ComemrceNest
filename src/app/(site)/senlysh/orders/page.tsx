@@ -15,18 +15,73 @@ interface Order {
   cashback_pct: number
   payment_provider: string
   created_at: string
-  items: any[]
+  items: Array<{
+    quantity: number
+    total_price: number
+    product?: {
+      name?: string
+    }
+  }>
 }
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [verifyingOrders, setVerifyingOrders] = useState<Set<string>>(new Set())
   const router = useRouter()
 
   useEffect(() => {
     loadOrders()
   }, [])
+
+  useEffect(() => {
+    if (!orders.length) return
+
+    const isRecentPendingOrder = (order: Order) => {
+      if (order.status !== 'pending') return false
+      const createdAt = new Date(order.created_at).getTime()
+      if (Number.isNaN(createdAt)) return false
+      const ageMs = Date.now() - createdAt
+      return ageMs >= 0 && ageMs <= 15 * 60 * 1000
+    }
+
+    const pendingRecentOrders = orders.filter(isRecentPendingOrder)
+    if (pendingRecentOrders.length === 0) return
+
+    const processPendingOrders = async () => {
+      await Promise.all(
+        pendingRecentOrders.map(async (order) => {
+          if (verifyingOrders.has(order.order_number)) return
+
+          setVerifyingOrders((prev) => {
+            const next = new Set(prev)
+            next.add(order.order_number)
+            return next
+          })
+
+          try {
+            await fetch(`/api/orders/${order.order_number}/verify-payment`, {
+              method: 'POST',
+              credentials: 'include',
+            })
+          } catch {
+            // Ignore transient verification errors; user can still refresh.
+          } finally {
+            setVerifyingOrders((prev) => {
+              const next = new Set(prev)
+              next.delete(order.order_number)
+              return next
+            })
+          }
+        })
+      )
+
+      await loadOrders()
+    }
+
+    processPendingOrders()
+  }, [orders])
 
   const loadOrders = async () => {
     try {
@@ -84,6 +139,14 @@ export default function OrdersPage() {
       case 'failed': return 'bg-red-100 text-red-800'
       default: return 'bg-gray-100 text-gray-800'
     }
+  }
+
+  const isRecentPendingOrder = (order: Order) => {
+    if (order.status !== 'pending') return false
+    const createdAt = new Date(order.created_at).getTime()
+    if (Number.isNaN(createdAt)) return false
+    const ageMs = Date.now() - createdAt
+    return ageMs >= 0 && ageMs <= 15 * 60 * 1000
   }
 
   const getCashbackStatus = (order: Order) => {
@@ -146,7 +209,7 @@ export default function OrdersPage() {
               </svg>
             </div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">No orders yet</h3>
-            <p className="text-gray-500 mb-4">When you place orders, they'll appear here.</p>
+            <p className="text-gray-500 mb-4">When you place orders, they will appear here.</p>
             <Link 
               href="/senlysh/products"
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
@@ -181,6 +244,15 @@ export default function OrdersPage() {
                         {order.status.toUpperCase()}
                       </span>
                     </div>
+
+                    {isRecentPendingOrder(order) && (
+                      <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-blue-50 text-blue-700 px-3 py-1 text-xs font-medium">
+                        <span className="inline-block h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+                        {verifyingOrders.has(order.order_number)
+                          ? 'Verifying payment and cashback...'
+                          : 'Payment verification in progress'}
+                      </div>
+                    )}
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                       <div>
