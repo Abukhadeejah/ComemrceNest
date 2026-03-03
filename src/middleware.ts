@@ -90,7 +90,8 @@ export function middleware(request: NextRequest) {
   }
 
   // If tenant found from host and not in path, rewrite to add tenant prefix
-  if (tenantFromHost && !tenantFromPath && !isGlobalRoute) {
+  // Keep /admin routes in the global admin flow to preserve correct admin auth/login behavior.
+  if (tenantFromHost && !tenantFromPath && !isGlobalRoute && !isAdminRoute) {
     const targetPath = pathname === '/' ? `/${tenantFromHost}` : `/${tenantFromHost}${pathname}`;
     const response = NextResponse.rewrite(new URL(targetPath, request.url), { request: { headers } });
     response.headers.set('x-pathname', targetPath);
@@ -111,12 +112,13 @@ export function middleware(request: NextRequest) {
   if (isAdminRoute) {
     const cookieHeader = request.headers.get('cookie') || '';
     const hasAuthCookie = /sb-.*-auth-token/.test(cookieHeader);
+    const cookieTenant = request.cookies.get('tenant')?.value;
 
     // For admin routes, prefer tenant from host, then cookie, then default
     const inferredTenant = tenantFromHost && knownTenants.has(tenantFromHost)
       ? tenantFromHost
-      : (request.cookies.get('tenant')?.value && knownTenants.has(request.cookies.get('tenant')?.value!))
-        ? request.cookies.get('tenant')?.value!
+      : (cookieTenant && knownTenants.has(cookieTenant))
+        ? cookieTenant
         : 'senlysh'; // Default to senlysh for production
 
     headers.set('x-tenant-admin', inferredTenant);
