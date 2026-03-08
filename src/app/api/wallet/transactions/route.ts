@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
+import { creditDueCashbackForCustomer } from '@/lib/cashback/cashbackService'
 
 export async function GET(request: NextRequest) {
   try {
@@ -29,6 +30,12 @@ export async function GET(request: NextRequest) {
         { error: 'Customer ID is required' },
         { status: 400 }
       )
+    }
+
+    try {
+      await creditDueCashbackForCustomer(customerId, tenantId)
+    } catch (error) {
+      console.error('[GET /api/wallet/transactions] Failed to process due cashback credits:', error)
     }
     
     // Get wallet account ID

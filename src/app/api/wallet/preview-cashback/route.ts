@@ -38,7 +38,8 @@ export async function POST(request: NextRequest) {
       totalSalePriceCents,
       totalPurchasePriceCents,
       walletUsedCents,
-      cashPaidCents
+      cashPaidCents,
+      gstAmountCents
     } = body
     
     // Preview cashback
@@ -48,7 +49,8 @@ export async function POST(request: NextRequest) {
       totalSalePriceCents,
       totalPurchasePriceCents,
       walletUsedCents,
-      cashPaidCents
+      cashPaidCents,
+      typeof gstAmountCents === 'number' ? gstAmountCents : 0
     )
     
     return NextResponse.json(preview)

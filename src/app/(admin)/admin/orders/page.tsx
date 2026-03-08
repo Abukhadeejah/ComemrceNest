@@ -39,7 +39,10 @@ export default async function AdminOrders({ searchParams }: AdminOrdersProps) {
           />
         </div>
 
-        <OrderTable orders={orders} />
+        <OrderTable
+          orders={orders}
+          orderBasePath="/admin/orders"
+        />
       </div>
     </div>
   )

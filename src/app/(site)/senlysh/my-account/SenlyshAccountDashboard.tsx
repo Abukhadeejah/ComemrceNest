@@ -345,7 +345,7 @@ export default function SenlyshAccountDashboard({ customer }: SenlyshAccountDash
                             <p className="text-sm text-gray-600">via {order.payment_provider}</p>
                           </div>
                           <Link
-                            href={`/orders/${order.order_number}`}
+                            href={`/orders/${order.id}`}
                             className="text-pink-600 hover:text-pink-700 text-sm font-medium"
                           >
                             View Details →

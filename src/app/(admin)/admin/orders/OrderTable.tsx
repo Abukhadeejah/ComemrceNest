@@ -16,6 +16,17 @@ interface Order {
   cashback_amount_cents?: number
   cashback_pct?: number
   customer_id?: string
+  order_items?: Array<{
+    id: string
+    quantity: number
+    variant?: string | null
+    unit_price_cents?: number
+    subtotal_cents?: number
+    products?: {
+      name?: string
+      sku?: string
+    } | null
+  }>
 }
 
 interface OrderTableProps {
@@ -26,9 +37,13 @@ interface OrderTableProps {
     pageSize: number
     totalPages: number
   }
+  orderBasePath?: string
 }
 
-export function OrderTable({ orders }: OrderTableProps) {
+export function OrderTable({
+  orders,
+  orderBasePath = '/admin/orders'
+}: OrderTableProps) {
   const router = useRouter()
   const [deletingOrderId, setDeletingOrderId] = useState<string | null>(null)
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null)
@@ -245,29 +260,37 @@ export function OrderTable({ orders }: OrderTableProps) {
   }
 
   return (
-    <div className="overflow-hidden">
-      <table className="min-w-full divide-y divide-gray-200">
+    <div>
+      <div className="px-4 pb-2 text-xs text-gray-500">
+        Scroll sideways to view all columns and actions.
+      </div>
+
+      <div className="w-full overflow-x-auto overflow-y-visible [scrollbar-gutter:stable] pb-2">
+        <table className="min-w-[1280px] w-full divide-y divide-gray-200">
         <thead className="bg-gray-50">
           <tr>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Order
             </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Customer
             </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Status
             </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Total
             </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[360px]">
+              Purchased Items
+            </th>
+            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Cashback
             </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Date
             </th>
-            <th scope="col" className="relative px-6 py-3">
+            <th scope="col" className="sticky right-0 z-10 border-l border-gray-200 bg-gray-50 px-4 py-3">
               <span className="sr-only">Actions</span>
             </th>
           </tr>
@@ -275,19 +298,48 @@ export function OrderTable({ orders }: OrderTableProps) {
         <tbody className="bg-white divide-y divide-gray-200">
           {orders.data.map((order) => (
             <tr key={order.id} className="hover:bg-gray-50">
-              <td className="px-6 py-4 whitespace-nowrap">
-                <div className="text-sm font-medium text-gray-900">{order.order_number}</div>
+              <td className="px-4 py-4 whitespace-nowrap align-top">
+                <span className="text-sm font-medium text-gray-900">
+                  {order.order_number}
+                </span>
               </td>
-              <td className="px-6 py-4 whitespace-nowrap">
+              <td className="px-4 py-4 whitespace-nowrap align-top">
                 <div className="text-sm text-gray-900">{order.email}</div>
               </td>
-              <td className="px-6 py-4 whitespace-nowrap">
+              <td className="px-4 py-4 whitespace-nowrap align-top">
                 {getStatusBadge(order.status)}
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+              <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 align-top">
                 {formatCurrency(order.total_cents, order.currency)}
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm">
+              <td className="px-4 py-4 text-sm text-gray-700 align-top">
+                {order.order_items && order.order_items.length > 0 ? (
+                  <div className="space-y-2">
+                    {order.order_items.slice(0, 3).map((item) => (
+                      <div key={item.id} className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2">
+                        <div className="text-sm font-medium text-gray-900 truncate">
+                          {item.products?.name || 'Product'}
+                        </div>
+                        <div className="mt-1 text-xs text-gray-600 flex flex-wrap gap-x-3 gap-y-1">
+                          <span>SKU: {item.products?.sku || '-'}</span>
+                          <span>Variant: {item.variant || '-'}</span>
+                          <span>Qty: {item.quantity}</span>
+                          <span>Unit: {formatCurrency(item.unit_price_cents || 0, order.currency)}</span>
+                          <span className="font-medium text-gray-800">Line: {formatCurrency(item.subtotal_cents || 0, order.currency)}</span>
+                        </div>
+                      </div>
+                    ))}
+                    {order.order_items.length > 3 && (
+                      <div className="text-xs text-gray-500 px-1">
+                        +{order.order_items.length - 3} more items
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <span className="text-gray-400">-</span>
+                )}
+              </td>
+              <td className="px-4 py-4 whitespace-nowrap text-sm align-top">
                 {order.cashback_amount_cents && order.cashback_amount_cents > 0 ? (
                   <div className="text-green-600 font-medium">
                     {formatCurrency(order.cashback_amount_cents, order.currency)}
@@ -301,18 +353,11 @@ export function OrderTable({ orders }: OrderTableProps) {
                   <span className="text-gray-400">-</span>
                 )}
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+              <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 align-top">
                 {formatDate(order.created_at)}
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+              <td className="sticky right-0 z-10 border-l border-gray-200 bg-white px-4 py-4 whitespace-nowrap text-right text-sm font-medium align-top">
                 <div className="flex flex-col space-y-1">
-                  <Link
-                    href={`/admin/orders/${order.id}`}
-                    className="text-blue-600 hover:text-blue-900"
-                  >
-                    View Details
-                  </Link>
-                  
                   {getStatusActions(order).map((action, index) => (
                     <div key={index}>{action}</div>
                   ))}
@@ -332,14 +377,15 @@ export function OrderTable({ orders }: OrderTableProps) {
             </tr>
           ))}
         </tbody>
-      </table>
+        </table>
+      </div>
 
       {/* Pagination */}
       {orders.totalPages > 1 && (
         <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
           <div className="flex-1 flex justify-between sm:hidden">
             <Link
-              href={`/admin/orders?page=${orders.page - 1}`}
+              href={`${orderBasePath}?page=${orders.page - 1}`}
               className={`relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md ${
                 orders.page > 1
                   ? 'bg-white text-gray-700 hover:bg-gray-50'
@@ -349,7 +395,7 @@ export function OrderTable({ orders }: OrderTableProps) {
               Previous
             </Link>
             <Link
-              href={`/admin/orders?page=${orders.page + 1}`}
+              href={`${orderBasePath}?page=${orders.page + 1}`}
               className={`relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md ${
                 orders.page < orders.totalPages
                   ? 'bg-white text-gray-700 hover:bg-gray-50'

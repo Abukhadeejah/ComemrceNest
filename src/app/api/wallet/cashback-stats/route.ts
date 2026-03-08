@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
-import { getCashbackStats, getCashbackHistory } from '@/lib/cashback/cashbackService'
+import { getCashbackStats, getCashbackHistory, creditDueCashbackForCustomer } from '@/lib/cashback/cashbackService'
 
 export async function GET(request: NextRequest) {
   try {
@@ -27,6 +27,12 @@ export async function GET(request: NextRequest) {
         { error: 'Customer ID is required' },
         { status: 400 }
       )
+    }
+
+    try {
+      await creditDueCashbackForCustomer(customerId, tenantId)
+    } catch (error) {
+      console.error('[GET /api/wallet/cashback-stats] Failed to process due cashback credits:', error)
     }
     
     // Get statistics

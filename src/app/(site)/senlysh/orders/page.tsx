@@ -228,7 +228,7 @@ export default function OrdersPage() {
                     <div className="flex justify-between items-start mb-4">
                       <div>
                         <h3 className="text-lg font-semibold text-gray-900">
-                          Order #{order.order_number.slice(-8)}
+                          Order #{order.order_number}
                         </h3>
                         <p className="text-sm text-gray-500">
                           {new Date(order.created_at).toLocaleDateString('en-US', {
@@ -309,7 +309,7 @@ export default function OrdersPage() {
                     <div className="flex justify-between items-center pt-4 border-t">
                       <div className="flex space-x-4">
                         <Link
-                          href={`/orders/${order.order_number}`}
+                          href={`/orders/${order.id}`}
                           className="text-blue-600 hover:text-blue-800 text-sm font-medium"
                         >
                           View Details
@@ -317,7 +317,7 @@ export default function OrdersPage() {
                         {order.status === 'paid' && (
                           <button
                             onClick={() => {
-                              window.open(`/api/customers/orders/${order.order_number}/invoice`, '_blank')
+                              window.open(`/api/orders/${order.id}/invoice`, '_blank')
                             }}
                             className="text-gray-600 hover:text-gray-800 text-sm font-medium"
                           >

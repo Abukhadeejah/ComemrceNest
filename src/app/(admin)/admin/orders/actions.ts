@@ -3,6 +3,8 @@ import { assertTenantAdmin } from '@/server/auth'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
 import { unstable_cache } from 'next/cache'
 
+const GUEST_PLACEHOLDER_EMAIL = 'guest@example.com'
+
 // Internal function for actual database query
 async function _getOrdersFromDB(searchParams: {
   search?: string
@@ -15,8 +17,30 @@ async function _getOrdersFromDB(searchParams: {
 
   let query = supabaseAdmin
     .from('orders')
-    .select('id, order_number, email, total_cents, currency, status, created_at, cashback_amount_cents, cashback_pct, customer_id', { count: 'exact' })
+    .select(`
+      id,
+      order_number,
+      email,
+      total_cents,
+      currency,
+      status,
+      created_at,
+      cashback_amount_cents,
+      cashback_pct,
+      customer_id,
+      order_items (
+        id,
+        quantity,
+        unit_price_cents,
+        subtotal_cents,
+        products (
+          name,
+          sku
+        )
+      )
+    `, { count: 'exact' })
     .eq('tenant_id', tenantId)
+    .neq('email', GUEST_PLACEHOLDER_EMAIL)
 
   // Apply search filter
   if (searchParams.search) {

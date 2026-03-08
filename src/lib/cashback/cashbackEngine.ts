@@ -23,6 +23,7 @@ export interface CashbackCalculationInput {
   totalPurchasePrice: number  // In rupees (not cents)
   walletUsed: number          // In rupees
   cashPaid: number            // In rupees
+  cashbackBaseAmount?: number // In rupees (optional override, e.g. cash paid minus GST)
 }
 
 export interface CashbackResult {
@@ -122,7 +123,7 @@ export function getCashbackSlab(
  *   → Cashback amount = ₹0
  */
 export function calculateCashback(orderData: CashbackCalculationInput): CashbackResult {
-  const { totalSalePrice, totalPurchasePrice, walletUsed, cashPaid } = orderData
+  const { totalSalePrice, totalPurchasePrice, walletUsed, cashPaid, cashbackBaseAmount } = orderData
   
   // Validation
   if (totalSalePrice <= 0) {
@@ -136,6 +137,10 @@ export function calculateCashback(orderData: CashbackCalculationInput): Cashback
   if (walletUsed < 0 || cashPaid < 0) {
     throw new Error('Wallet used and cash paid must be non-negative')
   }
+
+  if (cashbackBaseAmount !== undefined && cashbackBaseAmount < 0) {
+    throw new Error('Cashback base amount must be non-negative')
+  }
   
   const totalPaid = walletUsed + cashPaid
   const tolerance = 0.01 // Allow 1 paisa tolerance for rounding
@@ -143,6 +148,12 @@ export function calculateCashback(orderData: CashbackCalculationInput): Cashback
   if (Math.abs(totalPaid - totalSalePrice) > tolerance) {
     throw new Error(
       `Payment split doesn't match total: wallet(${walletUsed}) + cash(${cashPaid}) = ${totalPaid}, expected ${totalSalePrice}`
+    )
+  }
+
+  if (cashbackBaseAmount !== undefined && cashbackBaseAmount - cashPaid > tolerance) {
+    throw new Error(
+      `Cashback base amount (${cashbackBaseAmount}) cannot be greater than cash paid (${cashPaid})`
     )
   }
   
@@ -165,8 +176,11 @@ export function calculateCashback(orderData: CashbackCalculationInput): Cashback
     s => profitPct >= s.minProfitPct && profitPct <= s.maxProfitPct
   )?.cashbackPct || 0
   
-  // Cashback ONLY on cash paid
-  const cashbackAmount = (cashPaid * cashbackPct) / 100
+  // Cashback base can be overridden (e.g., cash paid minus GST)
+  const cashbackBase = cashbackBaseAmount !== undefined ? cashbackBaseAmount : cashPaid
+
+  // Cashback ONLY on eligible base amount
+  const cashbackAmount = (cashbackBase * cashbackPct) / 100
   
   return {
     profitPct: Math.round(profitPct * 100) / 100,

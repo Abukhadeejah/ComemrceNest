@@ -10,11 +10,27 @@ const playfair = Playfair_Display({ subsets: ['latin'], weight: ['700', '800', '
 interface Order {
   id: string;
   order_number: string;
-  status: 'pending' | 'paid' | 'failed' | 'shipped' | 'delivered';
+  status: 'pending' | 'paid' | 'failed' | 'fulfilled' | 'cancelled';
   total_cents: number;
   payment_provider: string;
   created_at: string;
   email: string;
+  wallet_used?: number;
+  cash_paid?: number;
+  cashback_amount?: number;
+  cashback_pct?: number;
+  item_count?: number;
+  items?: Array<{
+    id: string;
+    quantity: number;
+    total_price: number;
+    product?: {
+      name?: string;
+      variant?: {
+        color?: string;
+      };
+    };
+  }>;
 }
 
 interface CustomerProfile {
@@ -88,10 +104,26 @@ export default function AccountPage() {
       case 'paid': return 'bg-green-100 text-green-800';
       case 'pending': return 'bg-yellow-100 text-yellow-800';
       case 'failed': return 'bg-red-100 text-red-800';
-      case 'shipped': return 'bg-blue-100 text-blue-800';
-      case 'delivered': return 'bg-purple-100 text-purple-800';
+      case 'fulfilled': return 'bg-blue-100 text-blue-800';
+      case 'cancelled': return 'bg-gray-100 text-gray-700';
       default: return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const getCashbackStatus = (order: Order) => {
+    if (order.status !== 'paid') {
+      return { text: 'Payment Pending', color: 'text-yellow-600' };
+    }
+
+    if ((order.cashback_amount || 0) > 0) {
+      return { text: 'Credited', color: 'text-green-600' };
+    }
+
+    if ((order.cash_paid || 0) > 0) {
+      return { text: 'Pending (5 days)', color: 'text-blue-600' };
+    }
+
+    return { text: 'Not Eligible', color: 'text-gray-500' };
   };
 
   const formatDate = (dateString: string) => {
@@ -190,29 +222,99 @@ export default function AccountPage() {
                 ) : (
                   <div className="space-y-4">
                     {orders.map((order) => (
-                      <div key={order.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                        <div className="flex items-center justify-between mb-3">
+                      <div key={order.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow bg-white">
+                        <div className="flex items-center justify-between mb-4">
                           <div>
                             <h4 className="font-semibold text-gray-900">Order #{order.order_number}</h4>
                             <p className="text-sm text-gray-600">{formatDate(order.created_at)}</p>
                           </div>
-                          <div className="text-right">
+                          <div className="text-right space-y-2">
                             <div className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(order.status)}`}>
                               {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                             </div>
+                            <p className={`text-xs font-medium ${getCashbackStatus(order).color}`}>
+                              Cashback: {getCashbackStatus(order).text}
+                            </p>
                           </div>
                         </div>
-                        <div className="flex items-center justify-between">
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                           <div>
+                            <p className="text-sm text-gray-500">Total Amount</p>
                             <p className="text-lg font-semibold text-gray-900">{formatPrice(order.total_cents)}</p>
-                            <p className="text-sm text-gray-600">via {order.payment_provider}</p>
                           </div>
-                          <Link
-                            href={`/orders/${order.order_number}`}
-                            className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-                          >
-                            View Details →
-                          </Link>
+
+                          <div>
+                            <p className="text-sm text-gray-500">Payment Method</p>
+                            <p className="text-sm font-medium text-gray-900 capitalize">{order.payment_provider || 'N/A'}</p>
+                            {(order.wallet_used || 0) > 0 && (
+                              <p className="text-xs text-blue-600 mt-1">Wallet: ₹{(order.wallet_used || 0).toFixed(2)}</p>
+                            )}
+                          </div>
+
+                          <div>
+                            <p className="text-sm text-gray-500">Cashback</p>
+                            {(order.cashback_amount || 0) > 0 ? (
+                              <p className="text-sm font-semibold text-green-600">
+                                +₹{(order.cashback_amount || 0).toFixed(2)}
+                                {(order.cashback_pct || 0) > 0 ? ` (${order.cashback_pct}%)` : ''}
+                              </p>
+                            ) : (
+                              <p className="text-sm text-gray-500">-</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {order.items && order.items.length > 0 && (
+                          <div className="border-t pt-4 mb-4">
+                            <p className="text-sm text-gray-500 mb-2">
+                              Items ({order.item_count || order.items.length})
+                            </p>
+                            <div className="space-y-1">
+                              {order.items.slice(0, 2).map((item) => (
+                                <div key={item.id} className="flex justify-between text-sm text-gray-700">
+                                  <span>
+                                    {item.product?.name || 'Product'} × {item.quantity}
+                                  </span>
+                                  <span>₹{(item.total_price || 0).toFixed(2)}</span>
+                                </div>
+                              ))}
+                              {order.items.length > 2 && (
+                                <p className="text-xs text-gray-500">+{order.items.length - 2} more items</p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="flex items-center justify-between pt-4 border-t">
+                          <div className="flex items-center gap-4">
+                            <Link
+                              href={`/orders/${order.id}`}
+                              className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                            >
+                              View Details
+                            </Link>
+
+                            {(order.status === 'paid' || order.status === 'fulfilled') && (
+                              <a
+                                href={`/api/orders/${order.id}/invoice`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-gray-700 hover:text-gray-900 text-sm font-medium"
+                              >
+                                Download Invoice
+                              </a>
+                            )}
+                          </div>
+
+                          {order.status === 'pending' && (
+                            <Link
+                              href={`/checkout/success?orderId=${order.order_number}`}
+                              className="px-3 py-1.5 rounded-md bg-blue-600 text-white text-sm hover:bg-blue-700"
+                            >
+                              Complete Payment
+                            </Link>
+                          )}
                         </div>
                       </div>
                     ))}

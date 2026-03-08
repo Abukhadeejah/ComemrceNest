@@ -3,6 +3,9 @@ import { OrderTable } from '../../../../(admin)/admin/orders/OrderTable'
 import { OrderFilters } from '../../../../(admin)/admin/orders/OrderFilters'
 
 interface AdminOrdersProps {
+  params: Promise<{
+    tenant: string
+  }>
   searchParams: Promise<{
     search?: string
     status?: string
@@ -10,10 +13,11 @@ interface AdminOrdersProps {
   }>
 }
 
-export default async function AdminOrders({ searchParams }: AdminOrdersProps) {
-  const params = await searchParams
+export default async function AdminOrders({ params, searchParams }: AdminOrdersProps) {
+  const { tenant } = await params
+  const queryParams = await searchParams
   
-  const orders = await getOrders(params)
+  const orders = await getOrders(queryParams)
 
   return (
     <div className="p-6">
@@ -24,12 +28,15 @@ export default async function AdminOrders({ searchParams }: AdminOrdersProps) {
       <div className="bg-white shadow rounded-lg">
         <div className="p-6 border-b border-gray-200">
           <OrderFilters 
-            currentStatus={params.status}
-            currentSearch={params.search}
+            currentStatus={queryParams.status}
+            currentSearch={queryParams.search}
           />
         </div>
 
-        <OrderTable orders={orders} />
+        <OrderTable
+          orders={orders}
+          orderBasePath={`/${tenant}/admin/orders`}
+        />
       </div>
     </div>
   )

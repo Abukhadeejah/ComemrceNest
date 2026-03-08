@@ -18,7 +18,6 @@ export default function RefundAndReturnPolicyPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="container mx-auto px-4 max-w-4xl">
-        {/* Go Back Button */}
         <button
           onClick={handleGoBack}
           className="mb-8 flex items-center gap-2 text-purple-600 hover:text-purple-700 transition-colors duration-200 font-medium"
@@ -27,126 +26,168 @@ export default function RefundAndReturnPolicyPage() {
           <span>Go Back</span>
         </button>
 
-        {/* Page Header */}
         <div className="bg-white rounded-lg shadow-sm p-8 mb-6">
-          <h1 className="text-4xl font-bold text-gray-900">Refund and Return Policy</h1>
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">Return, Exchange & Refund Policy</h1>
+          <p className="text-sm text-gray-600">
+            Version 2.0 | Effective Date: 01 March 2026 | Last Updated: 01 March 2026
+          </p>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm p-8 mb-6 prose prose-gray max-w-none">
-          {/* Cancellation Policy */}
+        <div className="bg-white rounded-lg shadow-sm p-8 prose prose-gray max-w-none">
+          <p className="text-gray-700 leading-relaxed mb-6">
+            This Policy governs purchases on{' '}
+            <Link href="https://senlysh.in" className="text-purple-600 hover:text-purple-700 underline">https://senlysh.in</Link>
+            , operated by MAFIAA WESTERN OUTFIT.
+          </p>
+
           <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-2">Cancellation Policy</h2>
-            <h3 className="font-bold text-gray-900 mb-2">1-Day Cancellation Window</h3>
-            <p>Cancellations will only be considered if the request is made within 1 day of placing the order.</p>
-            <h3 className="font-bold text-gray-900 mt-6 mb-2">Cancellation Restrictions</h3>
-            <p>Cancellation requests may not be entertained if:</p>
-            <ul className="list-disc pl-6">
-              <li>Orders have been communicated to sellers/merchants</li>
-              <li>Sellers have initiated the shipping process</li>
-              <li>The product is out for delivery</li>
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4">1. Order Cancellation Policy</h2>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">1.1 Cancellation Window</h3>
+            <p className="text-gray-700 leading-relaxed mb-3">Orders may be cancelled within 24 hours of placement, only if not processed.</p>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">1.2 Non-Cancellable Orders</h3>
+            <ul className="list-disc pl-6 text-gray-700 space-y-2">
+              <li>Order has been processed or packed</li>
+              <li>Order has been dispatched</li>
+              <li>Shipment is out for delivery</li>
             </ul>
-            <p>In such cases, you may choose to reject the product at the doorstep.</p>
+            <p className="text-gray-700 leading-relaxed mt-3">If refused at delivery, reverse logistics and handling charges may be deducted.</p>
           </section>
 
-          {/* Clothing Exchange and Return Policy */}
           <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-2">Clothing Exchange and Return Policy</h2>
-            <p>
-              Clothing items are eligible for exchange or return only if the request is made within 2 days of delivery.<br />
-              Requests submitted after this period will not be accepted under any circumstances.
-            </p>
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4">2. Exchange Policy (Allowed)</h2>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">2.1 Exchange Window</h3>
+            <p className="text-gray-700 leading-relaxed mb-3">Exchange requests must be raised within 5 days from date of delivery.</p>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">2.2 Exchange Eligibility</h3>
+            <ul className="list-disc pl-6 text-gray-700 space-y-2">
+              <li>Unused, unwashed, unaltered item</li>
+              <li>Original tags intact</li>
+              <li>Original packaging available</li>
+              <li>Invoice available</li>
+              <li>No signs of wear, perfume, stains, or damage</li>
+            </ul>
+            <p className="text-gray-700 leading-relaxed mt-3">Products failing quality inspection will be rejected and returned to the customer.</p>
+            <h3 className="text-lg font-semibold text-gray-900 mt-4 mb-2">2.3 Exchange Conditions</h3>
+            <ul className="list-disc pl-6 text-gray-700 space-y-2">
+              <li>Size issue (subject to stock availability)</li>
+              <li>Verified defect or damage</li>
+              <li>Wrong item received</li>
+              <li>Only one exchange per order is permitted</li>
+            </ul>
+            <p className="text-gray-700 leading-relaxed mt-3">If requested size is unavailable, store credit (E-Wallet) may be issued.</p>
           </section>
 
-          {/* Return and Exchange Policy for Accessories */}
           <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-2">Return and Exchange Policy for Accessories</h2>
-            <p>
-              The following accessory products are non-returnable, non-exchangeable, and non-refundable:
-            </p>
-            <ul className="list-disc pl-6">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4">3. Return Policy (Strictly Limited)</h2>
+            <p className="text-gray-700 leading-relaxed mb-3">General returns are not accepted.</p>
+            <p className="text-gray-700 leading-relaxed mb-3">Return is accepted only for verified manufacturing defect, damaged product, or wrong item delivered.</p>
+            <p className="text-gray-700 leading-relaxed">Claims must be reported within 48 hours with clear unboxing video and photo proof.</p>
+          </section>
+
+          <section className="mb-8">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4">4. Non-Returnable / Non-Exchangeable Items</h2>
+            <ul className="list-disc pl-6 text-gray-700 space-y-2">
               <li>Belts</li>
-              <li>Perfumes and deodorants</li>
+              <li>Perfumes & Deodorants</li>
               <li>Handkerchiefs</li>
               <li>Socks</li>
-              <li>Room fresheners</li>
               <li>Caps</li>
-              <li>Any other similar accessory items</li>
-            </ul>
-            <p>
-              Once purchased, these items cannot be returned, exchanged, or refunded under any circumstances.
-            </p>
-          </section>
-
-          {/* Refund Policy */}
-          <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-2">Refund Policy</h2>
-            <p>
-              Mafia Western Outfit and Senlysh.in do not offer direct money-back refunds.<br />
-              However, if a refund is approved, the amount will be credited to your e-wallet on the respective platform.<br />
-              There is no expiry date on the e-wallet balance; you can use it for purchases anytime.
-            </p>
-            <h3 className="font-bold text-gray-900 mt-6 mb-2">Refund Processing Time</h3>
-            <p>
-              In case of any refunds approved by MAFIAA WESTERN OUTFIT, it will take 7 days for the refund to be processed to you in your e-wallet.
-            </p>
-          </section>
-
-          {/* Return Policy */}
-          <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-2">Return Policy</h2>
-            <h3 className="font-bold text-gray-900 mb-2">2 Day Return Window</h3>
-            <p>
-              We offer refund/exchange within 2 days from the date of delivery. If 2 days have passed since your delivery, you will not be offered a return, exchange, or refund of any kind.
-            </p>
-            <h3 className="font-bold text-gray-900 mb-2">Eligibility Criteria for Returns/Exchanges</h3>
-            <ul className="list-disc pl-6">
-              <li>The purchased item should be unused, unwashed, unaltered, untampered and in the same condition as you received it</li>
-              <li>The item must have original packaging</li>
-              <li>If the item was purchased on sale, then the item may not be eligible for a return/exchange</li>
-            </ul>
-
-            <h3 className="font-bold text-gray-900 mb-2">Exchange Process</h3>
-            <p>
-              Only such items are replaced by us (based on an exchange request), if such items are found defective or damaged.
-            </p>
-
-            <h3 className="font-bold text-gray-900 mb-2">Exempted Categories</h3>
-            <p>
-              Certain categories of products/items are exempted from returns or refunds and will be identified to you at the time of purchase.
-            </p>
-
-            <h3 className="font-bold text-gray-900 mb-2">Return Processing</h3>
-            <ol className="list-decimal list-inside mb-2 pl-7">
-              <li>Once your returned product/item is received and inspected, we will notify you by email.</li>
-              <li>If approved after quality check, your request will be processed in accordance with our policies.</li>
-            </ol>
-          </section>
-
-          {/* Important Notes */}
-          <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-2">Important Notes</h2>
-            <ul className="list-disc pl-6">
-              <li>All returns must be initiated within the specified time period.</li>
-              <li>Items must be in original condition with all tags and packaging.</li>
-              <li>All approved refunds will be processed to your e-wallet on our platform.</li>
-              <li>Refunds will not be credited to your original payment method (such as bank account, UPI, or card). You can use your e-wallet balance for future purchases at any time.</li>
-              <li>Customer service team has final decision on all return/refund requests.</li>
+              <li>Room Fresheners</li>
+              <li>Innerwear</li>
+              <li>Accessories</li>
+              <li>Clearance / Final Sale items</li>
+              <li>Items marked Non-Returnable at purchase</li>
             </ul>
           </section>
 
-          {/* Things to Consider */}
           <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-2">Things To Consider</h2>
-            <ul className="list-disc pl-6">
-              <li>The customers are requested to check the size guide before placing the order.</li>
-              <li>The color of the product(s) may vary as per the customer’s screen resolution.</li>
-              <li>Please provide your Arattai / WhatsApp registered number for timely updates and a better shopping experience.</li>
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4">5. Refund Policy</h2>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">5.1 Refund Mode Clarification</h3>
+            <ul className="list-disc pl-6 text-gray-700 space-y-2">
+              <li>Defective/Damaged/Wrong item: refund to original payment method.</li>
+              <li>Size exchange unavailable or approved non-defect case: refund to Senlysh E-Wallet.</li>
+              <li>COD orders: refund to verified bank account or Senlysh E-Wallet after verification.</li>
+              <li>Original shipping charges are non-refundable.</li>
             </ul>
-            <p className="font-semibold mt-4">Happy Shopping!</p>
+            <h3 className="text-lg font-semibold text-gray-900 mt-4 mb-2">5.2 E-Wallet Terms</h3>
+            <ul className="list-disc pl-6 text-gray-700 space-y-2">
+              <li>No expiry</li>
+              <li>Non-transferable</li>
+              <li>Cannot be withdrawn as cash</li>
+              <li>Usable only on senlysh.in</li>
+            </ul>
+          </section>
+
+          <section className="mb-8">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4">6. Refund Processing Timeline</h2>
+            <ul className="list-disc pl-6 text-gray-700 space-y-2">
+              <li>Reverse pickup quality inspection: 2-4 business days</li>
+              <li>Refund initiation: within 7 business days after approval</li>
+              <li>Bank posting timeline depends on payment provider</li>
+            </ul>
+          </section>
+
+          <section className="mb-8">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4">7. Shipping & Deductions</h2>
+            <ul className="list-disc pl-6 text-gray-700 space-y-2">
+              <li>Original shipping charges are non-refundable</li>
+              <li>Return shipping may be deducted unless claim is approved as defect/wrong item</li>
+              <li>COD handling fees may be deducted where applicable</li>
+            </ul>
+          </section>
+
+          <section className="mb-8">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4">8. Right to Refuse Return / Exchange</h2>
+            <p className="text-gray-700 leading-relaxed mb-3">We may refuse return/exchange for used, washed, altered, tag-removed, customer-damaged, or fraudulent claims.</p>
+            <p className="text-gray-700 leading-relaxed">Rejected returns may be re-shipped to the customer at customer cost.</p>
+          </section>
+
+          <section className="mb-8">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4">9. Fraud & Abuse Prevention</h2>
+            <ul className="list-disc pl-6 text-gray-700 space-y-2">
+              <li>Excessive return/exchange behavior may lead to account restriction</li>
+              <li>False defect claims may result in permanent blocking</li>
+              <li>Invalid chargebacks will be contested with delivery/inspection proof</li>
+              <li>Legal action may be initiated for deliberate misuse</li>
+            </ul>
+          </section>
+
+          <section className="mb-8">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4">10. Sale & Discount Policy</h2>
+            <p className="text-gray-700 leading-relaxed">Products purchased in clearance/flash/special promotions may not be eligible for exchange/refund unless defective or wrong.</p>
+          </section>
+
+          <section className="mb-8">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4">11. Important Customer Advisory</h2>
+            <ul className="list-disc pl-6 text-gray-700 space-y-2">
+              <li>Check size chart and product details carefully before ordering.</li>
+              <li>Minor color variation due to screen differences is not a defect.</li>
+              <li>Keep active contact details for smooth delivery coordination.</li>
+            </ul>
+          </section>
+
+          <section className="mb-8">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4">12. Limitation of Liability</h2>
+            <p className="text-gray-700 leading-relaxed">To the maximum extent permitted by law, we are not liable for indirect/consequential damages, loss of profit, emotional distress, or third-party logistics delays.</p>
+          </section>
+
+          <section className="mb-8">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4">13. Governing Law & Jurisdiction</h2>
+            <p className="text-gray-700 leading-relaxed">This Policy is governed by laws of India. Disputes are subject to exclusive jurisdiction of courts in Mumbai, Maharashtra.</p>
+          </section>
+
+          <section className="mb-8">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4">14. Policy Updates</h2>
+            <p className="text-gray-700 leading-relaxed">We may modify this Policy at any time. Updated versions are effective upon publication on the Platform.</p>
+          </section>
+
+          <section className="mb-8 bg-gray-50 p-6 rounded-lg border border-gray-200">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4">15. Customer Support</h2>
+            <p className="text-gray-700 leading-relaxed mb-2"><strong>Email:</strong> helpdesk@senlysh.in</p>
+            <p className="text-gray-700 leading-relaxed mb-2"><strong>WhatsApp:</strong> +91 7977439669</p>
+            <p className="text-gray-700 leading-relaxed"><strong>Business Name:</strong> MAFIAA WESTERN OUTFIT</p>
           </section>
         </div>
 
-        {/* Footer Navigation */}
         <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-between items-center">
           <button
             onClick={handleGoBack}
@@ -155,23 +196,15 @@ export default function RefundAndReturnPolicyPage() {
             <ArrowLeft className="w-5 h-5" />
             <span>Go Back</span>
           </button>
+
           <div className="flex gap-4">
-            <Link
-              href="/senlysh/terms"
-              className="text-gray-600 hover:text-purple-600 transition-colors duration-200"
-            >
+            <Link href="/senlysh/terms" className="text-gray-600 hover:text-purple-600 transition-colors duration-200">
               Terms & Conditions
             </Link>
-            <Link
-              href="/senlysh/privacy"
-              className="text-gray-600 hover:text-purple-600 transition-colors duration-200"
-            >
+            <Link href="/senlysh/privacy" className="text-gray-600 hover:text-purple-600 transition-colors duration-200">
               Privacy Policy
             </Link>
-            <Link
-              href="/senlysh/contact"
-              className="text-gray-600 hover:text-purple-600 transition-colors duration-200"
-            >
+            <Link href="/senlysh/contact" className="text-gray-600 hover:text-purple-600 transition-colors duration-200">
               Contact Us
             </Link>
           </div>

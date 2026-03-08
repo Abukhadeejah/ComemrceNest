@@ -166,7 +166,7 @@ export async function POST(request: NextRequest) {
     const body = (await request.json().catch(() => ({}))) as {
       tenantKey?: string;
       amountPaise?: number;
-      mode?: 'test' | 'live';
+      mode?: 'quote' | 'test' | 'payment' | 'live';
       customer?: {
         name?: string;
         email?: string;
@@ -221,13 +221,19 @@ export async function POST(request: NextRequest) {
     
     const amountPaise = finalAmountPaise;
 
+    const mode = body.mode || 'quote';
+
     // Get payment provider for this tenant
     const provider = await getPaymentProvider(tenantId);
     console.log(`[checkout] Using payment provider: ${provider} for tenant: ${tenantId}`);
 
-    // If just requesting quote/totals, return without processing payment
-    if (!body.mode || body.mode === 'test') {
+    // Quote/test requests should never create orders or payment intents.
+    if (mode === 'quote' || mode === 'test') {
       return NextResponse.json({ totals });
+    }
+
+    if (mode !== 'payment' && mode !== 'live') {
+      return NextResponse.json({ error: 'invalid_mode' }, { status: 400 });
     }
 
     // Route to appropriate payment provider

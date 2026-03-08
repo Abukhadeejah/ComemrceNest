@@ -4,6 +4,7 @@ import { getAuthenticatedUserId } from '@/server/auth'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { creditDueCashbackForCustomer } from '@/lib/cashback/cashbackService'
 
 type OrderItemRow = {
   id: string
@@ -12,6 +13,14 @@ type OrderItemRow = {
   quantity: number
   unit_price_cents: number | null
   subtotal_cents: number | null
+  variant?: string | null
+  products?: {
+    id?: string
+    name?: string
+    slug?: string
+    hero_image_url?: string | null
+    sku?: string | null
+  } | null
 }
 
 export async function GET() {
@@ -68,7 +77,15 @@ export async function GET() {
       return NextResponse.json({ success: true, orders: [] })
     }
 
-    // Fetch orders with basic schema (avoiding missing columns)
+    if (matchedCustomerId) {
+      try {
+        await creditDueCashbackForCustomer(matchedCustomerId, tenantId)
+      } catch (creditError) {
+        console.error('[Orders API] Failed to process due cashback credits:', creditError)
+      }
+    }
+
+    // Fetch customer orders with payment/cashback fields
     let ordersQuery = supabaseAdmin
       .from('orders')
       .select(`
@@ -80,7 +97,12 @@ export async function GET() {
         created_at,
         email,
         currency,
-        customer_id
+        customer_id,
+        wallet_used_cents,
+        cash_paid_cents,
+        cashback_amount_cents,
+        cashback_pct,
+        discount_amount_cents
       `)
       .eq('tenant_id', tenantId)
 
@@ -114,21 +136,29 @@ export async function GET() {
           product_id,
           quantity,
           unit_price_cents,
-          subtotal_cents
+          subtotal_cents,
+          variant,
+          products (
+            id,
+            name,
+            slug,
+            hero_image_url,
+            sku
+          )
         `)
         .in('order_id', orderIds)
       
       orderItems = items || []
     }
 
-    // Transform the data with safe defaults
+    // Transform to frontend-friendly shape with real values
     const transformedOrders = orders?.map(order => ({
       ...order,
       total_amount: order.total_cents / 100,
-      wallet_used: 0, // Default since column might not exist
-      cash_paid: order.total_cents / 100, // Assume full cash payment
-      cashback_amount: 0, // Default since column might not exist
-      discount_amount: 0, // Default since column might not exist
+      wallet_used: (order.wallet_used_cents || 0) / 100,
+      cash_paid: (order.cash_paid_cents ?? order.total_cents) / 100,
+      cashback_amount: (order.cashback_amount_cents || 0) / 100,
+      discount_amount: (order.discount_amount_cents || 0) / 100,
       items: orderItems
         .filter(item => item.order_id === order.id)
         .map(item => ({
@@ -137,17 +167,18 @@ export async function GET() {
           total_price: (item.subtotal_cents || 0) / 100,
           product: {
             id: item.product_id,
-            name: 'Product',
-            slug: '',
-            images: [],
+            name: item.products?.name || 'Product',
+            slug: item.products?.slug || '',
+            images: item.products?.hero_image_url ? [item.products.hero_image_url] : [],
             variant: {
               id: item.product_id,
-              sku: '',
+              sku: item.products?.sku || '',
               size: '',
-              color: ''
+              color: item.variant || ''
             }
           }
-        }))
+        })),
+      item_count: orderItems.filter(item => item.order_id === order.id).length
     })) || []
 
     console.log('[Orders API] Returning orders:', transformedOrders.length)

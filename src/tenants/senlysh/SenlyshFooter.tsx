@@ -169,9 +169,7 @@ export default function SenlyshFooter() {
       <div className="bg-gray-950 border-t border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-            <div className="text-gray-400 text-sm">
-              © 2024 Senlysh. All rights reserved.
-            </div>
+            <div className="text-gray-400 text-sm">Senlysh By Mafiaa Western Outfit</div>
             <div className="flex space-x-6 text-sm">
               <Link href="/privacy" className="text-gray-400 hover:text-cyan-400 transition-colors">
                 Privacy Policy

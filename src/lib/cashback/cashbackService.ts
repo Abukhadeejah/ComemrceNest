@@ -10,6 +10,9 @@
 import { supabaseAdmin } from '@/server/supabaseAdmin'
 import { calculateCashback, centsToRupees, rupeesToCents } from './cashbackEngine'
 
+const CASHBACK_CREDIT_DELAY_DAYS = 5
+const CASHBACK_CREDIT_DELAY_MS = CASHBACK_CREDIT_DELAY_DAYS * 24 * 60 * 60 * 1000
+
 // Types for new tables (created by migration)
 type Membership = {
   id: string
@@ -42,6 +45,7 @@ export interface ProcessCashbackInput {
   totalPurchasePriceCents: number
   walletUsedCents: number
   cashPaidCents: number
+  gstAmountCents?: number
 }
 
 export interface ProcessCashbackResult {
@@ -50,6 +54,241 @@ export interface ProcessCashbackResult {
   profitPct: number
   membershipUsed: string | null
   transactionId: string
+}
+
+async function estimateCashbackGstOnCashPaidCents(
+  tenantId: string,
+  orderId: string,
+  totalSalePriceCents: number,
+  cashPaidCents: number
+): Promise<number> {
+  if (totalSalePriceCents <= 0 || cashPaidCents <= 0) {
+    return 0
+  }
+
+  try {
+    const { data: orderItems, error: orderItemsError } = await supabaseAdmin
+      .from('order_items')
+      .select(`
+        quantity,
+        unit_price_cents,
+        products (
+          tax_class_id,
+          taxable
+        )
+      `)
+      .eq('tenant_id', tenantId)
+      .eq('order_id', orderId)
+
+    if (orderItemsError || !orderItems || orderItems.length === 0) {
+      return 0
+    }
+
+    const taxClassIds = Array.from(new Set(
+      orderItems
+        .map(item => {
+          const product = item.products as { tax_class_id?: string | null } | null
+          return product?.tax_class_id || null
+        })
+        .filter((id): id is string => typeof id === 'string' && id.length > 0)
+    ))
+
+    const taxRateMap = new Map<string, number>()
+    if (taxClassIds.length > 0) {
+      const { data: taxClasses } = await supabaseAdmin
+        .from('tax_classes')
+        .select('id, rate_percent')
+        .eq('tenant_id', tenantId)
+        .in('id', taxClassIds)
+
+      for (const taxClass of taxClasses || []) {
+        taxRateMap.set(taxClass.id, Number(taxClass.rate_percent) || 0)
+      }
+    }
+
+    let grossFromItemsCents = 0
+    let taxFromItemsCents = 0
+
+    for (const item of orderItems) {
+      const quantity = Number(item.quantity) || 0
+      const unitPriceCents = Number(item.unit_price_cents) || 0
+      const lineGrossCents = Math.max(unitPriceCents * quantity, 0)
+      if (lineGrossCents <= 0) {
+        continue
+      }
+
+      grossFromItemsCents += lineGrossCents
+
+      const product = item.products as { tax_class_id?: string | null; taxable?: boolean | null } | null
+      const isTaxable = product?.taxable !== false
+      const taxRatePercent = isTaxable && product?.tax_class_id
+        ? (taxRateMap.get(product.tax_class_id) || 0)
+        : 0
+
+      if (taxRatePercent > 0) {
+        const lineTaxCents = Math.round((lineGrossCents * taxRatePercent) / (100 + taxRatePercent))
+        taxFromItemsCents += Math.max(lineTaxCents, 0)
+      }
+    }
+
+    if (grossFromItemsCents <= 0 || taxFromItemsCents <= 0) {
+      return 0
+    }
+
+    const saleAdjustmentRatio = totalSalePriceCents / grossFromItemsCents
+    const adjustedOrderTaxCents = Math.max(Math.round(taxFromItemsCents * saleAdjustmentRatio), 0)
+    const cashShareRatio = Math.min(cashPaidCents / totalSalePriceCents, 1)
+    const gstOnCashPaidCents = Math.round(adjustedOrderTaxCents * cashShareRatio)
+
+    return Math.max(0, Math.min(gstOnCashPaidCents, cashPaidCents))
+  } catch (error) {
+    console.warn('[estimateCashbackGstOnCashPaidCents] Falling back to zero GST adjustment:', error)
+    return 0
+  }
+}
+
+/**
+ * Credit cashback transactions that have completed the hold period.
+ *
+ * NOTE: Cashback is credited after a 5-day delay from transaction creation.
+ */
+export async function creditDueCashbackForCustomer(
+  customerId: string,
+  tenantId: string
+): Promise<{ creditedCount: number; creditedAmountCents: number }> {
+  let walletAccountId: string
+
+  try {
+    walletAccountId = await getWalletAccountId(customerId, tenantId)
+  } catch {
+    return { creditedCount: 0, creditedAmountCents: 0 }
+  }
+
+  const creditEligibleBefore = new Date(Date.now() - CASHBACK_CREDIT_DELAY_MS).toISOString()
+
+  const { data: dueTransactions, error: dueError } = await supabaseAdmin
+    .from('cashback_transactions')
+    .select('id, order_id, cashback_amount_cents, created_at')
+    .eq('tenant_id', tenantId)
+    .eq('customer_id', customerId)
+    .gt('cashback_amount_cents', 0)
+    .lte('created_at', creditEligibleBefore)
+    .order('created_at', { ascending: true })
+
+  if (dueError) {
+    throw new Error(`Failed to fetch due cashback transactions: ${dueError.message}`)
+  }
+
+  if (!dueTransactions || dueTransactions.length === 0) {
+    return { creditedCount: 0, creditedAmountCents: 0 }
+  }
+
+  let creditedCount = 0
+  let creditedAmountCents = 0
+
+  for (const transaction of dueTransactions) {
+    const { data: existingCredit, error: existingCreditError } = await supabaseAdmin
+      .from('wallet_ledger')
+      .select('id')
+      .eq('tenant_id', tenantId)
+      .eq('account_id', walletAccountId)
+      .eq('source_key', 'CASHBACK')
+      .eq('reference_id', transaction.order_id)
+      .maybeSingle()
+
+    if (existingCreditError && existingCreditError.code !== 'PGRST116') {
+      throw new Error(`Failed to check existing cashback credit: ${existingCreditError.message}`)
+    }
+
+    if (existingCredit) {
+      continue
+    }
+
+    await creditCashbackToWallet(
+      walletAccountId,
+      tenantId,
+      transaction.order_id,
+      transaction.cashback_amount_cents
+    )
+
+    await supabaseAdmin
+      .from('orders')
+      .update({ cashback_amount_cents: transaction.cashback_amount_cents })
+      .eq('id', transaction.order_id)
+      .eq('tenant_id', tenantId)
+
+    creditedCount += 1
+    creditedAmountCents += transaction.cashback_amount_cents
+  }
+
+  return { creditedCount, creditedAmountCents }
+}
+
+/**
+ * Credit due cashback for multiple customer/tenant pairs in batch.
+ * Designed for scheduled jobs.
+ */
+export async function creditDueCashbackForAllCustomers(
+  maxCustomerTenantPairs: number = 200
+): Promise<{
+  scannedPairs: number
+  creditedCount: number
+  creditedAmountCents: number
+}> {
+  const safePairLimit = Math.min(Math.max(Math.floor(maxCustomerTenantPairs), 1), 500)
+  const creditEligibleBefore = new Date(Date.now() - CASHBACK_CREDIT_DELAY_MS).toISOString()
+
+  const { data: dueRows, error } = await supabaseAdmin
+    .from('cashback_transactions')
+    .select('tenant_id, customer_id')
+    .gt('cashback_amount_cents', 0)
+    .lte('created_at', creditEligibleBefore)
+    .order('created_at', { ascending: true })
+    .limit(Math.max(safePairLimit * 20, 200))
+
+  if (error) {
+    throw new Error(`Failed to fetch due cashback batch: ${error.message}`)
+  }
+
+  if (!dueRows || dueRows.length === 0) {
+    return {
+      scannedPairs: 0,
+      creditedCount: 0,
+      creditedAmountCents: 0
+    }
+  }
+
+  const uniquePairs: Array<{ tenantId: string; customerId: string }> = []
+  const seen = new Set<string>()
+
+  for (const row of dueRows) {
+    const key = `${row.tenant_id}:${row.customer_id}`
+    if (seen.has(key)) {
+      continue
+    }
+
+    seen.add(key)
+    uniquePairs.push({ tenantId: row.tenant_id, customerId: row.customer_id })
+
+    if (uniquePairs.length >= safePairLimit) {
+      break
+    }
+  }
+
+  let creditedCount = 0
+  let creditedAmountCents = 0
+
+  for (const pair of uniquePairs) {
+    const result = await creditDueCashbackForCustomer(pair.customerId, pair.tenantId)
+    creditedCount += result.creditedCount
+    creditedAmountCents += result.creditedAmountCents
+  }
+
+  return {
+    scannedPairs: uniquePairs.length,
+    creditedCount,
+    creditedAmountCents
+  }
 }
 
 /**
@@ -156,6 +395,13 @@ export async function getWalletBalance(
   customerId: string,
   tenantId: string
 ): Promise<number> {
+  // Auto-credit cashback that has completed hold period before reading balance
+  try {
+    await creditDueCashbackForCustomer(customerId, tenantId)
+  } catch (creditError) {
+    console.error('[getWalletBalance] Failed to process due cashback credits:', creditError)
+  }
+
   const { data, error } = await supabaseAdmin
     .from('v_wallet_balances')
     .select('balance_cents')
@@ -278,8 +524,8 @@ export async function recordCashbackTransaction(
  * 
  * This function:
  * 1. Checks if customer has active membership
- * 2. Calculates cashback on cash paid only
- * 3. Credits cashback to wallet (if eligible)
+ * 2. Calculates cashback on cash paid minus GST portion
+ * 3. Records cashback as pending (credited after hold period)
  * 4. Records transaction
  * 5. Returns cashback details
  * 
@@ -295,35 +541,34 @@ export async function processCashbackForOrder(
     totalSalePriceCents,
     totalPurchasePriceCents,
     walletUsedCents,
-    cashPaidCents
+    cashPaidCents,
+    gstAmountCents
   } = input
   
   // 1. Check for active membership
   const membership = await getActiveMembership(customerId, tenantId)
   
   // 2. Calculate cashback (always calculate for order record, even if no membership)
+  const gstOnCashPaidCents = typeof gstAmountCents === 'number'
+    ? Math.max(0, Math.min(Math.round(gstAmountCents), cashPaidCents))
+    : await estimateCashbackGstOnCashPaidCents(tenantId, orderId, totalSalePriceCents, cashPaidCents)
+
+  const cashbackBaseCents = Math.max(cashPaidCents - gstOnCashPaidCents, 0)
+
   const cashbackResult = calculateCashback({
     totalSalePrice: centsToRupees(totalSalePriceCents),
     totalPurchasePrice: centsToRupees(totalPurchasePriceCents),
     walletUsed: centsToRupees(walletUsedCents),
-    cashPaid: centsToRupees(cashPaidCents)
+    cashPaid: centsToRupees(cashPaidCents),
+    cashbackBaseAmount: centsToRupees(cashbackBaseCents)
   })
   
   const cashbackAmountCents = rupeesToCents(cashbackResult.cashbackAmount)
   
-  // 3. Credit cashback to wallet ONLY if active membership
-  let actualCashbackCredited = 0
-  
-  if (membership && cashbackAmountCents > 0) {
-    const walletAccountId = await getWalletAccountId(customerId, tenantId)
-    await creditCashbackToWallet(
-      walletAccountId,
-      tenantId,
-      orderId,
-      cashbackAmountCents
-    )
-    actualCashbackCredited = cashbackAmountCents
-  }
+  // 3. Keep cashback pending for delayed credit (membership required)
+  const pendingCashbackAmountCents = membership && cashbackAmountCents > 0
+    ? cashbackAmountCents
+    : 0
   
   // 4. Record cashback transaction (record even if 0 for audit trail)
   const transactionId = await recordCashbackTransaction(
@@ -334,11 +579,12 @@ export async function processCashbackForOrder(
     cashPaidCents,
     cashbackResult.profitPct,
     cashbackResult.cashbackPct,
-    actualCashbackCredited // Record actual amount credited (0 if no membership)
+    pendingCashbackAmountCents
   )
   
+  // Cashback is pending now and will be credited after hold period.
   return {
-    cashbackEarned: actualCashbackCredited,
+    cashbackEarned: 0,
     cashbackPct: cashbackResult.cashbackPct,
     profitPct: cashbackResult.profitPct,
     membershipUsed: membership?.id || null,
@@ -427,7 +673,8 @@ export async function previewCashback(
   totalSalePriceCents: number,
   totalPurchasePriceCents: number,
   walletUsedCents: number,
-  cashPaidCents: number
+  cashPaidCents: number,
+  gstAmountCents: number = 0
 ): Promise<{
   eligible: boolean
   reason?: string
@@ -449,11 +696,14 @@ export async function previewCashback(
   }
   
   // Calculate cashback
+  const cashbackBaseCents = Math.max(cashPaidCents - Math.max(gstAmountCents, 0), 0)
+
   const result = calculateCashback({
     totalSalePrice: centsToRupees(totalSalePriceCents),
     totalPurchasePrice: centsToRupees(totalPurchasePriceCents),
     walletUsed: centsToRupees(walletUsedCents),
-    cashPaid: centsToRupees(cashPaidCents)
+    cashPaid: centsToRupees(cashPaidCents),
+    cashbackBaseAmount: centsToRupees(cashbackBaseCents)
   })
   
   return {
