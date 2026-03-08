@@ -309,7 +309,7 @@ export default function OrdersPage() {
                     <div className="flex justify-between items-center pt-4 border-t">
                       <div className="flex space-x-4">
                         <Link
-                          href={`/orders/${order.id}`}
+                          href={`/senlysh/orders/${order.id}`}
                           className="text-blue-600 hover:text-blue-800 text-sm font-medium"
                         >
                           View Details

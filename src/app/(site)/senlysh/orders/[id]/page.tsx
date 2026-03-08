@@ -37,18 +37,13 @@ interface OrderDetail {
       hero_image_url: string | null
     } | null
   }>
-  customers?: {
-    first_name?: string
-    last_name?: string
-    phone?: string
-  } | null
 }
 
 interface PageProps {
   params: Promise<{ id: string }>
 }
 
-export default function AdminOrderDetailPage({ params }: PageProps) {
+export default function OrderDetailPage({ params }: PageProps) {
   const [order, setOrder] = useState<OrderDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -67,53 +62,74 @@ export default function AdminOrderDetailPage({ params }: PageProps) {
   const loadOrderDetails = async () => {
     try {
       setLoading(true)
-      console.log('[Admin Order Details] Fetching order:', orderId)
 
-      // Fetch single order with items from dedicated API
-      const response = await fetch(`/api/admin/orders/${orderId}`, {
+      // Get tenant from cookie or default to senlysh
+      const getTenantId = () => {
+        if (typeof document !== 'undefined') {
+          const cookies = document.cookie.split(';')
+          const tenantCookie = cookies.find(c => c.trim().startsWith('tenant='))
+          if (tenantCookie) {
+            return tenantCookie.split('=')[1]
+          }
+        }
+        return 'senlysh'
+      }
+
+      const tenantId = getTenantId()
+      console.log('[Order Details] Fetching order:', orderId, 'for tenant:', tenantId)
+
+      // First get all orders to find the matching one
+      const response = await fetch('/api/customers/orders', {
         credentials: 'include',
         headers: {
+          'x-tenant-id': tenantId,
           'Content-Type': 'application/json'
         }
       })
 
       if (response.ok) {
         const data = await response.json()
-        const foundOrder = data.order
+        const foundOrder = data.orders?.find((o: any) => o.id === orderId || o.order_number === orderId)
 
         if (foundOrder) {
-          console.log('[Admin Order Details] Found order:', foundOrder)
-          console.log('[Admin Order Details] Order items:', foundOrder.order_items)
+          console.log('[Order Details] Found order:', foundOrder)
+          console.log('[Order Details] Order items:', foundOrder.items)
 
-          // Transform the order data - API returns raw cents values from DB
+          // Transform the order data to match our interface
           setOrder({
-            id: foundOrder.id,
-            order_number: foundOrder.order_number,
-            status: foundOrder.status,
-            total_cents: foundOrder.total_cents,
+            ...foundOrder,
+            total_cents: foundOrder.total_amount * 100,
+            wallet_used_cents: (foundOrder.wallet_used || 0) * 100,
+            cash_paid_cents: (foundOrder.cash_paid || 0) * 100,
+            discount_amount_cents: (foundOrder.discount_amount || 0) * 100,
+            cashback_amount_cents: (foundOrder.cashback_amount || 0) * 100,
             currency: foundOrder.currency || 'INR',
-            email: foundOrder.email,
-            customer_id: foundOrder.customer_id,
-            created_at: foundOrder.created_at,
-            payment_provider: foundOrder.payment_provider || 'N/A',
             payment_env: foundOrder.payment_env || 'test',
-            wallet_used_cents: foundOrder.wallet_used_cents || 0,
-            cash_paid_cents: foundOrder.cash_paid_cents || foundOrder.total_cents,
-            discount_amount_cents: foundOrder.discount_amount_cents || 0,
-            cashback_amount_cents: foundOrder.cashback_amount_cents || 0,
-            cashback_pct: foundOrder.cashback_pct || 0,
             coupon_code: foundOrder.coupon_code || '',
-            order_items: foundOrder.order_items || [],
-            customers: null
+            order_items: foundOrder.items?.map((item: any) => ({
+              id: item.id,
+              quantity: item.quantity,
+              unit_price_cents: item.unit_price * 100,
+              subtotal_cents: item.total_price * 100,
+              variant: item.variant || null,
+              products: item.product ? {
+                id: item.product.id,
+                name: item.product.name,
+                sku: item.product.variant?.sku || '',
+                hero_image_url: item.product.images?.[0] || null
+              } : null
+            })) || []
           })
         } else {
           setError('Order not found')
         }
+      } else if (response.status === 401) {
+        router.push('/senlysh/login')
       } else {
         setError('Failed to load order details')
       }
     } catch (error) {
-      console.error('[Admin Order Details] Error:', error)
+      console.error('[Order Details] Error:', error)
       setError('Network error')
     } finally {
       setLoading(false)
@@ -163,10 +179,10 @@ export default function AdminOrderDetailPage({ params }: PageProps) {
             {error || 'Order not found'}
           </div>
           <Link
-            href="/admin/orders"
+            href="/senlysh/orders"
             className="text-blue-600 hover:text-blue-800"
           >
-            ← Back to Orders
+            ← Back to My Orders
           </Link>
         </div>
       </div>
@@ -183,9 +199,7 @@ export default function AdminOrderDetailPage({ params }: PageProps) {
     createdAt: order.created_at,
     currency: order.currency,
     customerEmail: order.email,
-    customerName: order.customers
-      ? [order.customers.first_name, order.customers.last_name].filter(Boolean).join(' ')
-      : order.email,
+    customerName: order.email,
     paymentProvider: order.payment_provider,
     paymentEnv: order.payment_env,
     subtotalCents,
@@ -218,13 +232,13 @@ export default function AdminOrderDetailPage({ params }: PageProps) {
             <p className="text-gray-500 mt-1">Order #{order.order_number}</p>
           </div>
           <Link
-            href="/admin/orders"
+            href="/senlysh/orders"
             className="text-blue-600 hover:text-blue-800 flex items-center gap-2"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
-            Back to Orders
+            Back to My Orders
           </Link>
         </div>
 
@@ -249,15 +263,8 @@ export default function AdminOrderDetailPage({ params }: PageProps) {
             </div>
           </div>
 
-          {/* Customer & Payment Info */}
+          {/* Payment Info */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t">
-            <div>
-              <p className="text-sm text-gray-500">Customer Email</p>
-              <p className="text-gray-900 font-medium">{order.email}</p>
-              {order.customer_id && (
-                <p className="text-xs text-gray-500 mt-1">ID: {order.customer_id.slice(0, 8)}...</p>
-              )}
-            </div>
             <div>
               <p className="text-sm text-gray-500">Payment Method</p>
               <p className="text-gray-900 capitalize font-medium">{order.payment_provider}</p>
@@ -266,12 +273,16 @@ export default function AdminOrderDetailPage({ params }: PageProps) {
             <div>
               <p className="text-sm text-gray-500">Order Total</p>
               <p className="text-gray-900 font-semibold text-lg">{formatCurrency(order.total_cents)}</p>
-              {order.cashback_amount_cents > 0 && (
-                <p className="text-xs text-green-600 mt-1">
-                  Cashback: {formatCurrency(order.cashback_amount_cents)}
-                </p>
-              )}
             </div>
+            {order.cashback_amount_cents > 0 && (
+              <div>
+                <p className="text-sm text-gray-500">Cashback Earned</p>
+                <p className="text-green-600 font-semibold text-lg">
+                  {formatCurrency(order.cashback_amount_cents)}
+                  {order.cashback_pct > 0 && <span className="text-sm ml-1">({order.cashback_pct}%)</span>}
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -281,53 +292,52 @@ export default function AdminOrderDetailPage({ params }: PageProps) {
             Order Items ({order.order_items?.length || 0} items)
           </h2>
           {order.order_items && order.order_items.length > 0 ? (
-            <div className="space-y-4">
-              {order.order_items.map((item) => (
-                <div key={item.id} className="flex gap-4 pb-4 border-b last:border-b-0">
-                  <div className="w-20 h-20 flex-shrink-0">
-                    {item.products?.hero_image_url ? (
-                      <Image
-                        src={item.products.hero_image_url}
-                        alt={item.products?.name || 'Product'}
-                        width={80}
-                        height={80}
-                        className="rounded-md object-cover w-full h-full"
-                      />
-                    ) : (
-                      <div className="w-full h-full rounded-md bg-gray-100 flex items-center justify-center">
-                        <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-medium text-gray-900">{item.products?.name || 'Product'}</h3>
-                    {item.products?.sku && (
-                      <p className="text-sm text-gray-500">SKU: {item.products.sku}</p>
-                    )}
-                    {item.variant && (
-                      <p className="text-sm text-gray-500">Variant: {item.variant}</p>
-                    )}
-                    <p className="text-sm text-gray-600 mt-1">Quantity: {item.quantity}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-gray-500">Unit Price</p>
-                    <p className="text-gray-900">{formatCurrency(item.unit_price_cents)}</p>
-                    <p className="text-sm text-gray-500 mt-2">Line Total</p>
-                    <p className="font-semibold text-gray-900">{formatCurrency(item.subtotal_cents)}</p>
-                  </div>
+          <div className="space-y-4">
+            {order.order_items.map((item) => (
+              <div key={item.id} className="flex gap-4 pb-4 border-b last:border-b-0">
+                <div className="w-20 h-20 flex-shrink-0">
+                  {item.products?.hero_image_url ? (
+                    <Image
+                      src={item.products.hero_image_url}
+                      alt={item.products?.name || 'Product'}
+                      width={80}
+                      height={80}
+                      className="rounded-md object-cover w-full h-full"
+                    />
+                  ) : (
+                    <div className="w-full h-full rounded-md bg-gray-100 flex items-center justify-center">
+                      <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                  )}
                 </div>
-              ))}
-            </div>
+                <div className="flex-1">
+                  <h3 className="font-medium text-gray-900">{item.products?.name || 'Product'}</h3>
+                  {item.products?.sku && (
+                    <p className="text-sm text-gray-500">SKU: {item.products.sku}</p>
+                  )}
+                  {item.variant && (
+                    <p className="text-sm text-gray-500">Variant: {item.variant}</p>
+                  )}
+                  <p className="text-sm text-gray-600 mt-1">Quantity: {item.quantity}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-gray-500">Unit Price</p>
+                  <p className="text-gray-900">{formatCurrency(item.unit_price_cents)}</p>
+                  <p className="text-sm text-gray-500 mt-2">Line Total</p>
+                  <p className="font-semibold text-gray-900">{formatCurrency(item.subtotal_cents)}</p>
+                </div>
+              </div>
+            ))}
+          </div>
           ) : (
             <div className="text-center py-8">
               <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
               </svg>
               <p className="mt-2 text-sm text-gray-500">No items found in this order.</p>
-              <p className="text-xs text-gray-400 mt-1">Order ID: {order.id}</p>
-              <p className="text-xs text-gray-400">This may be a data issue. Please check the database.</p>
+              <p className="text-xs text-gray-400 mt-1">This may be a data issue. Please contact support.</p>
             </div>
           )}
         </div>
@@ -366,10 +376,9 @@ export default function AdminOrderDetailPage({ params }: PageProps) {
             </div>
             {order.cashback_amount_cents > 0 && (
               <div className="flex justify-between bg-green-50 px-3 py-2 rounded-lg mt-3">
-                <span className="text-green-700 font-medium">Cashback Credited</span>
+                <span className="text-green-700 font-medium">Cashback Credited to Wallet</span>
                 <span className="text-green-700 font-bold">
                   +{formatCurrency(order.cashback_amount_cents)}
-                  {order.cashback_pct > 0 && <span className="text-sm ml-1">({order.cashback_pct}%)</span>}
                 </span>
               </div>
             )}
@@ -384,18 +393,26 @@ export default function AdminOrderDetailPage({ params }: PageProps) {
                 className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium flex items-center justify-center gap-2"
               />
             </div>
+            {order.status === 'pending' && (
+              <button
+                onClick={() => window.open(`/checkout/success?orderId=${order.order_number}`, '_blank')}
+                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors font-medium"
+              >
+                Complete Payment
+              </button>
+            )}
             <Link
-              href={`/admin/orders`}
+              href="/senlysh/contact"
               className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors font-medium text-center"
             >
-              View All Orders
+              Contact Support
             </Link>
           </div>
         </div>
 
-        {/* Debug Info */}
-        <div className="mt-4 text-center text-xs text-gray-400">
-          Order ID: {order.id} | Customer ID: {order.customer_id || 'N/A'}
+        {/* Customer Email */}
+        <div className="mt-6 text-center text-sm text-gray-500">
+          Order confirmation sent to: <span className="text-gray-900">{order.email}</span>
         </div>
       </div>
     </div>

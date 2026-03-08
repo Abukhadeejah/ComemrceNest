@@ -116,6 +116,16 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/senlysh/cookies" className="text-gray-300 hover:text-cyan-400 transition-colors">
+                  Cookie Policy
+                </Link>
+              </li>
+              <li>
+                <Link href="/senlysh/disclaimer" className="text-gray-300 hover:text-cyan-400 transition-colors">
+                  Disclaimer
+                </Link>
+              </li>
+              <li>
                 <Link href="/senlysh/refund-policy" className="text-gray-300 hover:text-cyan-400 transition-colors">
                   Refund & Return Policy
                 </Link>
@@ -171,6 +181,14 @@ export default function Footer() {
               <span>•</span>
               <Link href="/senlysh/privacy" className="hover:text-cyan-400 transition-colors">
                 Privacy
+              </Link>
+              <span>•</span>
+              <Link href="/senlysh/cookies" className="hover:text-cyan-400 transition-colors">
+                Cookies
+              </Link>
+              <span>•</span>
+              <Link href="/senlysh/disclaimer" className="hover:text-cyan-400 transition-colors">
+                Disclaimer
               </Link>
               <span>•</span>
               <Link href="/senlysh/refund-policy" className="hover:text-cyan-400 transition-colors">

@@ -358,6 +358,12 @@ export function OrderTable({
               </td>
               <td className="sticky right-0 z-10 border-l border-gray-200 bg-white px-4 py-4 whitespace-nowrap text-right text-sm font-medium align-top">
                 <div className="flex flex-col space-y-1">
+                  <Link
+                    href={`${orderBasePath}/${order.id}`}
+                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                  >
+                    View Details
+                  </Link>
                   {getStatusActions(order).map((action, index) => (
                     <div key={index}>{action}</div>
                   ))}

@@ -13,7 +13,6 @@ type OrderItemRow = {
   quantity: number
   unit_price_cents: number | null
   subtotal_cents: number | null
-  variant?: string | null
   products?: {
     id?: string
     name?: string
@@ -94,6 +93,7 @@ export async function GET() {
         status,
         total_cents,
         payment_provider,
+        payment_env,
         created_at,
         email,
         currency,
@@ -102,7 +102,8 @@ export async function GET() {
         cash_paid_cents,
         cashback_amount_cents,
         cashback_pct,
-        discount_amount_cents
+        discount_amount_cents,
+        coupon_code
       `)
       .eq('tenant_id', tenantId)
 
@@ -137,7 +138,6 @@ export async function GET() {
           quantity,
           unit_price_cents,
           subtotal_cents,
-          variant,
           products (
             id,
             name,
@@ -174,7 +174,7 @@ export async function GET() {
               id: item.product_id,
               sku: item.products?.sku || '',
               size: '',
-              color: item.variant || ''
+              color: ''
             }
           }
         })),

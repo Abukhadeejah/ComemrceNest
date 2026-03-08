@@ -427,7 +427,7 @@ async function handlePhonePeCheckout(
       product_id: it.productId,
       quantity: it.quantity,
       unit_price_cents: it.unitPriceCents ?? 0,
-      subtotal_cents: (it.unitPriceCents ?? 0) * it.quantity, // ✅ Changed from total_price_cents
+      subtotal_cents: (it.unitPriceCents ?? 0) * it.quantity,
     }));
     
     console.log('[PhonePe] Inserting order items payload:', itemsPayload);
@@ -611,7 +611,7 @@ async function handleRazorpayCheckout(
       product_id: it.productId,
       quantity: it.quantity,
       unit_price_cents: it.unitPriceCents ?? 0,
-      subtotal_cents: (it.unitPriceCents ?? 0) * it.quantity, // ✅ Changed from total_price_cents
+      subtotal_cents: (it.unitPriceCents ?? 0) * it.quantity,
     }));
     
     console.log('[Razorpay] Inserting order items payload:', itemsPayload);

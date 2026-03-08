@@ -1,9 +1,85 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
 import { assertTenantAdmin } from '@/server/auth'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
 import { revalidateTag } from 'next/cache'
 import { tenantProductsTag, tenantOrdersTag } from '@/server/cacheTags'
+
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params
+    let tenantId = await resolveTenantIdFromRequest()
+
+    if (!tenantId) {
+      tenantId = '1e4c9aa7-e7af-4fe7-999b-c9c46219fa3c'
+    }
+
+    if (!tenantId) {
+      return NextResponse.json({ error: 'Tenant not found' }, { status: 400 })
+    }
+
+    console.log('[Admin Order Detail] Fetching order:', id, 'tenant:', tenantId)
+
+    // Fetch order with order_items and product details
+    const { data: order, error } = await supabaseAdmin
+      .from('orders')
+      .select(`
+        id, order_number, email, total_cents, currency, status, created_at,
+        cashback_amount_cents, cashback_pct, customer_id, payment_provider,
+        payment_env, wallet_used_cents, cash_paid_cents, discount_amount_cents,
+        coupon_code,
+        order_items (
+          id, product_id, quantity, unit_price_cents, subtotal_cents,
+          products (
+            id, name, sku, hero_image_url
+          )
+        )
+      `)
+      .eq('tenant_id', tenantId)
+      .eq('id', id)
+      .maybeSingle()
+
+    if (error) {
+      console.error('[Admin Order Detail] Supabase error:', error)
+      return NextResponse.json({ error: 'Database error', details: error.message }, { status: 500 })
+    }
+
+    if (!order) {
+      console.log('[Admin Order Detail] Order not found, trying without tenant filter...')
+      // Fallback: try without tenant filter in case of tenant mismatch
+      const { data: orderAny, error: error2 } = await supabaseAdmin
+        .from('orders')
+        .select(`
+          id, order_number, email, total_cents, currency, status, created_at,
+          tenant_id, cashback_amount_cents, cashback_pct, customer_id, payment_provider,
+          payment_env, wallet_used_cents, cash_paid_cents, discount_amount_cents,
+          coupon_code,
+          order_items (
+            id, product_id, quantity, unit_price_cents, subtotal_cents,
+            products (
+              id, name, sku, hero_image_url
+            )
+          )
+        `)
+        .eq('id', id)
+        .maybeSingle()
+
+      if (error2 || !orderAny) {
+        console.error('[Admin Order Detail] Order truly not found:', error2)
+        return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+      }
+
+      console.log('[Admin Order Detail] Found order with tenant:', orderAny.tenant_id)
+      return NextResponse.json({ success: true, order: orderAny })
+    }
+
+    console.log('[Admin Order Detail] Found order:', order.id, 'items:', order.order_items?.length)
+    return NextResponse.json({ success: true, order })
+  } catch (error) {
+    console.error('Admin order detail API error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
