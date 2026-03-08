@@ -163,7 +163,7 @@ export default function Footer() {
       <div className="bg-gray-950 border-t border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-            <div className="text-gray-400 text-sm">Senlysh By Mafiaa Western Outfit</div>
+            <div className="text-gray-400 text-sm">C 2024 Senlysh By Mafiaa Western Outfit. All Rights Reserved</div>
             <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-gray-400 text-sm">
               <Link href="/senlysh/terms" className="hover:text-cyan-400 transition-colors">
                 Terms
