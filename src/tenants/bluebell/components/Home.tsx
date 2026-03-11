@@ -1,6 +1,7 @@
 "use client"
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Playfair_Display } from 'next/font/google'
 import { useBluebellHomeMode } from '@/lib/bluebellHomeMode'
 import type { ProductListItem } from '@/types/product'
@@ -90,36 +91,6 @@ export default function Home({ products }: HomeClientProps) {
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/25 via-black/10 to-transparent" />
         {/* Removed placeholder photo overlay that caused rounded window artifact */}
         <div className={`hero-content text-center z-10 px-4`}>
-          {/* Logo */}
-          <div className="hero-logo mb-8">
-            <svg width="220" height="140" viewBox="0 0 220 140" className="mx-auto drop-shadow-2xl animate-[pulse_3s_ease-in-out_infinite]">
-              <g transform="translate(110, 25)">
-                <defs>
-                  <radialGradient id="petalGradient" cx="50%" cy="50%" r="50%">
-                    <stop offset="0%" style={{ stopColor: 'var(--color-white)', stopOpacity: 1 }} />
-                    <stop offset="100%" style={{ stopColor: 'var(--color-primary)', stopOpacity: 0.8 }} />
-                  </radialGradient>
-                  <radialGradient id="accentGradient1" cx="50%" cy="50%" r="50%">
-                    <stop offset="0%" style={{ stopColor: 'var(--color-mustard)', stopOpacity: 0.9 }} />
-                    <stop offset="100%" style={{ stopColor: 'var(--color-mustard)', stopOpacity: 0.4 }} />
-                  </radialGradient>
-                  <radialGradient id="accentGradient2" cx="50%" cy="50%" r="50%">
-                    <stop offset="0%" style={{ stopColor: 'var(--color-crimson)', stopOpacity: 0.8 }} />
-                    <stop offset="100%" style={{ stopColor: 'var(--color-crimson)', stopOpacity: 0.3 }} />
-                  </radialGradient>
-                </defs>
-                <path d="M0 90 Q-25 55 0 20 Q25 55 0 90" fill="url(#petalGradient)" stroke="var(--color-primary)" strokeWidth="2" />
-                <path d="M-15 80 Q-35 50 -15 25 Q5 50 -15 80" fill="url(#accentGradient1)" />
-                <path d="M15 80 Q35 50 15 25 Q-5 50 15 80" fill="url(#accentGradient2)" />
-                <circle cx="0" cy="20" r="10" fill="var(--color-primary)" opacity="0.9" />
-                <line x1="0" y1="90" x2="0" y2="110" stroke="var(--color-brown)" strokeWidth="4" />
-                <path d="M-20 110 Q0 95 20 110" fill="none" stroke="var(--color-brown)" strokeWidth="3" />
-                <circle cx="-30" cy="40" r="3" fill="var(--color-mustard)" opacity="0.6" />
-                <circle cx="30" cy="40" r="3" fill="var(--color-crimson)" opacity="0.6" />
-                <circle cx="0" cy="10" r="2" fill="var(--color-white)" />
-              </g>
-            </svg>
-          </div>
           <h1 className="hero-title text-5xl md:text-7xl font-serif font-black text-white mb-6 leading-tight">
             {viewMode === 'interiors' ? (
               <>

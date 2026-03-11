@@ -1,5 +1,6 @@
 "use client"
 import Link from 'next/link'
+import Image from 'next/image'
 
 export default function Footer() {
   return (
@@ -18,17 +19,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
           {/* Logo and Description */}
           <div className="md:col-span-2">
-            <svg width="200" height="60" viewBox="0 0 200 60" className="mb-6">
-              <g transform="translate(0, 8)">
-                <path d="M18 40 Q12 28 18 16 Q24 28 18 40" fill="#FEFEFE" opacity="0.9"/>
-                <path d="M14 36 Q9 26 14 18 Q19 26 14 36" fill="#FDCE59" opacity="0.7"/>
-                <circle cx="18" cy="16" r="4" fill="#DC2A38" opacity="0.8"/>
-                <line x1="18" y1="40" x2="18" y2="46" stroke="#FEFEFE" strokeWidth="3"/>
-                <path d="M10 46 Q18 40 26 46" fill="none" stroke="#FEFEFE" strokeWidth="2"/>
-              </g>
-              <text x="40" y="24" fontFamily="Playfair Display, serif" fontSize="22" fontWeight="bold" fill="#FEFEFE">Bluebell</text>
-              <text x="40" y="42" fontFamily="Inter, sans-serif" fontSize="14" fontWeight="300" fill="#FEFEFE" letterSpacing="3" opacity="0.8">FABRICS</text>
-            </svg>
+            <Image src="/bb-logo.png" alt="Bluebell Interiors Studio LLP" width={200} height={60} className="mb-6 object-contain" />
             <p className="text-white/80 max-w-md text-lg leading-relaxed mb-6">
               Creating beautiful interiors with premium fabrics since 1985. Your trusted partner for exceptional design solutions that transform spaces into extraordinary experiences.
             </p>

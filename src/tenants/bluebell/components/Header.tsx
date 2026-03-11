@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Playfair_Display } from 'next/font/google';
 import { useCart } from '@/lib/cart';
@@ -72,45 +73,13 @@ export default function Header() {
       </div>
 
       {/* Main Header */}
-      <header className="sticky top-0 z-[100] bg-white/95 backdrop-blur border-b border-gray-100 shadow-sm">
-        <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-4">
-          <div className="flex items-center justify-between">
+      <header className="sticky top-0 z-[100] bg-white/95 backdrop-blur border-b border-gray-100 shadow-sm h-16 sm:h-18 md:h-20">
+        <div className="container mx-auto px-4 sm:px-6 h-full">
+          <div className="flex items-center justify-between h-full">
             {/* Logo */}
-            <Link href={basePath} className="flex items-center gap-2 sm:gap-3 transition-transform hover:scale-[1.02]">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 flex-shrink-0">
-                <svg viewBox="0 0 220 140" className="w-full h-full">
-                  <g transform="translate(110, 25)">
-                    <defs>
-                      <radialGradient id="petalGradient" cx="50%" cy="50%" r="50%">
-                        <stop offset="0%" style={{ stopColor: '#ffffff', stopOpacity: 1 }} />
-                        <stop offset="100%" style={{ stopColor: '#01589d', stopOpacity: 0.8 }} />
-                      </radialGradient>
-                      <radialGradient id="accentGradient1" cx="50%" cy="50%" r="50%">
-                        <stop offset="0%" style={{ stopColor: '#d4af37', stopOpacity: 0.9 }} />
-                        <stop offset="100%" style={{ stopColor: '#d4af37', stopOpacity: 0.4 }} />
-                      </radialGradient>
-                      <radialGradient id="accentGradient2" cx="50%" cy="50%" r="50%">
-                        <stop offset="0%" style={{ stopColor: '#dc143c', stopOpacity: 0.8 }} />
-                        <stop offset="100%" style={{ stopColor: '#dc143c', stopOpacity: 0.3 }} />
-                      </radialGradient>
-                    </defs>
-                    <path d="M0 90 Q-25 55 0 20 Q25 55 0 90" fill="url(#petalGradient)" stroke="#01589d" strokeWidth="2" />
-                    <path d="M-15 80 Q-35 50 -15 25 Q5 50 -15 80" fill="url(#accentGradient1)" />
-                    <path d="M15 80 Q35 50 15 25 Q-5 50 15 80" fill="url(#accentGradient2)" />
-                    <circle cx="0" cy="20" r="10" fill="#01589d" opacity="0.9" />
-                    <line x1="0" y1="90" x2="0" y2="110" stroke="#8B4513" strokeWidth="4" />
-                    <path d="M-20 110 Q0 95 20 110" fill="none" stroke="#8B4513" strokeWidth="3" />
-                    <circle cx="-30" cy="40" r="3" fill="#d4af37" opacity="0.6" />
-                    <circle cx="30" cy="40" r="3" fill="#dc143c" opacity="0.6" />
-                    <circle cx="0" cy="10" r="2" fill="#ffffff" />
-                  </g>
-                </svg>
-              </div>
-              <div className="flex flex-col">
-                <h1 className={`${playfair.className} text-xs sm:text-sm md:text-lg lg:text-xl font-bold text-primary leading-tight`}>
-                  Bluebell Interiors Studio LLP
-                </h1>
-                <p className="text-[8px] sm:text-[10px] md:text-xs text-gray-600">Feel the luxurious life</p>
+            <Link href={basePath} className="flex items-center transition-transform hover:scale-[1.02] -my-6 sm:-my-8 md:-my-10 lg:-my-12">
+              <div className="w-24 h-24 sm:w-32 sm:h-32 md:w-36 md:h-36 lg:w-40 lg:h-40 flex-shrink-0">
+                <Image src="/bb-logo.png" alt="Bluebell Interiors Studio LLP" width={160} height={160} className="w-full h-full object-contain" priority />
               </div>
             </Link>
 
