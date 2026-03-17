@@ -4,6 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Playfair_Display } from 'next/font/google'
 import { useBluebellHomeMode } from '@/lib/bluebellHomeMode'
+import { shouldShowPrices } from '@/tenants/bluebell/config'
 import type { ProductListItem } from '@/types/product'
 import Testimonials from '@/components/patterns/Testimonials'
 import { bluebellTestimonials } from './testimonialsData'
@@ -18,6 +19,7 @@ type HomeClientProps = {
 export default function Home({ products }: HomeClientProps) {
   const [loaded, setLoaded] = useState(false)
   const { mode: storeMode } = useBluebellHomeMode()
+  const showPrices = shouldShowPrices()
   const [viewMode, setViewMode] = useState<'interiors' | 'fabrics'>(storeMode)
   useEffect(() => setLoaded(true), [])
 
@@ -219,9 +221,9 @@ export default function Home({ products }: HomeClientProps) {
             </p>
           </div>
 
-          {/* Top Row - Mock Data (Original Design) */}
+          {/* Top Row - Curated Preview */}
           <div className="mb-12">
-            <h3 className="text-2xl font-bold text-primary mb-6 text-center">Design Preview (Mock Data)</h3>
+            <h3 className="text-2xl font-bold text-primary mb-6 text-center">Design Preview</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
               {[
                 { title: 'Ocean Breeze', price: '₹ 6,999', tone: 'from-[color:var(--color-primary)] via-blue-600 to-[color:var(--color-primary)]/70' },
@@ -242,10 +244,12 @@ export default function Home({ products }: HomeClientProps) {
                   </div>
                   <h3 className="text-2xl font-serif font-bold text-primary mb-3">{p.title}</h3>
                   <p className="text-brown mb-6 leading-relaxed">Premium blend with subtle texture and exceptional durability</p>
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-2xl font-bold text-primary">{p.price}</span>
-                    <span className="text-sm text-brown">per metre</span>
-                  </div>
+                  {showPrices && (
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="text-2xl font-bold text-primary">{p.price}</span>
+                      <span className="text-sm text-brown">per metre</span>
+                    </div>
+                  )}
                   <button className="w-full bg-mustard text-brown font-bold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 btn-glow">
                     View Details
                   </button>
@@ -254,9 +258,9 @@ export default function Home({ products }: HomeClientProps) {
             </div>
           </div>
 
-          {/* Bottom Row - Real Backend Data */}
+          {/* Bottom Row - Live Products */}
           <div>
-            <h3 className="text-2xl font-bold text-primary mb-6 text-center">Live Products (Backend Data)</h3>
+            <h3 className="text-2xl font-bold text-primary mb-6 text-center">Featured Products</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
               {products.slice(0, 8).map((p, idx) => {
                 // Generate dynamic pattern colors based on product characteristics
@@ -304,10 +308,12 @@ export default function Home({ products }: HomeClientProps) {
                     </div>
                     <h3 className="text-2xl font-serif font-bold text-primary mb-3">{p.name}</h3>
                     <p className="text-brown mb-6 leading-relaxed">{p.description || 'Premium blend with subtle texture and exceptional durability'}</p>
-                    <div className="flex items-center justify-between mb-4">
-                      <span className="text-2xl font-bold text-primary">₹{Math.round((p.price_cents || 0)/100).toLocaleString('en-IN')}</span>
-                      <span className="text-sm text-brown">per metre</span>
-                    </div>
+                    {showPrices && (
+                      <div className="flex items-center justify-between mb-4">
+                        <span className="text-2xl font-bold text-primary">₹{Math.round((p.price_cents || 0)/100).toLocaleString('en-IN')}</span>
+                        <span className="text-sm text-brown">per metre</span>
+                      </div>
+                    )}
                     <div className="w-full bg-mustard text-brown text-center font-bold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 btn-glow">
                       View Details
                     </div>

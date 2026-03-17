@@ -2,12 +2,14 @@
 
 import { useMemo, useState } from 'react'
 import type { ProductListItem } from '@/server/modules/products/service'
+import { shouldShowPrices } from '@/tenants/bluebell/config'
 
 interface BluebellProductFiltersProps {
   products: ProductListItem[]
 }
 
 export default function BluebellProductFilters({ products }: BluebellProductFiltersProps) {
+  const showPrices = shouldShowPrices()
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [selectedPriceRange, setSelectedPriceRange] = useState('all')
   const [selectedFabricTypes, setSelectedFabricTypes] = useState<string[]>(['all'])
@@ -20,12 +22,18 @@ export default function BluebellProductFilters({ products }: BluebellProductFilt
     linen: products.filter(p => p.name?.toLowerCase().includes('linen')).length
   }), [products])
 
-  const priceRangeCounts = useMemo(() => ({
-    all: products.length,
-    'under-100': products.filter(p => p.price_cents && p.price_cents < 10000).length,
-    '100-200': products.filter(p => p.price_cents && p.price_cents >= 10000 && p.price_cents < 20000).length,
-    '200-plus': products.filter(p => p.price_cents && p.price_cents >= 20000).length
-  }), [products])
+  const priceRangeCounts = useMemo(() => {
+    if (!showPrices) {
+      return {}
+    }
+
+    return {
+      all: products.length,
+      'under-100': products.filter(p => p.price_cents && p.price_cents < 10000).length,
+      '100-200': products.filter(p => p.price_cents && p.price_cents >= 10000 && p.price_cents < 20000).length,
+      '200-plus': products.filter(p => p.price_cents && p.price_cents >= 20000).length,
+    }
+  }, [products, showPrices])
 
   const handleFabricTypeChange = (fabricType: string) => {
     if (fabricType === 'all') {
@@ -48,7 +56,7 @@ export default function BluebellProductFilters({ products }: BluebellProductFilt
     setSelectedFabricTypes(['all'])
   }
 
-  const hasActiveFilters = selectedCategory !== 'all' || selectedPriceRange !== 'all' || selectedFabricTypes.length > 1
+  const hasActiveFilters = selectedCategory !== 'all' || (showPrices && selectedPriceRange !== 'all') || selectedFabricTypes.length > 1
 
   return (
     <div className="lg:w-80 flex-shrink-0">
@@ -105,40 +113,41 @@ export default function BluebellProductFilters({ products }: BluebellProductFilt
           </div>
         </div>
         
-        {/* Price Range Filter */}
-        <div className="mb-8">
-          <h4 className="text-bluebell-brown font-semibold mb-4 text-lg">Price Range</h4>
-          <div className="space-y-3">
-            {Object.entries(priceRangeCounts).map(([range, count]) => (
-              <label
-                key={range}
-                className={`filter-option flex items-center p-3 rounded-xl cursor-pointer transition-all duration-300 hover:bg-bluebell-mustard/10 hover:translate-x-1 ${
-                  selectedPriceRange === range ? 'active bg-bluebell-blue/10 border-l-4 border-bluebell-blue' : ''
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="price"
-                  className="sr-only"
-                  checked={selectedPriceRange === range}
-                  onChange={() => setSelectedPriceRange(range)}
-                />
-                <div className={`w-5 h-5 rounded-full border-2 mr-3 transition-all duration-300 ${
-                  selectedPriceRange === range 
-                    ? 'bg-bluebell-blue border-bluebell-blue' 
-                    : 'bg-white border-gray-300'
-                }`}></div>
-                <span className="text-bluebell-brown font-medium">
-                  {range === 'all' ? 'All Prices' : 
-                   range === 'under-100' ? 'Under ₹100' :
-                   range === '100-200' ? '₹100 - ₹200' :
-                   '₹200+'}
-                </span>
-                <span className="ml-auto text-bluebell-blue text-sm font-semibold">({count})</span>
-              </label>
-            ))}
+        {showPrices && (
+          <div className="mb-8">
+            <h4 className="text-bluebell-brown font-semibold mb-4 text-lg">Price Range</h4>
+            <div className="space-y-3">
+              {Object.entries(priceRangeCounts).map(([range, count]) => (
+                <label
+                  key={range}
+                  className={`filter-option flex items-center p-3 rounded-xl cursor-pointer transition-all duration-300 hover:bg-bluebell-mustard/10 hover:translate-x-1 ${
+                    selectedPriceRange === range ? 'active bg-bluebell-blue/10 border-l-4 border-bluebell-blue' : ''
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="price"
+                    className="sr-only"
+                    checked={selectedPriceRange === range}
+                    onChange={() => setSelectedPriceRange(range)}
+                  />
+                  <div className={`w-5 h-5 rounded-full border-2 mr-3 transition-all duration-300 ${
+                    selectedPriceRange === range
+                      ? 'bg-bluebell-blue border-bluebell-blue'
+                      : 'bg-white border-gray-300'
+                  }`}></div>
+                  <span className="text-bluebell-brown font-medium">
+                    {range === 'all' ? 'All Prices' :
+                     range === 'under-100' ? 'Under ₹100' :
+                     range === '100-200' ? '₹100 - ₹200' :
+                     '₹200+'}
+                  </span>
+                  <span className="ml-auto text-bluebell-blue text-sm font-semibold">({count})</span>
+                </label>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
         
         {/* Clear Filters Button */}
         {hasActiveFilters && (
