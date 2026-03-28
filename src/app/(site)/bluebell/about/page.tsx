@@ -1,4 +1,4 @@
-// Disable static optimization for debugging
+//     Disable static optimization for debugging
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
