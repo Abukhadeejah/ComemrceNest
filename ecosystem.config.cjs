@@ -1,0 +1,33 @@
+module.exports = {
+  apps: [
+    {
+      name: 'commercenest-web',
+      cwd: __dirname,
+      script: 'npm',
+      args: 'start',
+      interpreter: 'none',
+      exec_mode: 'fork',
+      instances: 1,
+      watch: false,
+      autorestart: true,
+      max_memory_restart: '512M',
+      env: {
+        NODE_ENV: 'production',
+        PORT: process.env.PORT || '3000',
+        NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+        SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+        NEXTAUTH_URL: process.env.NEXTAUTH_URL,
+        NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
+        NEXT_PUBLIC_BASE_URL: process.env.NEXT_PUBLIC_BASE_URL,
+        PHONEPE_REDIRECT_BASE_URL: process.env.PHONEPE_REDIRECT_BASE_URL,
+        PHONEPE_ENV: process.env.PHONEPE_ENV,
+        PHONEPE_MERCHANT_ID: process.env.PHONEPE_MERCHANT_ID,
+        PHONEPE_CLIENT_ID: process.env.PHONEPE_CLIENT_ID,
+        PHONEPE_CLIENT_SECRET: process.env.PHONEPE_CLIENT_SECRET,
+        PHONEPE_CLIENT_VERSION: process.env.PHONEPE_CLIENT_VERSION,
+        PHONEPE_SALT_KEY: process.env.PHONEPE_SALT_KEY,
+        PHONEPE_SALT_INDEX: process.env.PHONEPE_SALT_INDEX,
+      },
+    },
+  ],
+}

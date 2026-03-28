@@ -1,0 +1,164 @@
+KEY DIRECTORIES & MODULES
+======================================
+
+/src/app - NEXT.JS APP ROUTER
+--------------------------------------
+The main application structure using Next.js App Router:
+
+(admin)                    - Admin dashboard wrapper
+├── admin/                 - Main admin pages
+│   ├── products/          - Product CRUD & management
+│   ├── categories/        - Category management
+│   ├── orders/            - Order processing
+│   ├── customers/         - Customer database
+│   ├── inventory/         - Stock management
+│   └── settings/          - System configuration
+
+(site)                     - Customer storefront wrapper
+├── bluebell/              - First tenant store
+├── senlysh/               - Second tenant store
+└── [slug]/                - Dynamic product/portfolio pages
+
+(tenant-admin)             - Multi-tenant admin
+└── [tenant]/              - Dynamic tenant routes
+
+api/                       - Backend API routes
+├── admin/                 - Admin endpoints
+│   ├── attributes/        - Product attributes CRUD
+│   ├── categories/        - Category management
+│   ├── coupons/           - Coupon system
+│   ├── orders/            - Order management
+│   ├── products/          - Product CRUD & drafts
+│   ├── settings/          - System settings
+│   └── upload/            - File uploads
+├── auth/                  - Authentication (Supabase)
+│   ├── [...nextauth]/     - NextAuth handler
+│   ├── admin-tenant/      - Tenant admin auth
+│   ├── callback/          - Auth callbacks
+│   ├── check-tenant-access/ - Tenant access validation
+│   ├── signout/           - Sign out
+│   └── whoami/            - User info
+├── checkout/              - Cart & checkout
+├── coupons/               - Coupon validation
+├── customers/             - Customer management
+│   ├── addresses/         - Address management
+│   ├── profile/           - Profile updates
+│   ├── register/          - Registration
+│   └── wallet/            - Wallet operations
+├── debug/                 - Debug endpoints
+├── health/                - Health check
+├── orders/                - Order processing
+├── product-drafts/        - Draft management
+├── products/              - Product APIs
+├── rewards/               - Cashback system
+│   ├── calculate/         - Cashback calculation
+│   └── history/           - Reward history
+├── site/                  - Frontend APIs
+│   ├── categories/        - Public categories
+│   └── tags/              - Product tags
+├── wallet/                - Wallet system
+│   ├── cashback-stats/    - Cashback statistics
+│   ├── preview-cashback/  - Preview calculations
+│   └── transactions/      - Transaction history
+└── webhooks/              - Payment webhooks
+    ├── juspay/            - Juspay webhooks (legacy)
+    └── phonepe/           - PhonePe webhooks
+
+
+/src/CORE MODULES
+--------------------------------------
+
+components/
+├── admin/                 - Admin UI components
+│   └── layout/            - Admin layouts
+├── tenant/                - Tenant-specific components
+│   └── products/          - Product components
+└── patterns/              - Reusable patterns
+
+server/
+├── config/                - Database config
+├── modules/               - Server-side business logic
+│   ├── products/          - Product handling
+│   └── portfolio/         - Portfolio handling
+└── tenant/                - Tenant utilities
+
+modules/
+└── products/
+    └── components/        - Product components
+
+types/
+├── product.ts             - Product types
+├── order.ts               - Order types
+├── customer.ts            - Customer types
+└── payment.ts             - Payment types
+
+hooks/
+├── useAuth.ts             - Authentication hook
+├── useCart.ts             - Cart management
+└── useTenant.ts           - Tenant context
+
+utils/
+├── helpers.ts             - Helper functions
+├── validators.ts          - Validation logic
+└── constants.ts           - App constants
+
+lib/
+├── cashback/              - Cashback engine & service
+├── payments/              - Payment integrations
+│   └── phonepe.ts         - PhonePe integration
+├── supabaseClient.ts      - Supabase client
+├── cart.tsx               - Cart management
+├── draftService.ts        - Draft auto-save
+└── storage.ts             - File storage utilities
+
+
+/DATABASE & MIGRATIONS
+--------------------------------------
+
+Located in /migrations/:
+✓ add_phonepe_transaction_id.sql     - PhonePe column addition
+✓ create_wallet_withdrawals_table.sql - Wallet feature
+✓ setup-rls-policies.sql              - Row Level Security
+
+Tables in Supabase:
+✓ products              - Product data
+✓ product_attributes    - Attribute definitions
+✓ product_variants      - Product variants
+✓ categories            - Product categories
+✓ orders                - Order records
+✓ order_items           - Order details
+✓ customers             - Customer accounts
+✓ customer_addresses    - Customer addresses
+✓ wallets               - Customer wallets
+✓ wallet_transactions   - Wallet transaction history
+✓ cashback_transactions - Cashback records
+✓ coupons               - Coupon definitions
+✓ coupon_usage          - Coupon usage tracking
+✓ payments              - Payment records
+
+
+/TESTING
+--------------------------------------
+
+tests/e2e/                - Playwright E2E tests
+✓ Test product flows
+✓ Test checkout
+✓ Test authentication
+
+
+STATIC FILES
+--------------------------------------
+
+public/
+├── images/
+│   ├── brands/          - Brand logos
+│   └── senlysh/         - Tenant-specific images
+
+
+SCRIPTS & UTILITIES
+--------------------------------------
+
+scripts/
+├── scaffold-tenant.js    - Create new tenant
+├── validate-imports.js   - Check imports
+└── fix-hero-images.js    - Image utilities

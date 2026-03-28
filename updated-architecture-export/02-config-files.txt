@@ -1,0 +1,73 @@
+CONFIGURATION FILES REFERENCE
+======================================
+
+MAIN CONFIGS
+--------------------------------------
+
+package.json
+  - Node.js dependencies (Next.js, React, TailwindCSS, etc.)
+  - Build & dev scripts
+  - Project metadata
+
+tsconfig.json
+  - TypeScript compilation settings
+  - Path aliases (@/ for src/)
+  - Strict type checking
+
+next.config.ts
+  - Next.js build optimization
+  - Image optimization
+  - Environment variables
+
+tailwind.config.ts
+  - TailwindCSS theme customization
+  - Color schemes
+  - Responsive breakpoints
+
+postcss.config.js
+  - PostCSS plugin configuration
+  - TailwindCSS integration
+
+eslint.config.mjs
+  - Code style & quality rules
+  - TypeScript support
+  - React rules
+
+API & DEPLOYMENT
+--------------------------------------
+
+vercel.json
+  - Vercel deployment configuration
+  - Build settings
+  - Environment setup
+
+playwright.config.ts
+  - E2E test configuration
+  - Browser settings
+  - Test timeouts
+
+DATABASE & MIGRATIONS
+--------------------------------------
+
+Located in /migrations/
+  ✓ add_phonepe_transaction_id.sql     - PhonePe column addition
+  ✓ create_cashback_system.sql         - Cashback/rewards system
+  ✓ create_coupons_system.sql          - Coupon management
+  ✓ create_pending_coupon_usage.sql    - Coupon usage tracking
+  ✓ create_wallet_withdrawals_table.sql - Wallet feature
+  ✓ fix_coupons_schema.sql              - Coupon schema fixes
+  ✓ fix_validate_coupon_function.sql    - Coupon validation
+  ✓ recreate_coupons_fresh.sql          - Fresh coupon setup
+  ✓ recreate_coupons_no_users.sql       - Coupon system rebuild
+  ✓ RLS (Row Level Security) policies
+
+ENVIRONMENT VARIABLES
+--------------------------------------
+Required in .env.local:
+  - SUPABASE_URL
+  - SUPABASE_ANON_KEY
+  - SUPABASE_SERVICE_ROLE_KEY
+  - RAZORPAY_KEY_ID
+  - RAZORPAY_KEY_SECRET
+  - PHONEPE_* (PhonePe credentials)
+  - DATABASE_URL (if needed)

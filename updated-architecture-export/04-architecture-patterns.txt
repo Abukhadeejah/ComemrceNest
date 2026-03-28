@@ -1,0 +1,160 @@
+CODE ARCHITECTURE & PATTERNS
+======================================
+
+MULTI-TENANT ARCHITECTURE
+--------------------------------------
+Pattern: Dynamic tenant routing using [tenant] parameter
+
+Admin Access:
+  /[tenant]/admin/*              - Tenant-specific admin dashboard
+  Routes are protected by auth middleware
+
+Customer Access:
+  /[tenant]/*                    - Customer-facing store
+  Multi-store support (bluebell, senlysh, etc.)
+
+Implementation:
+  ✓ Middleware handles tenant validation
+  ✓ Tenant context provides config
+  ✓ RLS policies enforce data isolation in DB
+
+
+AUTHENTICATION FLOW
+--------------------------------------
+✓ Supabase Auth (OAuth + Email/Password)
+✓ Protected routes via middleware
+✓ Session management
+✓ Role-based access (admin, customer, vendor)
+
+
+PRODUCT MANAGEMENT
+--------------------------------------
+Features:
+  ✓ Simple & variant products
+  ✓ Product attributes (dynamic)
+  ✓ Categories with hierarchical structure
+  ✓ Stock tracking
+  ✓ Pricing (base + variants)
+  ✓ Cost price tracking
+  ✓ Tenant-specific availability
+  ✓ Draft auto-save system
+  ✓ Product image galleries
+  ✓ SEO optimization
+
+Components:
+  - ProductForm (add/edit)
+  - AttributesSection (horizontal layout - UPDATED)
+  - VariantsSection (size, color, etc.)
+  - PricingSection (base + variant pricing)
+  - SizeGuideSection (fashion products)
+  - ProductGallery (image management)
+
+
+ORDER & CHECKOUT
+--------------------------------------
+Process:
+  1. Add to cart
+  2. Review cart
+  3. Apply coupons (if available)
+  4. Enter shipping address
+  5. Select payment method (Razorpay/PhonePe/Wallet)
+  6. Process payment
+  7. Webhook confirmation
+  8. Order confirmation & cashback calculation
+
+Payment Integration:
+  ✓ Razorpay (primary)
+  ✓ PhonePe (secondary)
+  ✓ Wallet system (top-up & redemption)
+  ✓ Webhook handlers for confirmations
+  ✓ Multi-provider payment support
+  ✓ Cashback calculation engine
+
+Coupon System:
+  ✓ Percentage & fixed amount discounts
+  ✓ Minimum order value requirements
+  ✓ Usage limits & expiry dates
+  ✓ Tenant-specific coupons
+  ✓ Real-time validation
+
+
+API STRUCTURE
+--------------------------------------
+Admin APIs:
+  GET/POST    /api/admin/products
+  GET/POST    /api/admin/categories
+  GET/POST    /api/admin/orders
+  GET/POST    /api/admin/coupons
+  GET/POST    /api/admin/attributes
+  POST        /api/admin/upload
+
+Auth APIs:
+  POST        /api/auth/signout
+  GET         /api/auth/whoami
+  POST        /api/auth/admin-tenant
+  GET         /api/auth/check-tenant-access
+
+Customer APIs:
+  POST        /api/customers/register
+  GET/PUT     /api/customers/profile
+  GET/POST    /api/customers/addresses
+  GET/POST    /api/customers/wallet
+
+Checkout APIs:
+  POST        /api/checkout
+  POST        /api/coupons/validate
+  POST        /api/webhooks/razorpay
+  POST        /api/webhooks/phonepe
+
+Rewards APIs:
+  POST        /api/rewards/calculate
+  GET         /api/rewards/history
+  GET         /api/wallet/cashback-stats
+  POST        /api/wallet/preview-cashback
+
+
+DATA FLOW
+--------------------------------------
+
+User Action → React Component
+         ↓
+Server Action / API Route
+         ↓
+Supabase (Database/Auth)
+         ↓
+Response → Component → UI Update
+
+
+TYPE SAFETY
+--------------------------------------
+All routes and components use TypeScript:
+  ✓ Strict null checks
+  ✓ Type-safe form data
+  ✓ Database schema types
+
+
+STYLING
+--------------------------------------
+✓ TailwindCSS for styling
+✓ Component-level styles
+✓ Responsive design (mobile-first)
+✓ Dark mode support (configurable)
+
+
+PERFORMANCE OPTIMIZATIONS
+--------------------------------------
+✓ Image optimization (Next.js Image)
+✓ Code splitting
+✓ Server components (default in App Router)
+✓ Data caching strategies
+✓ SEO-friendly structure
+
+
+SECURITY
+--------------------------------------
+✓ Row Level Security (RLS) in database
+✓ API route protection
+✓ CSRF protection
+✓ Input validation
+✓ SQL injection prevention (Supabase queries)
+✓ Environment variable protection

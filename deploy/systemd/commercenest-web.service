@@ -1,0 +1,19 @@
+[Unit]
+Description=CommerceNest Next.js Web App
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/var/www/commercenest/web
+EnvironmentFile=/etc/commercenest/web.env
+Environment=NODE_ENV=production
+Environment=PORT=3000
+ExecStart=/usr/bin/npm start
+Restart=always
+RestartSec=5
+KillSignal=SIGINT
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target
