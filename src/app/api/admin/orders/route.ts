@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
 
     // Apply status filter
     if (status && status !== 'all') {
-      const allowedStatuses = ['pending', 'paid', 'confirmed', 'failed', 'fulfilled', 'cancelled']
+      const allowedStatuses = ['pending', 'paid', 'confirmed', 'failed', 'fulfilled', 'cancelled', 'partially_returned', 'returned']
       if (allowedStatuses.includes(status)) {
         query = query.eq('status', status)
       }

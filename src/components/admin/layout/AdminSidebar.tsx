@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import { 
   XMarkIcon,
   HomeIcon,
@@ -53,16 +54,22 @@ export function AdminSidebar({ open = false, setOpen }: AdminSidebarProps) {
   const pathname = usePathname()
   const brandingConfig = useAdminBranding()
   const tenantKey = useAdminTenantKey()
-  
-  let enabledModules: Set<string> | undefined
-  if (typeof document !== 'undefined') {
+  const [enabledModules, setEnabledModules] = useState<Set<string> | undefined>(undefined)
+
+  useEffect(() => {
     const data = document.body?.getAttribute('data-enabled-modules')
-    if (data) {
-      try {
-        enabledModules = new Set(JSON.parse(data))
-      } catch {}
+    if (!data) return
+
+    try {
+      const parsed = JSON.parse(data)
+      if (Array.isArray(parsed)) {
+        setEnabledModules(new Set(parsed))
+      }
+    } catch {
+      setEnabledModules(undefined)
     }
-  }
+  }, [])
+
   const navigation = buildNavigation(tenantKey, enabledModules)
 
   const handleClose = () => {
@@ -116,7 +123,7 @@ export function AdminSidebar({ open = false, setOpen }: AdminSidebarProps) {
               onClick={handleClose}
             >
               <span className="sr-only">Close sidebar</span>
-              <XMarkIcon className="h-6 w-6" />
+              <XMarkIcon className="h-6 w-6" suppressHydrationWarning />
             </button>
           </div>
           
@@ -139,6 +146,7 @@ export function AdminSidebar({ open = false, setOpen }: AdminSidebarProps) {
                     className={`mr-3 h-5 w-5 flex-shrink-0 transition-colors ${
                       isActive ? 'text-indigo-600' : 'text-gray-400 group-hover:text-gray-600'
                     }`}
+                    suppressHydrationWarning
                   />
                   {item.name}
                 </Link>
@@ -182,6 +190,7 @@ export function AdminSidebar({ open = false, setOpen }: AdminSidebarProps) {
                     className={`mr-3 h-5 w-5 flex-shrink-0 transition-colors ${
                       isActive ? 'text-indigo-600' : 'text-gray-400 group-hover:text-gray-600'
                     }`}
+                    suppressHydrationWarning
                   />
                   {item.name}
                 </Link>

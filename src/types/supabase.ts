@@ -789,6 +789,7 @@ export type Database = {
           currency: string
           email: string
           id: string
+          order_source: string
           order_number: string
           payment_env: string
           payment_provider: string
@@ -802,6 +803,7 @@ export type Database = {
           currency?: string
           email: string
           id?: string
+          order_source?: string
           order_number: string
           payment_env?: string
           payment_provider?: string
@@ -815,6 +817,7 @@ export type Database = {
           currency?: string
           email?: string
           id?: string
+          order_source?: string
           order_number?: string
           payment_env?: string
           payment_provider?: string

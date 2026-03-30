@@ -417,7 +417,45 @@ export async function getWalletBalance(
     throw new Error(`Failed to fetch wallet balance: ${error.message}`)
   }
   
-  return data.balance_cents || 0
+  const viewBalance = data.balance_cents || 0
+  if (viewBalance !== 0) {
+    return viewBalance
+  }
+
+  // Fallback for environments where v_wallet_balances CASE handling is stale.
+  const { data: account, error: accountError } = await supabaseAdmin
+    .from('wallet_accounts')
+    .select('id')
+    .eq('customer_id', customerId)
+    .eq('tenant_id', tenantId)
+    .maybeSingle()
+
+  if (accountError) {
+    throw new Error(`Failed to fetch wallet account for fallback balance: ${accountError.message}`)
+  }
+
+  if (!account?.id) {
+    return 0
+  }
+
+  const { data: ledgerRows, error: ledgerError } = await supabaseAdmin
+    .from('wallet_ledger')
+    .select('entry_type, amount_cents')
+    .eq('tenant_id', tenantId)
+    .eq('account_id', account.id)
+
+  if (ledgerError) {
+    throw new Error(`Failed to fetch wallet ledger for fallback balance: ${ledgerError.message}`)
+  }
+
+  const computedBalance = (ledgerRows || []).reduce((sum, row) => {
+    const kind = (row.entry_type || '').toLowerCase()
+    if (kind === 'credit') return sum + (row.amount_cents || 0)
+    if (kind === 'debit') return sum - (row.amount_cents || 0)
+    return sum
+  }, 0)
+
+  return computedBalance
 }
 
 /**

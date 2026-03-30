@@ -1,6 +1,7 @@
 import { getOrders } from './actions'
 import { OrderTable } from './OrderTable'
 import { OrderFilters } from './OrderFilters'
+import Link from 'next/link'
 
 interface AdminOrdersProps {
   searchParams: Promise<{
@@ -25,6 +26,18 @@ export default async function AdminOrders({ searchParams }: AdminOrdersProps) {
           </p>
         </div>
         <div className="flex items-center space-x-4">
+          <Link
+            href="/admin/orders/returns"
+            className="inline-flex items-center rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-100"
+          >
+            Returns
+          </Link>
+          <Link
+            href="/admin/orders/create"
+            className="inline-flex items-center rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          >
+            Create Order
+          </Link>
           <div className="text-sm text-gray-500">
             Total Orders: <span className="font-semibold text-gray-900">{orders.count}</span>
           </div>

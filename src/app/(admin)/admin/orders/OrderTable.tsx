@@ -8,6 +8,7 @@ import { ReactElement } from 'react'
 interface Order {
   id: string
   order_number: string
+  order_source?: string
   email: string
   total_cents: number
   currency: string
@@ -96,7 +97,10 @@ export function OrderTable({
     const statusLabels = {
       pending: 'Pending',
       paid: 'Paid',
+      confirmed: 'Confirmed',
       fulfilled: 'Fulfilled',
+      partially_returned: 'Partially Returned',
+      returned: 'Returned',
       cancelled: 'Cancelled',
       failed: 'Failed'
     }
@@ -188,7 +192,10 @@ export function OrderTable({
     const statusConfig = {
       pending: { color: 'bg-yellow-100 text-yellow-800', label: 'Pending' },
       paid: { color: 'bg-green-100 text-green-800', label: 'Paid' },
+      confirmed: { color: 'bg-cyan-100 text-cyan-800', label: 'Confirmed' },
       fulfilled: { color: 'bg-purple-100 text-purple-800', label: 'Fulfilled' },
+      partially_returned: { color: 'bg-orange-100 text-orange-800', label: 'Partially Returned' },
+      returned: { color: 'bg-rose-100 text-rose-800', label: 'Returned' },
       cancelled: { color: 'bg-gray-100 text-gray-800', label: 'Cancelled' },
       failed: { color: 'bg-red-100 text-red-800', label: 'Failed' }
     }
@@ -198,6 +205,22 @@ export function OrderTable({
     return (
       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.color}`}>
         {config.label}
+      </span>
+    )
+  }
+
+  const getOrderSourceBadge = (source?: string) => {
+    if (source === 'offline_admin') {
+      return (
+        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-orange-100 text-orange-800">
+          Offline Admin
+        </span>
+      )
+    }
+
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-blue-100 text-blue-800">
+        Online
       </span>
     )
   }
@@ -299,9 +322,12 @@ export function OrderTable({
           {orders.data.map((order) => (
             <tr key={order.id} className="hover:bg-gray-50">
               <td className="px-4 py-4 whitespace-nowrap align-top">
-                <span className="text-sm font-medium text-gray-900">
-                  {order.order_number}
-                </span>
+                <div className="flex flex-col gap-1">
+                  <span className="text-sm font-medium text-gray-900">
+                    {order.order_number}
+                  </span>
+                  {getOrderSourceBadge(order.order_source)}
+                </div>
               </td>
               <td className="px-4 py-4 whitespace-nowrap align-top">
                 <div className="text-sm text-gray-900">{order.email}</div>
@@ -364,6 +390,14 @@ export function OrderTable({
                   >
                     View Details
                   </Link>
+                  {order.order_source === 'offline_admin' && ['paid', 'fulfilled'].includes(order.status) && (
+                    <Link
+                      href={`${orderBasePath}/returns?order=${encodeURIComponent(order.order_number)}`}
+                      className="text-red-600 hover:text-red-800 text-sm"
+                    >
+                      Create Return
+                    </Link>
+                  )}
                   {getStatusActions(order).map((action, index) => (
                     <div key={index}>{action}</div>
                   ))}
