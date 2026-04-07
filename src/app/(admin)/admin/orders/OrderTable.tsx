@@ -9,6 +9,7 @@ interface Order {
   id: string
   order_number: string
   order_source?: string
+  has_processed_return?: boolean
   email: string
   total_cents: number
   currency: string
@@ -390,7 +391,7 @@ export function OrderTable({
                   >
                     View Details
                   </Link>
-                  {order.order_source === 'offline_admin' && ['paid', 'fulfilled'].includes(order.status) && (
+                  {order.order_source === 'offline_admin' && !order.has_processed_return && ['paid', 'fulfilled'].includes(order.status) && (
                     <Link
                       href={`${orderBasePath}/returns?order=${encodeURIComponent(order.order_number)}`}
                       className="text-red-600 hover:text-red-800 text-sm"

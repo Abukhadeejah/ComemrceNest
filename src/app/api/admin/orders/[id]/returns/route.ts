@@ -21,6 +21,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const body = (await request.json()) as CreateOfflineReturnInput
     const result = await createOfflineOrderReturn(tenantId, orderId, body)
 
+    // Also bust shared orders list cache used by server actions.
+    revalidateTag('orders', 'default')
     revalidateTag(tenantOrdersTag(tenantId), 'default')
     revalidateTag(tenantProductsTag(tenantId), 'default')
 

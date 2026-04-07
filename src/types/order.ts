@@ -4,7 +4,15 @@
  * Type definitions for orders, order items, and payment processing
  */
 
-export type OrderStatus = 'pending' | 'paid' | 'fulfilled' | 'cancelled' | 'failed' | 'refunded';
+export type OrderStatus =
+  | 'pending'
+  | 'paid'
+  | 'fulfilled'
+  | 'cancelled'
+  | 'failed'
+  | 'refunded'
+  | 'partially_returned'
+  | 'returned';
 export type PaymentProvider = 'phonepe' | 'razorpay';
 export type PaymentEnv = 'test' | 'live' | 'sandbox' | 'production';
 export type OrderSource = 'online' | 'offline_admin';

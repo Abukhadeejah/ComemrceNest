@@ -807,6 +807,23 @@ export async function createOfflineOrderReturn(
     }
   }
 
+  const { data: existingProcessedReturn, error: existingProcessedReturnError } = await adminDb
+    .from('order_returns')
+    .select('id, return_number')
+    .eq('tenant_id', tenantId)
+    .eq('order_id', orderId)
+    .eq('status', 'processed')
+    .limit(1)
+    .maybeSingle()
+
+  if (existingProcessedReturnError) {
+    throw new Error(`Failed to verify existing processed returns: ${existingProcessedReturnError.message}`)
+  }
+
+  if (existingProcessedReturn?.id) {
+    throw new Error(`Return already exists for this order (${existingProcessedReturn.return_number})`)
+  }
+
   const normalizedItems = input.items.map((item, index) => ({
     orderItemId: item.orderItemId,
     returnedQuantity: ensurePositiveInt(Number(item.returnedQuantity), `items[${index}].returnedQuantity`),
