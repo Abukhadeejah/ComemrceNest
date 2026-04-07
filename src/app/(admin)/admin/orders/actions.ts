@@ -66,8 +66,32 @@ async function _getOrdersFromDB(searchParams: {
     throw new Error(`Failed to fetch orders: ${error.message}`)
   }
 
+  const orders = data || []
+  const orderIds = orders.map((order: { id: string }) => order.id)
+  const returnedOrderIds = new Set<string>()
+
+  if (orderIds.length > 0) {
+    const { data: processedReturns, error: processedReturnsError } = await supabaseAdmin
+      .from('order_returns')
+      .select('order_id')
+      .eq('tenant_id', tenantId)
+      .eq('status', 'processed')
+      .in('order_id', orderIds)
+
+    if (processedReturnsError) {
+      throw new Error(`Failed to fetch processed return flags: ${processedReturnsError.message}`)
+    }
+
+    for (const row of processedReturns || []) {
+      if (row.order_id) returnedOrderIds.add(row.order_id)
+    }
+  }
+
   return {
-    data: data || [],
+    data: orders.map((order: any) => ({
+      ...order,
+      has_processed_return: returnedOrderIds.has(order.id),
+    })),
     count: count || 0,
     page,
     pageSize,

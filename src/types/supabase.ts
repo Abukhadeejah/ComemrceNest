@@ -2604,7 +2604,14 @@ export type Database = {
     Enums: {
       capture_mode: "auto" | "manual"
       domain_ssl_status: "pending" | "active" | "error"
-      order_status: "pending" | "paid" | "failed" | "fulfilled" | "cancelled"
+      order_status:
+        | "pending"
+        | "paid"
+        | "failed"
+        | "fulfilled"
+        | "cancelled"
+        | "partially_returned"
+        | "returned"
       platform_role: "superadmin" | "staff"
       product_status: "draft" | "published"
       project_status: "draft" | "published"
@@ -2739,7 +2746,7 @@ export const Constants = {
     Enums: {
       capture_mode: ["auto", "manual"],
       domain_ssl_status: ["pending", "active", "error"],
-      order_status: ["pending", "paid", "failed", "fulfilled", "cancelled"],
+      order_status: ["pending", "paid", "failed", "fulfilled", "cancelled", "partially_returned", "returned"],
       platform_role: ["superadmin", "staff"],
       product_status: ["draft", "published"],
       project_status: ["draft", "published"],
