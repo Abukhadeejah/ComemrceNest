@@ -1,0 +1,443 @@
+# Offline Return Function Log
+
+## Phase 1 - Discovery and Scope Mapping
+
+Date: 2026-03-28
+Status: Completed
+
+### Objective
+Map current admin/offline order architecture and identify integration points for offline returns without changing code.
+
+### Files Inspected
+- src/app/(admin)/admin/orders/actions.ts
+- src/app/(admin)/admin/orders/OrderTable.tsx
+- src/app/(admin)/admin/orders/page.tsx
+- src/app/(tenant-admin)/[tenant]/admin/orders/page.tsx
+- src/app/(admin)/admin/order-details/[id]/page.tsx
+- src/app/(tenant-admin)/[tenant]/admin/order-details/[id]/page.tsx
+- src/app/api/admin/orders/update-status/route.ts
+- src/app/api/admin/orders/[id]/mark-paid/route.ts
+- src/app/api/admin/orders/[id]/route.ts
+- src/app/api/admin/orders/offline/route.ts
+- src/app/api/admin/customers/by-phone/route.ts
+- src/server/admin/offlineOrders.ts
+- src/lib/cashback/cashbackService.ts
+- src/app/api/orders/route.ts
+- src/app/api/orders/[orderId]/verify-payment/route.ts
+- src/app/api/webhooks/phonepe/route.ts
+- src/app/api/webhooks/razorpay/route.ts
+- src/types/supabase.ts
+
+### Findings
+1. No existing returns system in codebase:
+   - No admin returns API routes.
+   - No server/admin return service module.
+   - No return-related SQL migrations found in migrations folder.
+
+2. Order action surface today:
+   - Admin order table supports View Details, Mark Paid, Mark Fulfilled, Cancel, Delete.
+   - No return action exists at list or details level.
+
+3. Post-payment side-effects are centralized for offline/admin paid flow:
+   - Admin paid transitions call processPaidOrderPostPaymentOnce from src/server/admin/offlineOrders.ts.
+   - This is the key pattern for idempotent financial side-effects and should be mirrored for returns.
+
+4. Wallet/cashback data model touchpoints exist, but no reversal helpers exist:
+   - wallet_ledger and cashback_transactions are present.
+   - cashbackService currently handles earning/crediting cashback, not return reversals.
+
+5. Inventory update mechanism is not explicitly implemented in app-layer order handlers:
+   - Order creation paths validate stock and create order_items.
+   - No direct product stock decrement/increment update found in inspected API/service code.
+   - Returns design must account for this unknown and avoid double-restock.
+
+6. Tenant security pattern for current admin endpoints:
+   - Current admin routes use resolveTenantIdFromRequest with temporary fallback tenant behavior.
+   - Returns endpoints must remain tenant-scoped and consistent with existing temporary admin behavior.
+
+7. Schema signals from generated types:
+   - Existing enums include order_status (pending/paid/failed/fulfilled/cancelled).
+   - No return status, return tables, or return RPCs are present in generated Supabase types.
+
+### Phase 1 Conclusion
+Offline returns are not yet scaffolded and require new schema + API + UI work. The safest path is item-level returns with explicit idempotency tracking and tenant scoping, integrated into existing admin orders flows.
+
+### Proposed Next Phase
+Phase 2 should define and implement database schema for returns (header + line items + idempotency markers), with clear constraints to prevent duplicate refund/restock.
+
+## Phase 2 - Returns Schema Foundation
+
+Date: 2026-03-28
+Status: Completed
+
+### Objective
+Implement DB schema for offline/admin item-level returns with tenant-safe constraints and duplicate side-effect protection.
+
+### Files Changed
+- migrations/create_offline_order_returns_system.sql
+
+### Schema Added
+1. order_returns (return header)
+    - Linked to tenant, order, customer.
+    - Tracks return_number, status, reason/notes, refund split, cashback reversal amount.
+    - Unique constraint on (tenant_id, return_number).
+    - Refund split check: wallet_refund_cents + cash_refund_cents = total_return_cents.
+
+2. order_return_items (item-level lines)
+    - Linked to return header + order_item + product.
+    - Tracks returned_quantity, restock_quantity, unit price snapshot, line subtotal.
+    - Unique constraint on (order_return_id, order_item_id).
+    - Check ensures restock_quantity <= returned_quantity.
+
+3. order_return_effects (idempotency/audit)
+    - Stores applied side effects by effect_type:
+       - wallet_refund
+       - cash_refund
+       - stock_restock
+       - cashback_reversal
+    - Partial unique indexes prevent duplicate effect application:
+       - item-level unique key when order_return_item_id is present
+       - header-level unique key when order_return_item_id is null
+
+### Safety/Integrity Guards Added
+- Trigger updates order_returns.updated_at on update.
+- Trigger validates each return line before insert/update:
+   - return header exists in same tenant
+   - order_item exists in same tenant
+   - order_item belongs to the same order as return header
+   - product_id matches the order_item product
+   - cumulative returned quantity (excluding cancelled returns) never exceeds sold quantity
+
+### Phase 2 Conclusion
+Core returns schema is now in place with strong DB-level protection against over-returns and duplicate refund/restock/cashback side effects.
+
+### Proposed Next Phase
+Phase 3 should add backend service contract for creating returns and applying side effects using order_return_effects idempotency keys.
+
+## Phase 3 - Backend Contract and API
+
+Date: 2026-03-28
+Status: Completed
+
+### Objective
+Implement return creation backend logic and admin API endpoint using Phase 2 schema with idempotent side effects.
+
+### Files Changed
+- src/server/admin/offlineOrderReturns.ts
+- src/app/api/admin/orders/[id]/returns/route.ts
+
+### Backend Contract Implemented
+- New service function:
+   - createOfflineOrderReturn(tenantId, orderId, input)
+- New API route:
+   - POST /api/admin/orders/[id]/returns
+
+### Validation and Scope Rules Implemented
+- Enforces tenant-scoped order lookup.
+- Enforces offline-only scope:
+   - only orders with order_source = offline_admin can be returned.
+- Enforces order status eligibility:
+   - only paid or fulfilled orders are returnable.
+- Enforces item-level input validity:
+   - positive returnedQuantity
+   - non-negative restockQuantity
+   - restockQuantity <= returnedQuantity
+   - order_item must belong to requested order
+- Calculates server-side return totals from original order_item unit prices.
+
+### Refund/Cashback Logic Implemented
+- Computes total_return_cents as sum of returned line subtotals.
+- Computes wallet/cash refund split with guardrails:
+   - split must equal total_return_cents
+   - wallet refund cannot exceed original wallet_used_cents for the order
+- Computes cashback reversal proportionally based on return amount,
+   capped by remaining unreversed cashback across previous non-cancelled returns.
+
+### Idempotent Side Effects Implemented
+Using order_return_effects unique constraints, service records side effects once:
+- wallet_refund:
+   - credits customer wallet_ledger with source_key RETURN_REFUND
+- cash_refund:
+   - records idempotent cash refund effect metadata
+- stock_restock:
+   - increments product stock only for track_inventory products
+- cashback_reversal:
+   - reduces cashback_transactions.cashback_amount_cents for the order
+   - if cashback already credited to wallet, debits wallet_ledger with source_key CASHBACK_REVERSAL
+
+### Processing Lifecycle
+- Creates return header as draft.
+- Inserts return line items.
+- Applies side effects.
+- Finalizes return header to processed with processed_at timestamp.
+
+### Cache Invalidation Added
+- Revalidates tenant order and product tags after successful return create.
+
+### Phase 3 Conclusion
+Backend return contract and API are now in place with tenant scope, offline-only guardrails, and idempotent side-effect execution.
+
+### Proposed Next Phase
+Phase 4 should add admin UI integration (return action + return form/modal + return visibility in order details).
+
+## Phase 4 - Admin UI Integration
+
+Date: 2026-03-28
+Status: Completed
+
+### Objective
+Add return creation entry points and visibility in admin order management UI.
+
+### Files Changed
+- src/components/admin/orders/OfflineReturnPanel.tsx
+- src/app/(admin)/admin/order-details/[id]/page.tsx
+- src/app/(tenant-admin)/[tenant]/admin/order-details/[id]/page.tsx
+- src/app/(admin)/admin/orders/OrderTable.tsx
+
+### UI Features Implemented
+1. Create Return panel on order details pages (global + tenant admin)
+   - Item-level quantity inputs per sold order item
+   - Optional reason and notes
+   - Optional automatic restock toggle for inventory-tracked products
+   - Server call to POST /api/admin/orders/[id]/returns
+   - Success/error feedback and router refresh after creation
+
+2. Return eligibility guard in UI
+   - Return creation panel shows actionable flow only for:
+     - order_source = offline_admin
+     - order status in paid or fulfilled
+   - Ineligible orders display explanatory notice.
+
+3. Return history visibility in order details
+   - Added Return History section in both global and tenant order-details pages
+   - Shows per return:
+     - return number, status, created/processed timestamps
+     - total return, wallet refund, cash refund, cashback reversal
+     - item-level lines with returned qty, restocked qty, line return value
+
+4. Quick action from orders list
+   - Added "Create Return" action link in orders table for eligible rows.
+   - Link routes to order-details page where return panel is available.
+
+### Data Fetch Enhancements
+- Order detail item query now includes products.track_inventory to support restock default behavior in panel.
+- Added order_returns + nested order_return_items reads for history rendering.
+
+### Phase 4 Conclusion
+Admin users can now discover, create, and review offline order returns directly from existing order management surfaces.
+
+### Proposed Next Phase
+Phase 5 should perform end-to-end testing and edge-case hardening (duplicate submits, mixed partial returns, and refund/cashback consistency checks).
+
+## Phase 5 - Hardening and E2E Validation
+
+Date: 2026-03-28
+Status: Completed
+
+### Objective
+Harden return creation against duplicate submissions and cumulative refund inconsistencies, then validate with integration tests.
+
+### Files Changed
+- migrations/add_order_returns_client_request_id.sql
+- src/server/admin/offlineOrderReturns.ts
+- src/components/admin/orders/OfflineReturnPanel.tsx
+- scripts/test-offline-returns.js
+
+### Hardening Implemented
+1. Backend idempotency key support
+   - Added optional clientRequestId in return input contract.
+   - Added client_request_id persistence on order_returns.
+   - Added DB unique index per (tenant_id, order_id, client_request_id) for replay-safe retries.
+   - On unique conflict, backend now loads and returns existing return payload instead of failing.
+
+2. Cumulative refund consistency guards
+   - Calculates already refunded wallet/cash across non-cancelled prior returns.
+   - Enforces current return does not exceed remaining refundable wallet/cash amounts.
+
+3. UI submit hardening
+   - Return panel now sends a stable clientRequestId per submit attempt.
+   - Clears key after successful completion.
+
+4. Integration test harness added
+   - New script: scripts/test-offline-returns.js
+   - Covers:
+     - duplicate submit replay behavior
+     - partial multi-return quantity behavior
+     - refund split and consistency guards
+
+### Test Execution Summary
+Command run:
+- node scripts/test-offline-returns.js
+
+Final result:
+- 3/3 passed
+
+Checks validated:
+1. Duplicate submit with same clientRequestId replays safely
+   - first call 200, second call 200, replayed=true
+2. Partial returns allow valid slices and reject over-quantity
+   - valid partial returns succeeded
+   - over-quantity request rejected with explicit validation error
+3. Refund/cashback consistency guards
+   - invalid split rejected
+   - valid split accepted
+
+### Phase 5 Conclusion
+- Code-level hardening and runtime E2E validation are complete.
+
+### Proposed Next Phase
+Phase 6 should finalize operational rollout: migration runbook, admin usage notes, and production safety checklist.
+
+## Phase 6 - Operational Rollout Finalization
+
+Date: 2026-03-28
+Status: Completed
+
+### Objective
+Finalize deployment readiness with a practical rollout runbook, admin usage instructions, and production safety checklist.
+
+### Files Changed
+- docs/offline-returns-rollout-runbook.md
+
+### Deliverables Completed
+1. Migration runbook
+   - Ordered migration sequence and deployment flow for staging and production.
+
+2. Admin usage notes
+   - Step-by-step return creation and review process for operations/admin teams.
+
+3. Production safety checklist
+   - DB/API/UI/financial/audit checks before and after go-live.
+
+4. Rollback guidance
+   - Non-destructive mitigation path preserving financial and audit history.
+
+### Phase 6 Conclusion
+Offline order returns implementation is now complete across discovery, schema, backend, UI, hardening, and operational rollout guidance.
+
+## Post-Phase 6 - Production Hardening Addendum
+
+Date: 2026-03-28
+Status: Completed
+
+### Objective
+Apply additional production-grade safeguards for tenant isolation, side-effect tracking, and inventory safety after final implementation review.
+
+### Files Changed
+- src/app/api/admin/orders/[id]/returns/route.ts
+- src/server/admin/offlineOrderReturns.ts
+- migrations/harden_offline_return_effects_and_status_guards.sql
+- scripts/test-offline-returns.js
+
+### Hardening Implemented
+1. Strict tenant requirement on money-moving return route
+   - Removed fallback tenant behavior from returns API.
+   - Route now hard-fails when tenant cannot be resolved.
+
+2. Side-effect execution tracking hardening
+   - Added effect claim/apply/error flow with `applied_at` and `last_error` fields.
+   - Added backward compatibility to continue working in environments where those columns are not yet present.
+
+3. Return lifecycle status protection
+   - Added migration guard to block direct `processed -> cancelled` transition.
+
+4. Variant inventory safety guard
+   - Restock flow now blocks variant-based product restock from generic product stock path.
+   - Test harness updated to use variant-aware restock payloads.
+
+5. Test strict-tenant alignment
+   - Harness now sends tenant resolution context via `x-tenant-admin` header.
+
+### Test Execution Summary
+Command run:
+- node scripts/test-offline-returns.js
+
+Final result:
+- 3/3 passed
+
+Checks validated:
+1. Duplicate submit with same clientRequestId replays safely
+2. Partial returns allow valid slices and reject over-quantity
+3. Refund/cashback consistency guards block impossible refund split and allow valid split
+
+### Addendum Conclusion
+Post-review production hardening is implemented and validated in the integration harness with all scenarios passing.
+
+## Post-Phase 6 - Strict Safety Patch Set (Ordered)
+
+Date: 2026-03-28
+Status: Implemented (Validation gated on DB migration)
+
+### Objective
+Apply strict ordered hardening to eliminate partial-effect replay hazards, enforce variant-safe restock behavior before side effects, and lock inventory updates to atomic tenant-scoped operations.
+
+### Ordered Execution (Implemented)
+1. Fail fast on variant restock requests
+   - Added explicit pre-side-effect guard so variant restock requests fail before any wallet/cashback/stock effect attempts.
+   - Applied both in new-return path and draft-resume path.
+
+2. Add resumable draft replay
+   - Idempotency replay now branches by return status:
+     - `processed`: returns replay payload.
+     - `draft`: resumes pending effects and finalizes to `processed` before returning.
+   - Unique-conflict replay path was aligned to the same resume logic.
+
+3. Make stock increment atomic at DB level
+   - Replaced product stock read-modify-write with RPC call to DB function:
+     - `increment_product_stock_atomic(...)`
+   - Added function in hardening migration for tenant-scoped atomic stock increment.
+
+4. Tighten legacy mode hard (fail closed)
+   - Removed soft compatibility behavior for missing `applied_at/last_error`.
+   - Service now requires hardened effect-tracking schema before processing returns.
+   - If missing, route fails hard with explicit migration-required message.
+
+5. Add adversarial validation suite
+   - Expanded `scripts/test-offline-returns.js` scenarios to include:
+     - processed replay correctness,
+     - draft replay resume,
+     - variant restock pre-side-effect fail,
+     - tenant/missing-tenant rejection,
+     - concurrent partial return contention,
+     - resume after seeded wallet-complete crash simulation,
+     - DB-level processed->cancelled block check.
+
+### Files Changed
+- src/server/admin/offlineOrderReturns.ts
+- migrations/harden_offline_return_effects_and_status_guards.sql
+- scripts/test-offline-returns.js
+
+### Validation Status
+- Type/compile diagnostics on touched files: clean.
+- Runtime adversarial harness currently stops at strict schema gate because DB is missing hardened columns (`order_return_effects.applied_at`, `order_return_effects.last_error`).
+- This is expected by design under fail-closed mode.
+
+### Operational Note
+To complete runtime validation, apply:
+- migrations/harden_offline_return_effects_and_status_guards.sql
+
+After migration is applied, re-run:
+- node scripts/test-offline-returns.js
+
+### Conclusion
+Strict ordered safety patch set is implemented in code. Full runtime acceptance is intentionally blocked until the required hardening migration is applied, preventing weakened money/stock guarantees in partially migrated environments.
+
+### Final Acceptance Update
+Date: 2026-03-28
+
+Command run:
+- node scripts/test-offline-returns.js
+
+Result:
+- 9/9 passed
+
+Validated scenarios:
+1. Effect tracking schema hardened (`applied_at`, `last_error` present)
+2. Same request id replay with processed status returns replayed success only
+3. Same request id replay with draft status resumes and finalizes cleanly
+4. Variant restock request fails before side effects
+5. Missing-tenant and cross-tenant requests fail hard
+6. Concurrent partial returns on same line cannot both pass over bounds
+7. Crash-after-wallet simulation resumes without double-credit
+8. Unapplied effect marker does not bypass completion checks
+9. Processed return cancellation blocked at DB level

@@ -7,6 +7,7 @@
 export type OrderStatus = 'pending' | 'paid' | 'fulfilled' | 'cancelled' | 'failed' | 'refunded';
 export type PaymentProvider = 'phonepe' | 'razorpay';
 export type PaymentEnv = 'test' | 'live' | 'sandbox' | 'production';
+export type OrderSource = 'online' | 'offline_admin';
 
 /**
  * Order record from database
@@ -22,6 +23,7 @@ export interface Order {
   tenant_id: string;
   order_number: string;
   customer_id: string | null;
+  order_source: OrderSource;
   status: OrderStatus;
   
   // Pricing

@@ -25,6 +25,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       .from('orders')
       .select(`
         id, order_number, email, total_cents, currency, status, created_at,
+        order_source,
         cashback_amount_cents, cashback_pct, customer_id, payment_provider,
         payment_env, wallet_used_cents, cash_paid_cents, discount_amount_cents,
         coupon_code,
@@ -51,6 +52,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         .from('orders')
         .select(`
           id, order_number, email, total_cents, currency, status, created_at,
+          order_source,
           tenant_id, cashback_amount_cents, cashback_pct, customer_id, payment_provider,
           payment_env, wallet_used_cents, cash_paid_cents, discount_amount_cents,
           coupon_code,

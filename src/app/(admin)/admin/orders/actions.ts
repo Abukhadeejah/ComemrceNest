@@ -20,6 +20,7 @@ async function _getOrdersFromDB(searchParams: {
     .select(`
       id,
       order_number,
+      order_source,
       email,
       total_cents,
       currency,
@@ -49,7 +50,7 @@ async function _getOrdersFromDB(searchParams: {
 
   // Apply status filter
   if (searchParams.status && searchParams.status !== 'all') {
-    const allowed = ['pending','paid','confirmed','failed','fulfilled','cancelled'] as const
+    const allowed = ['pending','paid','confirmed','failed','fulfilled','cancelled','partially_returned','returned'] as const
     type OrderStatus = typeof allowed[number]
     const isAllowed = (val: string): val is OrderStatus => (allowed as readonly string[]).includes(val)
     if (isAllowed(searchParams.status)) {
@@ -94,9 +95,9 @@ export async function getOrders(searchParams: {
   search?: string
   status?: string
   page?: string
-}) {
+}, tenantIdOverride?: string | null) {
   try {
-    let tenantId = await resolveTenantIdFromRequest()
+    let tenantId = tenantIdOverride || (await resolveTenantIdFromRequest())
     
     // TEMPORARY FIX: If no tenant resolved, default to Senlysh for admin access
     if (!tenantId) {

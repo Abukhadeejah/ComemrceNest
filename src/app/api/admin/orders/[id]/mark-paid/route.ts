@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
-import { assertTenantAdmin } from '@/server/auth'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
 import { revalidateTag } from 'next/cache'
 import { tenantProductsTag } from '@/server/cacheTags'
-import { processCashbackForOrder } from '@/lib/cashback/cashbackService'
+import { processPaidOrderPostPaymentOnce } from '@/server/admin/offlineOrders'
 
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -18,10 +17,6 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   
   if (!tenantId) return NextResponse.json({ error: 'tenant_not_found' }, { status: 400 })
   
-  // TEMPORARY: Skip admin authentication for debugging
-  // TODO: Re-enable this after setting up proper admin login
-  // await assertTenantAdmin(tenantId)
-
   try {
     // 1. Update order status to paid
     const { data: order, error } = await supabaseAdmin
@@ -31,68 +26,19 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
       })
       .eq('tenant_id', tenantId)
       .eq('id', id)
-      .select(`
-        id,
-        tenant_id,
-        customer_id,
-        total_cents,
-        wallet_used_cents,
-        cash_paid_cents,
-        order_items (
-          product_id,
-          quantity,
-          unit_price_cents
-        )
-      `)
+      .select('id')
       .single()
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 })
 
-    // 2. Process cashback (same logic as webhooks)
+    // 2. Process post-payment side effects once
     if (order) {
       try {
-        // Calculate total purchase price from cost prices (use 60% of sale price as default cost)
-        let totalPurchasePriceCents = 0
-        if (order.order_items) {
-          for (const item of order.order_items) {
-            // Use 60% of sale price as cost price (40% profit margin)
-            const costPrice = item.unit_price_cents * 0.6
-            totalPurchasePriceCents += costPrice * item.quantity
-          }
-        }
-
-        // Process cashback
-        const cashbackResult = await processCashbackForOrder({
-          tenantId: order.tenant_id,
-          orderId: order.id,
-          customerId: order.customer_id,
-          totalSalePriceCents: order.total_cents,
-          totalPurchasePriceCents,
-          walletUsedCents: order.wallet_used_cents || 0,
-          cashPaidCents: order.cash_paid_cents || order.total_cents
-        })
-
-        // Update order with cashback details
-        await supabaseAdmin
-          .from('orders')
-          .update({
-            total_purchase_price_cents: totalPurchasePriceCents,
-            total_profit_pct: cashbackResult.profitPct,
-            cashback_pct: cashbackResult.cashbackPct,
-            cashback_amount_cents: cashbackResult.cashbackEarned,
-            membership_id: cashbackResult.membershipUsed
-          })
-          .eq('id', order.id)
-
-        console.log(`Cashback processed for order ${id}:`, {
-          cashbackEarned: cashbackResult.cashbackEarned,
-          cashbackPct: cashbackResult.cashbackPct,
-          profitPct: cashbackResult.profitPct
-        })
-
-      } catch (cashbackError) {
-        console.error('Error processing cashback:', cashbackError)
-        // Don't fail the whole operation if cashback fails
+        const processingResult = await processPaidOrderPostPaymentOnce(tenantId, order.id)
+        console.log(`[Admin Orders Mark-Paid API] Post-payment result for order ${id}:`, processingResult)
+      } catch (processingError) {
+        console.error('[Admin Orders Mark-Paid API] Error processing post-payment side effects:', processingError)
+        // Don't fail the whole operation if post-payment processing fails
       }
     }
     
@@ -101,7 +47,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     
     return NextResponse.json({ 
       success: true, 
-      message: 'Order marked as paid and cashback processed' 
+      message: 'Order marked as paid and post-payment processing attempted' 
     })
 
   } catch (error) {

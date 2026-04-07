@@ -6,6 +6,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { InvoiceDownloadButton } from '@/components/invoice/InvoiceDownloadButton'
 import type { InvoiceOrderData } from '@/components/invoice/types'
+import { OfflineReturnPanel } from '@/components/admin/orders/OfflineReturnPanel'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,6 +16,7 @@ const ORDER_DETAILS_SELECT = `
   tenant_id,
   id,
   order_number,
+  order_source,
   email,
   customer_id,
   status,
@@ -39,7 +41,9 @@ const ORDER_DETAILS_SELECT = `
       id,
       name,
       sku,
-      hero_image_url
+      hero_image_url,
+      track_inventory,
+      has_variants
     )
   )
 `
@@ -106,6 +110,40 @@ export default async function OrderDetailsPage({ params }: OrderDetailsPageProps
   const order: any = await findOrder(id, scopedTenantId)
 
   if (!order) notFound()
+
+  const adminDb = supabaseAdmin as any
+
+  const { data: returnHeaders } = await adminDb
+    .from('order_returns')
+    .select(
+      `
+        id,
+        return_number,
+        status,
+        total_return_cents,
+        wallet_refund_cents,
+        cash_refund_cents,
+        cashback_reversal_cents,
+        created_at,
+        processed_at,
+        order_return_items (
+          id,
+          order_item_id,
+          product_id,
+          returned_quantity,
+          restock_quantity,
+          unit_price_cents,
+          return_subtotal_cents,
+          products (
+            name,
+            sku
+          )
+        )
+      `
+    )
+    .eq('tenant_id', scopedTenantId)
+    .eq('order_id', order.id)
+    .order('created_at', { ascending: false })
 
   const effectiveTenantId = scopedTenantId || order.tenant_id || null
   const tenantKey = tenantFromPath || (effectiveTenantId ? await resolveTenantKeyFromId(effectiveTenantId) : null) || null
@@ -209,6 +247,10 @@ export default async function OrderDetailsPage({ params }: OrderDetailsPageProps
             <div>
               <div className="text-sm text-gray-500">Status</div>
               <div className="text-gray-900 capitalize">{order.status}</div>
+            </div>
+            <div>
+              <div className="text-sm text-gray-500">Order Source</div>
+              <div className="text-gray-900">{order.order_source === 'offline_admin' ? 'Offline Admin' : 'Online'}</div>
             </div>
             <div>
               <div className="text-sm text-gray-500">Created</div>
@@ -367,6 +409,97 @@ export default async function OrderDetailsPage({ params }: OrderDetailsPageProps
             </div>
           ) : (
             <p className="text-sm text-gray-500">No order items found for this order.</p>
+          )}
+        </div>
+
+        <OfflineReturnPanel
+          orderId={order.id}
+          orderStatus={order.status}
+          orderSource={order.order_source}
+          currency={order.currency || 'INR'}
+          items={(order.order_items || []).map((item: any) => ({
+            orderItemId: item.id,
+            productId: item.products?.id || '',
+            name: item.products?.name || 'Product',
+            sku: item.products?.sku || null,
+            quantity: item.quantity || 0,
+            unitPriceCents: item.unit_price_cents || 0,
+            trackInventory: !!item.products?.track_inventory,
+            hasVariants: !!item.products?.has_variants,
+          }))}
+        />
+
+        <div className="bg-white rounded-lg shadow p-6 mt-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Return History</h2>
+
+          {returnHeaders && returnHeaders.length > 0 ? (
+            <div className="space-y-4">
+              {returnHeaders.map((ret: any) => (
+                <div key={ret.id} className="rounded-md border border-gray-200 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900">{ret.return_number}</div>
+                      <div className="text-xs text-gray-500">
+                        Created {new Date(ret.created_at).toLocaleString('en-IN')}
+                        {ret.processed_at ? ` | Processed ${new Date(ret.processed_at).toLocaleString('en-IN')}` : ''}
+                      </div>
+                    </div>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 capitalize">
+                      {ret.status}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-sm mb-3">
+                    <div>
+                      <div className="text-gray-500">Total Return</div>
+                      <div className="font-medium text-gray-900">{formatCurrency(ret.total_return_cents || 0, order.currency)}</div>
+                    </div>
+                    <div>
+                      <div className="text-gray-500">Wallet Refund</div>
+                      <div className="font-medium text-gray-900">{formatCurrency(ret.wallet_refund_cents || 0, order.currency)}</div>
+                    </div>
+                    <div>
+                      <div className="text-gray-500">Cash Refund</div>
+                      <div className="font-medium text-gray-900">{formatCurrency(ret.cash_refund_cents || 0, order.currency)}</div>
+                    </div>
+                    <div>
+                      <div className="text-gray-500">Cashback Reversal</div>
+                      <div className="font-medium text-gray-900">{formatCurrency(ret.cashback_reversal_cents || 0, order.currency)}</div>
+                    </div>
+                  </div>
+
+                  {ret.order_return_items && ret.order_return_items.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Returned Qty</th>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Restocked</th>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Line Return</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {ret.order_return_items.map((line: any) => (
+                            <tr key={line.id}>
+                              <td className="px-3 py-2 text-sm text-gray-900">
+                                <div>{line.products?.name || line.product_id}</div>
+                                <div className="text-xs text-gray-500">SKU: {line.products?.sku || '—'}</div>
+                              </td>
+                              <td className="px-3 py-2 text-sm text-gray-700">{line.returned_quantity}</td>
+                              <td className="px-3 py-2 text-sm text-gray-700">{line.restock_quantity}</td>
+                              <td className="px-3 py-2 text-sm font-medium text-gray-900">{formatCurrency(line.return_subtotal_cents || 0, order.currency)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500">No returns created for this order yet.</p>
           )}
         </div>
       </div>

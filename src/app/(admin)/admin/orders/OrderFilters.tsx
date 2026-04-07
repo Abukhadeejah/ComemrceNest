@@ -73,6 +73,8 @@ export function OrderFilters({ currentStatus, currentSearch }: OrderFiltersProps
           <option value="paid">Paid</option>
           <option value="confirmed">Confirmed</option>
           <option value="fulfilled">Fulfilled</option>
+          <option value="partially_returned">Partially Returned</option>
+          <option value="returned">Returned</option>
           <option value="cancelled">Cancelled</option>
           <option value="failed">Failed</option>
         </select>

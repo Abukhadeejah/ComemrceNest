@@ -24,7 +24,7 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
     const { status } = body
 
     // Validate status
-    const allowedStatuses = ['pending', 'paid', 'confirmed', 'fulfilled', 'cancelled', 'failed']
+    const allowedStatuses = ['pending', 'paid', 'confirmed', 'fulfilled', 'partially_returned', 'returned', 'cancelled', 'failed']
     if (!status || !allowedStatuses.includes(status)) {
       return NextResponse.json({ 
         error: 'Invalid status. Allowed values: ' + allowedStatuses.join(', ') 

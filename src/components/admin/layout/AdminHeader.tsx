@@ -24,7 +24,7 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
         onClick={onMenuClick}
       >
         <span className="sr-only">Open sidebar</span>
-        <Bars3Icon className="h-6 w-6" aria-hidden="true" />
+        <Bars3Icon className="h-6 w-6" aria-hidden="true" suppressHydrationWarning />
       </button>
 
       {/* Separator - Mobile only */}
@@ -38,7 +38,7 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
         {/* Notifications */}
         <button type="button" className="p-2 text-gray-400 hover:text-gray-500 rounded-md">
           <span className="sr-only">View notifications</span>
-          <BellIcon className="h-6 w-6" aria-hidden="true" />
+          <BellIcon className="h-6 w-6" aria-hidden="true" suppressHydrationWarning />
         </button>
 
         {/* Separator - Desktop only */}

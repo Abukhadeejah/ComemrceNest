@@ -10,6 +10,7 @@ import type { InvoiceOrderData } from '@/components/invoice/types'
 interface OrderDetail {
   id: string
   order_number: string
+  order_source?: string
   status: string
   total_cents: number
   currency: string
@@ -89,6 +90,7 @@ export default function AdminOrderDetailPage({ params }: PageProps) {
           setOrder({
             id: foundOrder.id,
             order_number: foundOrder.order_number,
+            order_source: foundOrder.order_source || 'online',
             status: foundOrder.status,
             total_cents: foundOrder.total_cents,
             currency: foundOrder.currency || 'INR',
@@ -136,6 +138,10 @@ export default function AdminOrderDetailPage({ params }: PageProps) {
       case 'cancelled': return 'bg-gray-100 text-gray-800'
       default: return 'bg-gray-100 text-gray-800'
     }
+  }
+
+  const getOrderSourceLabel = (source?: string) => {
+    return source === 'offline_admin' ? 'Offline Admin' : 'Online'
   }
 
   if (loading) {
@@ -262,6 +268,10 @@ export default function AdminOrderDetailPage({ params }: PageProps) {
               <p className="text-sm text-gray-500">Payment Method</p>
               <p className="text-gray-900 capitalize font-medium">{order.payment_provider}</p>
               <p className="text-xs text-gray-500 mt-1">{order.payment_env}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Order Source</p>
+              <p className="text-gray-900 font-medium">{getOrderSourceLabel(order.order_source)}</p>
             </div>
             <div>
               <p className="text-sm text-gray-500">Order Total</p>
