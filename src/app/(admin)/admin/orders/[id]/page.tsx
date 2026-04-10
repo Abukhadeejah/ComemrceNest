@@ -62,10 +62,18 @@ export default function AdminOrderDetailPage({ params }: PageProps) {
 
   useEffect(() => {
     if (!orderId) return
+    if (orderId.toLowerCase() === 'create') {
+      router.replace('/admin/orders/create')
+      return
+    }
     loadOrderDetails()
   }, [orderId])
 
   const loadOrderDetails = async () => {
+    if (orderId.toLowerCase() === 'create') {
+      return
+    }
+
     try {
       setLoading(true)
       console.log('[Admin Order Details] Fetching order:', orderId)

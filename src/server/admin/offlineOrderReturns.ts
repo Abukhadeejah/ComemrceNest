@@ -657,10 +657,12 @@ async function applyReturnEffectsAndFinalize(params: {
     returnItems: returnItems.map((item) => ({
       orderReturnItemId: item.orderReturnItemId,
       productId: item.productId,
+      variantId: item.variantId || null,
       restockQuantity: item.restockQuantity,
       trackInventory: item.trackInventory,
       hasVariant: item.hasVariant,
       productName: item.productName,
+      variantName: item.variantName || null,
     })),
   })
 

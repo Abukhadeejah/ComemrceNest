@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
 import { resolveTenantIdFromRequest, resolveTenantIdFromKey } from '@/server/tenant'
 import Image from 'next/image'
@@ -51,6 +51,11 @@ interface TenantOrderDetailsProps {
 
 export default async function TenantOrderDetailsPage({ params }: TenantOrderDetailsProps) {
   const { tenant, id } = await params
+
+  if (id.toLowerCase() === 'create') {
+    redirect(`/${tenant}/admin/orders/create`)
+  }
+
   let tenantId = await resolveTenantIdFromRequest()
 
   if (!tenantId) {
