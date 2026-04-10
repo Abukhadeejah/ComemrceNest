@@ -12,6 +12,8 @@ type ReturnableItem = {
   unitPriceCents: number
   trackInventory: boolean
   hasVariants?: boolean
+  variantId?: string | null
+  variantName?: string | null
 }
 
 interface OfflineReturnPanelProps {
@@ -58,23 +60,26 @@ export function OfflineReturnPanel({
         if (qty <= 0) return null
 
         const clampedQty = Math.min(qty, item.quantity)
+        const canRestock = item.trackInventory && restockAll && (!item.hasVariants || !!item.variantId)
         return {
           orderItemId: item.orderItemId,
           productId: item.productId,
+          variantId: item.variantId || null,
           name: item.name,
           quantity: clampedQty,
-          restockQuantity: item.trackInventory && !item.hasVariants && restockAll ? clampedQty : 0,
+          restockQuantity: canRestock ? clampedQty : 0,
           subtotalCents: clampedQty * item.unitPriceCents,
         }
       })
       .filter(Boolean) as Array<{
-      orderItemId: string
-      productId: string
-      name: string
-      quantity: number
-      restockQuantity: number
-      subtotalCents: number
-    }>
+        orderItemId: string
+        productId: string
+        variantId: string | null
+        name: string
+        quantity: number
+        restockQuantity: number
+        subtotalCents: number
+      }>
   }, [items, quantities, restockAll])
 
   const totalReturnCents = useMemo(
@@ -176,6 +181,10 @@ export function OfflineReturnPanel({
                       <td className="px-3 py-2 text-sm text-gray-900">
                         <div>{item.name}</div>
                         <div className="text-xs text-gray-500">SKU: {item.sku || '—'}</div>
+                        {item.variantName && <div className="text-xs text-gray-500">Variant: {item.variantName}</div>}
+                        {item.hasVariants && !item.variantId && (
+                          <div className="text-xs text-amber-700">Variant stock cannot be restocked because the order did not record a variant ID.</div>
+                        )}
                       </td>
                       <td className="px-3 py-2 text-sm text-gray-700">{item.quantity}</td>
                       <td className="px-3 py-2 text-sm text-gray-700">{formatCurrency(item.unitPriceCents, currency)}</td>
@@ -212,8 +221,8 @@ export function OfflineReturnPanel({
             />
             Restock returned quantities for inventory-tracked products
           </label>
-          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-            Variant-backed items are excluded from generic restock here and will be returned without stock increment.
+          <p className="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-md px-3 py-2">
+            Variant returns restock the recorded variant when the order item includes a variant ID.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

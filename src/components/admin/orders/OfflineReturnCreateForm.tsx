@@ -7,6 +7,8 @@ import { OfflineReturnPanel } from './OfflineReturnPanel'
 type LookupOrderItem = {
   id: string
   product_id: string
+  variant_id: string | null
+  variant_name: string | null
   quantity: number
   unit_price_cents: number
   products?: {
@@ -15,6 +17,13 @@ type LookupOrderItem = {
     sku: string | null
     track_inventory: boolean | null
     has_variants: boolean | null
+  } | null
+  product_variants?: {
+    id: string
+    name: string
+    sku: string | null
+    stock: number | null
+    track_inventory: boolean | null
   } | null
 }
 
@@ -161,6 +170,8 @@ export default function OfflineReturnCreateForm({
             unitPriceCents: item.unit_price_cents || 0,
             trackInventory: !!item.products?.track_inventory,
             hasVariants: !!item.products?.has_variants,
+            variantId: item.variant_id || null,
+            variantName: item.variant_name || item.product_variants?.name || null,
           }))}
         />
       )}

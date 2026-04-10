@@ -31,6 +31,8 @@ export async function GET(request: NextRequest) {
       order_items (
         id,
         product_id,
+        variant_id,
+        variant_name,
         quantity,
         unit_price_cents,
         products (
@@ -39,6 +41,13 @@ export async function GET(request: NextRequest) {
           sku,
           track_inventory,
           has_variants
+        ),
+        product_variants (
+          id,
+          name,
+          sku,
+          stock,
+          track_inventory
         )
       )
     `

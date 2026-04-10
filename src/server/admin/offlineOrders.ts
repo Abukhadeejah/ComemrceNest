@@ -5,12 +5,14 @@ import {
   getWalletBalance,
   processCashbackForOrder,
 } from '@/lib/cashback/cashbackService'
+import { fetchProductVariants, fetchProductVariantOptions } from '@/server/modules/products/service'
 
 export type OfflineOrderStatus = 'pending' | 'paid'
 
 export interface OfflineOrderItemInput {
   productId: string
   quantity: number
+  variantId?: string
 }
 
 export interface OfflineOrderCustomerInput {
@@ -51,8 +53,22 @@ type ProductRow = {
   cost_per_item_cents: number | null
   stock: number
   track_inventory: boolean | null
+  has_variants: boolean | null
   status: string
   is_sold_out: boolean | null
+}
+
+type VariantRow = {
+  id: string
+  product_id: string
+  name: string
+  sku: string | null
+  price_cents: number
+  stock: number | null
+  track_inventory: boolean | null
+  allow_backorders: boolean | null
+  is_active: boolean | null
+  attributes: Record<string, string> | null
 }
 
 async function buildCustomerLookupPayload(tenantId: string, customer: CustomerRow) {
@@ -486,13 +502,14 @@ export async function createOfflineOrder(tenantId: string, input: CreateOfflineO
     return {
       productId: item.productId,
       quantity,
+      variantId: item.variantId,
     }
   })
 
   const productIds = Array.from(new Set(normalizedItems.map((item) => item.productId)))
   const { data: products, error: productsError } = await supabaseAdmin
     .from('products')
-    .select('id, name, sku, price_cents, cost_per_item_cents, stock, track_inventory, status, is_sold_out')
+    .select('id, name, sku, price_cents, cost_per_item_cents, stock, track_inventory, has_variants, status, is_sold_out')
     .eq('tenant_id', tenantId)
     .in('id', productIds)
 
@@ -508,21 +525,76 @@ export async function createOfflineOrder(tenantId: string, input: CreateOfflineO
     }
   }
 
+  const variantIds = Array.from(
+    new Set(
+      normalizedItems
+        .map((item) => item.variantId?.trim())
+        .filter((variantId): variantId is string => Boolean(variantId))
+    )
+  )
+
+  const { data: variantRows, error: variantError } = variantIds.length > 0
+    ? await supabaseAdmin
+        .from('product_variants')
+        .select('id, product_id, name, sku, price_cents, stock, track_inventory, allow_backorders, is_active, attributes')
+        .eq('tenant_id', tenantId)
+        .in('id', variantIds)
+    : { data: [], error: null }
+
+  if (variantError) {
+    throw new Error(`Failed to load product variants: ${variantError.message}`)
+  }
+
+  const variantById = new Map<string, VariantRow>(
+    (variantRows || []).map((variant) => [variant.id, variant as VariantRow])
+  )
+
   const pricedItems = normalizedItems.map((item) => {
     const product = byId.get(item.productId) as ProductRow
     validateSelectableProduct(product)
 
-    if (product.track_inventory && item.quantity > product.stock) {
-      throw new Error(`Insufficient stock for ${product.name}. Available: ${product.stock}`)
+    const variantId = item.variantId?.trim() || null
+    const selectedVariant = variantId ? variantById.get(variantId) : undefined
+
+    if (product.has_variants) {
+      if (!variantId) {
+        throw new Error(`Variant selection is required for ${product.name}`)
+      }
+
+      if (!selectedVariant) {
+        throw new Error(`Variant ${variantId} not found for product ${product.name}`)
+      }
+
+      if (selectedVariant.product_id !== product.id) {
+        throw new Error(`Variant ${selectedVariant.name} does not belong to ${product.name}`)
+      }
+
+      if (selectedVariant.is_active === false) {
+        throw new Error(`Variant ${selectedVariant.name} is inactive and cannot be selected`)
+      }
+
+      const variantStock = Number(selectedVariant.stock || 0)
+      if ((selectedVariant.track_inventory ?? product.track_inventory) && item.quantity > variantStock) {
+        throw new Error(`Insufficient stock for ${selectedVariant.name}. Available: ${variantStock}`)
+      }
+    } else {
+      if (variantId) {
+        throw new Error(`Product ${product.name} does not use variants`)
+      }
+
+      if (product.track_inventory && item.quantity > product.stock) {
+        throw new Error(`Insufficient stock for ${product.name}. Available: ${product.stock}`)
+      }
     }
 
-    const unitPriceCents = Number(product.price_cents) || 0
+    const unitPriceCents = selectedVariant ? Number(selectedVariant.price_cents) || 0 : Number(product.price_cents) || 0
     if (unitPriceCents < 0) {
       throw new Error(`Invalid product price for ${product.name}`)
     }
 
     return {
       product,
+      variant: selectedVariant,
       quantity: item.quantity,
       unitPriceCents,
       subtotalCents: unitPriceCents * item.quantity,
@@ -571,6 +643,17 @@ export async function createOfflineOrder(tenantId: string, input: CreateOfflineO
     if (walletUsedCents + cashPaidCents !== totalCents) {
       throw new Error('cashPaidCents + walletUsedCents must equal final total')
     }
+
+    if (walletUsedCents > 0) {
+      const walletBalanceCents = await getWalletBalance(customer.id, tenantId)
+      if (walletBalanceCents <= 0) {
+        throw new Error('Wallet balance is zero and cannot be used for this order')
+      }
+
+      if (walletUsedCents > walletBalanceCents) {
+        throw new Error(`Insufficient wallet balance. Available: ${walletBalanceCents}`)
+      }
+    }
   }
 
   const orderNumber = generateOfflineOrderNumber(tenantId)
@@ -605,6 +688,9 @@ export async function createOfflineOrder(tenantId: string, input: CreateOfflineO
     tenant_id: tenantId,
     order_id: order.id,
     product_id: item.product.id,
+    variant_id: item.variant?.id || null,
+    variant_name: item.variant?.name || null,
+    variant_attributes: item.variant ? item.variant.attributes || {} : {},
     quantity: item.quantity,
     unit_price_cents: item.unitPriceCents,
     subtotal_cents: item.subtotalCents,
@@ -654,6 +740,8 @@ export async function createOfflineOrder(tenantId: string, input: CreateOfflineO
       productId: item.product.id,
       productName: item.product.name,
       sku: item.product.sku,
+      variantId: item.variant?.id || null,
+      variantName: item.variant?.name || null,
       quantity: item.quantity,
       unitPriceCents: item.unitPriceCents,
       subtotalCents: item.subtotalCents,
@@ -670,7 +758,7 @@ export async function searchSelectableProducts(tenantId: string, query: string, 
   const { data, error } = await supabaseAdmin
     .from('products')
     .select(
-      'id, name, sku, price_cents, stock, track_inventory, status, is_sold_out, hero_image_url, updated_at'
+      'id, name, sku, price_cents, stock, track_inventory, has_variants, status, is_sold_out, hero_image_url, updated_at'
     )
     .eq('tenant_id', tenantId)
     .or(`name.ilike.%${q}%,sku.ilike.%${q}%`)
@@ -681,16 +769,56 @@ export async function searchSelectableProducts(tenantId: string, query: string, 
     throw new Error(`Failed to search products: ${error.message}`)
   }
 
-  return (data || [])
+  const matchedProducts = (data || [])
     .filter((product) => product.status === 'published' && !product.is_sold_out)
-    .map((product) => ({
-      id: product.id,
-      name: product.name,
-      sku: product.sku,
-      price_cents: product.price_cents,
-      stock: product.stock,
-      track_inventory: product.track_inventory,
-      status: product.status,
-      hero_image_url: product.hero_image_url,
-    }))
+
+  const productsWithVariants = await Promise.all(
+    matchedProducts.map(async (product) => {
+      if (!product.has_variants) {
+        return {
+          id: product.id,
+          name: product.name,
+          sku: product.sku,
+          price_cents: product.price_cents,
+          stock: product.stock,
+          track_inventory: product.track_inventory,
+          has_variants: false,
+          status: product.status,
+          hero_image_url: product.hero_image_url,
+          variants: [],
+          variant_options: [],
+        }
+      }
+
+      const [variantOptions, variants] = await Promise.all([
+        fetchProductVariantOptions(tenantId, product.id),
+        fetchProductVariants(tenantId, product.id),
+      ])
+
+      return {
+        id: product.id,
+        name: product.name,
+        sku: product.sku,
+        price_cents: product.price_cents,
+        stock: product.stock,
+        track_inventory: product.track_inventory,
+        has_variants: true,
+        status: product.status,
+        hero_image_url: product.hero_image_url,
+        variants: (variants || []).map((variant) => ({
+          id: variant.id,
+          name: variant.name,
+          sku: variant.sku,
+          price_cents: variant.price_cents,
+          stock: variant.stock,
+          track_inventory: variant.track_inventory,
+          allow_backorders: variant.allow_backorders,
+          attributes: variant.attributes,
+        })),
+        variant_options: variantOptions || [],
+      }
+    })
+  )
+
+  return productsWithVariants
 }

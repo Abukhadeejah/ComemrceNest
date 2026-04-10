@@ -3,6 +3,7 @@ import { createPhonePePayment } from '@/lib/payments/phonepe';
 import { supabaseAdmin } from '@/server/supabaseAdmin';
 import { resolveTenantIdFromRequest, resolveTenantIdFromKey } from '@/server/tenant';
 import { getPaymentProvider, resolveRazorpayCredentials } from '@/server/payments';
+import { getWalletBalance } from '@/lib/cashback/cashbackService';
 import Razorpay from 'razorpay';
 
 interface CheckoutItem {
@@ -223,6 +224,27 @@ export async function POST(request: NextRequest) {
 
     const mode = body.mode || 'quote';
 
+    const walletUsedCents = body.walletUsedRupees ? Math.round(body.walletUsedRupees * 100) : 0;
+    const customerId = await resolveOrderCustomerId(tenantId, body.customerId, customerEmail, 'PhonePe');
+
+    if (walletUsedCents > 0) {
+      if (!customerId) {
+        return NextResponse.json({ error: 'wallet_requires_customer' }, { status: 400 });
+      }
+
+      const walletBalanceCents = await getWalletBalance(customerId, tenantId)
+      if (walletBalanceCents <= 0) {
+        return NextResponse.json({ error: 'wallet_balance_zero', message: 'Wallet balance is zero and cannot be used' }, { status: 400 })
+      }
+
+      if (walletUsedCents > walletBalanceCents) {
+        return NextResponse.json({
+          error: 'insufficient_wallet_balance',
+          message: `Wallet balance available: ${walletBalanceCents / 100}`,
+        }, { status: 400 })
+      }
+    }
+
     // Get payment provider for this tenant
     const provider = await getPaymentProvider(tenantId);
     console.log(`[checkout] Using payment provider: ${provider} for tenant: ${tenantId}`);
@@ -252,7 +274,7 @@ export async function POST(request: NextRequest) {
         coupon_id: body.coupon_id,
         discount_amount_cents: body.discount_amount_cents,
         walletUsedRupees: body.walletUsedRupees,
-        customerId: body.customerId
+        customerId: customerId || undefined
       }, requestBaseUrl);
     } else if (provider === 'razorpay') {
       return await handleRazorpayCheckout(tenantId, amountPaise, customerEmail, customerPhone, { 
@@ -263,7 +285,7 @@ export async function POST(request: NextRequest) {
         coupon_id: body.coupon_id,
         discount_amount_cents: body.discount_amount_cents,
         walletUsedRupees: body.walletUsedRupees,
-        customerId: body.customerId
+        customerId: customerId || undefined
       });
     } else {
       return NextResponse.json({ error: 'unsupported_payment_provider' }, { status: 400 });

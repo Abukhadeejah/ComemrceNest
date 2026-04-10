@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 type ProductResult = {
@@ -11,11 +11,21 @@ type ProductResult = {
   price_cents: number
   stock: number
   track_inventory: boolean | null
+  has_variants?: boolean | null
   status: string
   hero_image_url?: string | null
+  variants?: Array<{
+    id: string
+    name: string
+    sku: string | null
+    price_cents: number
+    stock: number | null
+    track_inventory: boolean | null
+  }>
 }
 
 type SelectedLineItem = {
+  lineKey: string
   productId: string
   name: string
   sku: string | null
@@ -23,6 +33,9 @@ type SelectedLineItem = {
   quantity: number
   stock: number
   trackInventory: boolean | null
+  variantId?: string | null
+  variantName?: string | null
+  heroImageUrl?: string | null
 }
 
 type CustomerInfo = {
@@ -83,6 +96,7 @@ export default function OfflineOrderCreateForm({
   const [productSearch, setProductSearch] = useState('')
   const [productResults, setProductResults] = useState<ProductResult[]>([])
   const [lineItems, setLineItems] = useState<SelectedLineItem[]>([])
+  const [selectedVariantByProduct, setSelectedVariantByProduct] = useState<Record<string, string>>({})
 
   const [discountRupees, setDiscountRupees] = useState('0')
   const [walletUsedRupees, setWalletUsedRupees] = useState('0')
@@ -113,6 +127,31 @@ export default function OfflineOrderCreateForm({
     const raw = toCents(walletUsedRupees)
     return Math.min(raw, totalCents)
   }, [walletUsedRupees, totalCents])
+
+  useEffect(() => {
+    setSelectedVariantByProduct((prev) => {
+      const next = { ...prev }
+
+      for (const product of productResults) {
+        if (!product.has_variants || !product.variants || product.variants.length === 0) {
+          delete next[product.id]
+          continue
+        }
+
+        if (!next[product.id] || !product.variants.some((variant) => variant.id === next[product.id])) {
+          next[product.id] = product.variants[0].id
+        }
+      }
+
+      return next
+    })
+  }, [productResults])
+
+  useEffect(() => {
+    if (walletBalanceCents <= 0 && Number(walletUsedRupees) !== 0) {
+      setWalletUsedRupees('0')
+    }
+  }, [walletBalanceCents, walletUsedRupees])
 
   const cashPaidCents = useMemo(() => {
     if (orderStatus === 'pending') return 0
@@ -249,41 +288,56 @@ export default function OfflineOrderCreateForm({
   }
 
   function addLineItem(product: ProductResult) {
+    const selectedVariantId = product.has_variants ? selectedVariantByProduct[product.id] : null
+    const selectedVariant = selectedVariantId
+      ? product.variants?.find((variant) => variant.id === selectedVariantId) || null
+      : null
+
+    if (product.has_variants && !selectedVariant) {
+      setValidationMessage(`Select a variant for ${product.name} before adding it.`)
+      return
+    }
+
+    const lineKey = `${product.id}:${selectedVariant?.id || 'base'}`
     setLineItems((prev) => {
-      const existing = prev.find((line) => line.productId === product.id)
+      const existing = prev.find((line) => line.lineKey === lineKey)
       if (existing) {
         return prev.map((line) =>
-          line.productId === product.id ? { ...line, quantity: line.quantity + 1 } : line
+          line.lineKey === lineKey ? { ...line, quantity: line.quantity + 1 } : line
         )
       }
 
       return [
         ...prev,
         {
+          lineKey,
           productId: product.id,
           name: product.name,
           sku: product.sku,
-          unitPriceCents: product.price_cents,
+          unitPriceCents: selectedVariant ? selectedVariant.price_cents : product.price_cents,
           quantity: 1,
-          stock: product.stock,
+          stock: selectedVariant ? (selectedVariant.stock || 0) : product.stock,
           trackInventory: product.track_inventory,
+          variantId: selectedVariant?.id || null,
+          variantName: selectedVariant?.name || null,
+          heroImageUrl: product.hero_image_url || null,
         },
       ]
     })
   }
 
-  function updateQuantity(productId: string, quantity: number) {
+  function updateQuantity(lineKey: string, quantity: number) {
     setLineItems((prev) =>
       prev.map((item) => {
-        if (item.productId !== productId) return item
+        if (item.lineKey !== lineKey) return item
         const nextQty = Math.max(1, Math.floor(quantity || 1))
         return { ...item, quantity: nextQty }
       })
     )
   }
 
-  function removeLineItem(productId: string) {
-    setLineItems((prev) => prev.filter((item) => item.productId !== productId))
+  function removeLineItem(lineKey: string) {
+    setLineItems((prev) => prev.filter((item) => item.lineKey !== lineKey))
   }
 
   async function submitOrder() {
@@ -318,6 +372,7 @@ export default function OfflineOrderCreateForm({
         items: lineItems.map((item) => ({
           productId: item.productId,
           quantity: item.quantity,
+          variantId: item.variantId || undefined,
         })),
         discountAmountCents: discountCents,
         walletUsedCents: orderStatus === 'paid' ? walletUsedCents : 0,
@@ -524,21 +579,53 @@ export default function OfflineOrderCreateForm({
         {productResults.length > 0 && (
           <div className="rounded-md border border-gray-200 divide-y">
             {productResults.map((product) => (
-              <div key={product.id} className="p-3 flex items-center justify-between gap-3">
-                <div>
-                  <div className="text-sm font-medium text-gray-900">{product.name}</div>
-                  <div className="text-xs text-gray-600">SKU: {product.sku || 'N/A'}</div>
-                  <div className="text-xs text-gray-600">
-                    Price: {formatCurrency(product.price_cents)} {product.track_inventory ? `| Stock: ${product.stock}` : ''}
+              <div key={product.id} className="p-3 space-y-3 md:flex md:items-start md:justify-between md:gap-4">
+                <div className="flex gap-3">
+                  <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-md border border-gray-200 bg-gray-50">
+                    {product.hero_image_url ? (
+                      <img src={product.hero_image_url} alt={product.name} className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-xs text-gray-400">No image</div>
+                    )}
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-gray-900">{product.name}</div>
+                    <div className="text-xs text-gray-600">SKU: {product.sku || 'N/A'}</div>
+                    <div className="text-xs text-gray-600">
+                      Price: {formatCurrency(product.price_cents)} {product.track_inventory ? `| Stock: ${product.stock}` : ''}
+                    </div>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => addLineItem(product)}
-                  className="rounded-md bg-blue-600 px-3 py-2 text-xs font-medium text-white hover:bg-blue-700"
-                >
-                  Add
-                </button>
+
+                <div className="flex flex-col gap-2 md:min-w-72">
+                  {product.has_variants && (product.variants || []).length > 0 && (
+                    <select
+                      value={selectedVariantByProduct[product.id] || product.variants?.[0]?.id || ''}
+                      onChange={(e) =>
+                        setSelectedVariantByProduct((prev) => ({
+                          ...prev,
+                          [product.id]: e.target.value,
+                        }))
+                      }
+                      className="rounded-md border border-gray-300 px-3 py-2 text-xs text-gray-700"
+                    >
+                      {product.variants?.map((variant) => (
+                        <option key={variant.id} value={variant.id}>
+                          {variant.name}
+                          {variant.stock != null ? ` | Stock: ${variant.stock}` : ''}
+                          {variant.price_cents !== product.price_cents ? ` | ${formatCurrency(variant.price_cents)}` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => addLineItem(product)}
+                    className="rounded-md bg-blue-600 px-3 py-2 text-xs font-medium text-white hover:bg-blue-700"
+                  >
+                    Add
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -547,10 +634,14 @@ export default function OfflineOrderCreateForm({
         <div className="space-y-2">
           {lineItems.length === 0 && <div className="text-sm text-gray-500">No line items selected yet.</div>}
           {lineItems.map((item) => (
-            <div key={item.productId} className="rounded-md border border-gray-200 p-3 grid grid-cols-1 md:grid-cols-8 gap-3 items-center">
-              <div className="md:col-span-3">
+            <div key={item.lineKey} className="rounded-md border border-gray-200 p-3 grid grid-cols-1 md:grid-cols-8 gap-3 items-center">
+              <div className="md:col-span-3 flex items-center gap-3">
+                {item.heroImageUrl ? (
+                  <img src={item.heroImageUrl} alt={item.name} className="h-12 w-12 rounded-md object-cover" />
+                ) : null}
                 <div className="text-sm font-medium text-gray-900">{item.name}</div>
                 <div className="text-xs text-gray-600">SKU: {item.sku || 'N/A'}</div>
+                {item.variantName && <div className="text-xs text-gray-600">Variant: {item.variantName}</div>}
               </div>
 
               <div>
@@ -559,7 +650,7 @@ export default function OfflineOrderCreateForm({
                   type="number"
                   min={1}
                   value={item.quantity}
-                  onChange={(e) => updateQuantity(item.productId, Number(e.target.value))}
+                  onChange={(e) => updateQuantity(item.lineKey, Number(e.target.value))}
                   className="w-full rounded-md border border-gray-300 px-2 py-1 text-sm"
                 />
               </div>
@@ -575,7 +666,7 @@ export default function OfflineOrderCreateForm({
               <div className="text-right">
                 <button
                   type="button"
-                  onClick={() => removeLineItem(item.productId)}
+                  onClick={() => removeLineItem(item.lineKey)}
                   className="text-sm text-red-600 hover:text-red-800"
                 >
                   Remove
@@ -610,9 +701,12 @@ export default function OfflineOrderCreateForm({
               step="0.01"
               value={walletUsedRupees}
               onChange={(e) => setWalletUsedRupees(e.target.value)}
-              disabled={orderStatus === 'pending'}
+              disabled={orderStatus === 'pending' || walletBalanceCents <= 0}
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-100"
             />
+            {walletBalanceCents <= 0 && orderStatus === 'paid' && (
+              <p className="mt-1 text-xs text-amber-700">Wallet balance is zero, so wallet payment is disabled.</p>
+            )}
           </div>
 
           <div>

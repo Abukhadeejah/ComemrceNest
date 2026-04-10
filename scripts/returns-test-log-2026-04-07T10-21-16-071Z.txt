@@ -1,0 +1,229 @@
+[2026-04-07T10:21:16.081Z] [INFO] ================================================================================
+[2026-04-07T10:21:16.091Z] [SECTION] TEST SUITE 1: INPUT VALIDATION
+[2026-04-07T10:21:16.091Z] [INFO] ================================================================================
+[2026-04-07T10:21:16.092Z] [INFO] Testing: ensurePositiveInt validation
+[2026-04-07T10:21:16.092Z] [TEST] ✓ PASS: ensurePositiveInt: positive integer
+[2026-04-07T10:21:16.093Z] [TEST]   Details: Value: 1
+[2026-04-07T10:21:16.093Z] [TEST] ✓ PASS: ensurePositiveInt: large positive integer
+[2026-04-07T10:21:16.093Z] [TEST]   Details: Value: 100
+[2026-04-07T10:21:16.094Z] [TEST] ✓ PASS: ensurePositiveInt: very large positive integer
+[2026-04-07T10:21:16.094Z] [TEST]   Details: Value: 9999999
+[2026-04-07T10:21:16.095Z] [TEST] ✓ PASS: ensurePositiveInt rejects: zero
+[2026-04-07T10:21:16.095Z] [TEST]   Details: Value: 0
+[2026-04-07T10:21:16.095Z] [TEST] ✓ PASS: ensurePositiveInt rejects: negative integer
+[2026-04-07T10:21:16.096Z] [TEST]   Details: Value: -1
+[2026-04-07T10:21:16.096Z] [TEST] ✓ PASS: ensurePositiveInt rejects: decimal
+[2026-04-07T10:21:16.096Z] [TEST]   Details: Value: 1.5
+[2026-04-07T10:21:16.096Z] [TEST] ✓ PASS: ensurePositiveInt rejects: NaN
+[2026-04-07T10:21:16.096Z] [TEST]   Details: Value: NaN
+[2026-04-07T10:21:16.096Z] [TEST] ✓ PASS: ensurePositiveInt rejects: null
+[2026-04-07T10:21:16.097Z] [TEST]   Details: Value: null
+[2026-04-07T10:21:16.097Z] [INFO] Testing: Return number generation
+[2026-04-07T10:21:16.097Z] [TEST] ✓ PASS: Return numbers are unique
+[2026-04-07T10:21:16.098Z] [TEST]   Details: Generated 5 unique numbers
+[2026-04-07T10:21:16.098Z] [TEST] ✓ PASS: Return numbers match pattern
+[2026-04-07T10:21:16.098Z] [TEST]   Details: Pattern: OFFRET-[PREFIX]-[TIMESTAMP]-[RANDOM]
+[2026-04-07T10:21:16.098Z] [INFO] Sample generated return numbers:
+[2026-04-07T10:21:16.099Z] [INFO]   - OFFRET-1E4C-57276097-310
+[2026-04-07T10:21:16.099Z] [INFO]   - OFFRET-1E4C-57276097-602
+[2026-04-07T10:21:16.099Z] [INFO]   - OFFRET-1E4C-57276097-527
+[2026-04-07T10:21:16.100Z] [INFO] ================================================================================
+[2026-04-07T10:21:16.100Z] [SECTION] TEST SUITE 2: FINANCIAL CALCULATIONS
+[2026-04-07T10:21:16.100Z] [INFO] ================================================================================
+[2026-04-07T10:21:16.101Z] [INFO] Testing: Return amount calculations and validations
+[2026-04-07T10:21:16.102Z] [TEST] ✓ PASS: Simple return - full amount
+[2026-04-07T10:21:16.102Z] [TEST]   Details: Return: ₹10000 (wallet: ₹3000, cash: ₹7000)
+[2026-04-07T10:21:16.102Z] [TEST] ✓ PASS: Partial return - cash only
+[2026-04-07T10:21:16.102Z] [TEST]   Details: Return: ₹5000 (wallet: ₹0, cash: ₹5000)
+[2026-04-07T10:21:16.103Z] [TEST] ✓ PASS: Partial return - wallet only
+[2026-04-07T10:21:16.103Z] [TEST]   Details: Return: ₹2000 (wallet: ₹2000, cash: ₹0)
+[2026-04-07T10:21:16.103Z] [TEST] ✓ PASS: Invalid: wallet exceeds available
+[2026-04-07T10:21:16.103Z] [TEST]   Details: Return: ₹5000 (wallet: ₹5000, cash: ₹0)
+[2026-04-07T10:21:16.103Z] [TEST] ✓ PASS: Invalid: cash exceeds available
+[2026-04-07T10:21:16.104Z] [TEST]   Details: Return: ₹8000 (wallet: ₹0, cash: ₹8000)
+[2026-04-07T10:21:16.104Z] [INFO] Testing: Cashback reversal calculations
+[2026-04-07T10:21:16.105Z] [TEST] ✓ PASS: Full order return - full cashback reversal
+[2026-04-07T10:21:16.105Z] [TEST]   Details: Expected: ₹500, Got: ₹500
+[2026-04-07T10:21:16.105Z] [TEST] ✓ PASS: Half order return - proportional cashback reversal
+[2026-04-07T10:21:16.105Z] [TEST]   Details: Expected: ₹250, Got: ₹250
+[2026-04-07T10:21:16.105Z] [TEST] ✓ PASS: Quarter order return - proportional cashback reversal
+[2026-04-07T10:21:16.106Z] [TEST]   Details: Expected: ₹125, Got: ₹125
+[2026-04-07T10:21:16.106Z] [TEST] ✓ PASS: No cashback - zero reversal
+[2026-04-07T10:21:16.106Z] [TEST]   Details: Expected: ₹0, Got: ₹0
+[2026-04-07T10:21:16.106Z] [INFO] ================================================================================
+[2026-04-07T10:21:16.107Z] [SECTION] TEST SUITE 3: ORDER STATUS VALIDATION
+[2026-04-07T10:21:16.107Z] [INFO] ================================================================================
+[2026-04-07T10:21:16.107Z] [INFO] Testing: Order status validation for returns
+[2026-04-07T10:21:16.107Z] [TEST] ✓ PASS: Can create return for status: paid
+[2026-04-07T10:21:16.108Z] [TEST]   Details: Status is valid for returns
+[2026-04-07T10:21:16.108Z] [TEST] ✓ PASS: Can create return for status: fulfilled
+[2026-04-07T10:21:16.108Z] [TEST]   Details: Status is valid for returns
+[2026-04-07T10:21:16.108Z] [TEST] ✓ PASS: Can create return for status: partially_returned
+[2026-04-07T10:21:16.108Z] [TEST]   Details: Status is valid for returns
+[2026-04-07T10:21:16.109Z] [TEST] ✓ PASS: Cannot create return for status: pending
+[2026-04-07T10:21:16.109Z] [TEST]   Details: Status is invalid for returns
+[2026-04-07T10:21:16.109Z] [TEST] ✓ PASS: Cannot create return for status: shipped
+[2026-04-07T10:21:16.109Z] [TEST]   Details: Status is invalid for returns
+[2026-04-07T10:21:16.109Z] [TEST] ✓ PASS: Cannot create return for status: cancelled
+[2026-04-07T10:21:16.110Z] [TEST]   Details: Status is invalid for returns
+[2026-04-07T10:21:16.110Z] [TEST] ✓ PASS: Cannot create return for status: returned
+[2026-04-07T10:21:16.110Z] [TEST]   Details: Status is invalid for returns
+[2026-04-07T10:21:16.110Z] [TEST] ✓ PASS: Only offline_admin orders can have returns
+[2026-04-07T10:21:16.110Z] [TEST]   Details: Returns restricted to offline_admin source
+[2026-04-07T10:21:16.111Z] [INFO] ================================================================================
+[2026-04-07T10:21:16.111Z] [SECTION] TEST SUITE 4: INVENTORY RESTOCK VALIDATION
+[2026-04-07T10:21:16.111Z] [INFO] ================================================================================
+[2026-04-07T10:21:16.112Z] [INFO] Testing: Inventory restock validations
+[2026-04-07T10:21:16.112Z] [TEST] ✓ PASS: Valid: restock < returned quantity
+[2026-04-07T10:21:16.112Z] [TEST]   Details: Returned: 5, Restock: 3, Tracked: true, Variant: false
+[2026-04-07T10:21:16.112Z] [TEST] ✓ PASS: Valid: restock = returned quantity
+[2026-04-07T10:21:16.113Z] [TEST]   Details: Returned: 5, Restock: 5, Tracked: true, Variant: false
+[2026-04-07T10:21:16.113Z] [TEST] ✓ PASS: Invalid: restock > returned quantity
+[2026-04-07T10:21:16.113Z] [TEST]   Details: Returned: 5, Restock: 6, Tracked: true, Variant: false
+[2026-04-07T10:21:16.113Z] [TEST] ✓ PASS: Valid: no restock when inventory not tracked
+[2026-04-07T10:21:16.113Z] [TEST]   Details: Returned: 5, Restock: 0, Tracked: false, Variant: false
+[2026-04-07T10:21:16.113Z] [TEST] ✓ PASS: Invalid: restock blocked for variant items
+[2026-04-07T10:21:16.114Z] [TEST]   Details: Returned: 5, Restock: 3, Tracked: true, Variant: true
+[2026-04-07T10:21:16.114Z] [INFO] ================================================================================
+[2026-04-07T10:21:16.114Z] [SECTION] TEST SUITE 5: IDEMPOTENCY AND DUPLICATE PREVENTION
+[2026-04-07T10:21:16.114Z] [INFO] ================================================================================
+[2026-04-07T10:21:16.114Z] [INFO] Testing: Idempotency key generation and behavior
+[2026-04-07T10:21:16.115Z] [TEST] ✓ PASS: Idempotency key normalization: trimmed
+[2026-04-07T10:21:16.115Z] [TEST]   Details: Input: "  req-123  " → "req-123"
+[2026-04-07T10:21:16.115Z] [TEST] ✓ PASS: Idempotency key normalization: no spaces
+[2026-04-07T10:21:16.116Z] [TEST]   Details: Input: "req-123" → "req-123"
+[2026-04-07T10:21:16.116Z] [TEST] ✓ PASS: Idempotency key normalization: empty string → null
+[2026-04-07T10:21:16.116Z] [TEST]   Details: Input: "" → "null"
+[2026-04-07T10:21:16.116Z] [TEST] ✓ PASS: Idempotency key normalization: null → null
+[2026-04-07T10:21:16.117Z] [TEST]   Details: Input: "null" → "null"
+[2026-04-07T10:21:16.117Z] [TEST] ✓ PASS: Duplicate requests with same client ID are detected
+[2026-04-07T10:21:16.117Z] [TEST]   Details: Idempotency prevents duplicate processing
+[2026-04-07T10:21:16.118Z] [INFO] ================================================================================
+[2026-04-07T10:21:16.118Z] [SECTION] TEST SUITE 6: EFFECT TRACKING AND SIDE EFFECTS
+[2026-04-07T10:21:16.119Z] [INFO] ================================================================================
+[2026-04-07T10:21:16.119Z] [INFO] Testing: Return effects tracking
+[2026-04-07T10:21:16.119Z] [TEST] ✓ PASS: Effect type tracked: wallet_refund
+[2026-04-07T10:21:16.120Z] [TEST]   Details: Effect type is recorded in order_return_effects table
+[2026-04-07T10:21:16.120Z] [TEST] ✓ PASS: Effect type tracked: cash_refund
+[2026-04-07T10:21:16.120Z] [TEST]   Details: Effect type is recorded in order_return_effects table
+[2026-04-07T10:21:16.121Z] [TEST] ✓ PASS: Effect type tracked: stock_restock
+[2026-04-07T10:21:16.121Z] [TEST]   Details: Effect type is recorded in order_return_effects table
+[2026-04-07T10:21:16.121Z] [TEST] ✓ PASS: Effect type tracked: cashback_reversal
+[2026-04-07T10:21:16.122Z] [TEST]   Details: Effect type is recorded in order_return_effects table
+[2026-04-07T10:21:16.122Z] [TEST] ✓ PASS: Effects are deduplicated by unique constraint
+[2026-04-07T10:21:16.122Z] [TEST]   Details: Multiple attempts to apply same effect are idempotent via (order_return_id, order_return_item_id, effect_type) constraint
+[2026-04-07T10:21:16.122Z] [TEST] ✓ PASS: Applied effects are marked with applied_at timestamp
+[2026-04-07T10:21:16.122Z] [TEST]   Details: Successful effect applications update applied_at field
+[2026-04-07T10:21:16.123Z] [TEST] ✓ PASS: Failed effect applications record error message
+[2026-04-07T10:21:16.123Z] [TEST]   Details: last_error field captures failure reason up to 2000 chars
+[2026-04-07T10:21:16.123Z] [INFO] ================================================================================
+[2026-04-07T10:21:16.123Z] [SECTION] TEST SUITE 7: TENANT ISOLATION
+[2026-04-07T10:21:16.123Z] [INFO] ================================================================================
+[2026-04-07T10:21:16.124Z] [INFO] Testing: Tenant isolation safety
+[2026-04-07T10:21:16.124Z] [TEST] ✓ PASS: Returns are scoped by tenant_id in all queries
+[2026-04-07T10:21:16.124Z] [TEST]   Details: All operations filter by tenant_id to prevent cross-tenant data access
+[2026-04-07T10:21:16.124Z] [TEST] ✓ PASS: Order must belong to same tenant as return
+[2026-04-07T10:21:16.124Z] [TEST]   Details: Tenant ID from request must match order.tenant_id
+[2026-04-07T10:21:16.124Z] [TEST] ✓ PASS: Order items must belong to same tenant
+[2026-04-07T10:21:16.125Z] [TEST]   Details: Order items are validated to be in same tenant
+[2026-04-07T10:21:16.125Z] [TEST] ✓ PASS: Cross-tenant return attempts fail with clear error
+[2026-04-07T10:21:16.125Z] [TEST]   Details: Attempting to return order from different tenant is rejected
+[2026-04-07T10:21:16.125Z] [INFO] ================================================================================
+[2026-04-07T10:21:16.126Z] [SECTION] TEST SUITE 8: ERROR HANDLING AND EDGE CASES
+[2026-04-07T10:21:16.126Z] [INFO] ================================================================================
+[2026-04-07T10:21:16.127Z] [INFO] Testing: Error handling and edge cases
+[2026-04-07T10:21:16.127Z] [TEST] ✓ PASS: Error case handled: Invalid order ID format
+[2026-04-07T10:21:16.127Z] [TEST]   Details: Error is caught and returned with appropriate message
+[2026-04-07T10:21:16.127Z] [TEST] ✓ PASS: Error case handled: Order not found
+[2026-04-07T10:21:16.127Z] [TEST]   Details: Error is caught and returned with appropriate message
+[2026-04-07T10:21:16.128Z] [TEST] ✓ PASS: Error case handled: No return items provided
+[2026-04-07T10:21:16.128Z] [TEST]   Details: Error is caught and returned with appropriate message
+[2026-04-07T10:21:16.128Z] [TEST] ✓ PASS: Error case handled: Return quantity exceeds sold quantity
+[2026-04-07T10:21:16.129Z] [TEST]   Details: Error is caught and returned with appropriate message
+[2026-04-07T10:21:16.129Z] [TEST] ✓ PASS: Error case handled: Total return amount is zero
+[2026-04-07T10:21:16.130Z] [TEST]   Details: Error is caught and returned with appropriate message
+[2026-04-07T10:21:16.130Z] [TEST] ✓ PASS: Error case handled: Wallet refund exceeds wallet used
+[2026-04-07T10:21:16.131Z] [TEST]   Details: Error is caught and returned with appropriate message
+[2026-04-07T10:21:16.132Z] [TEST] ✓ PASS: Error case handled: Cash refund exceeds cash paid
+[2026-04-07T10:21:16.132Z] [TEST]   Details: Error is caught and returned with appropriate message
+[2026-04-07T10:21:16.132Z] [TEST] ✓ PASS: Error case handled: Total refund exceeds order amount
+[2026-04-07T10:21:16.133Z] [TEST]   Details: Error is caught and returned with appropriate message
+[2026-04-07T10:21:16.133Z] [INFO] ================================================================================
+[2026-04-07T10:21:16.133Z] [SECTION] TEST EXECUTION SUMMARY
+[2026-04-07T10:21:16.134Z] [INFO] ================================================================================
+[2026-04-07T10:21:16.135Z] [INFO] 
+[2026-04-07T10:21:16.136Z] [INFO] Total Tests: 56
+[2026-04-07T10:21:16.137Z] [INFO] Passed: 56 ✓
+[2026-04-07T10:21:16.137Z] [INFO] Failed: 0 ✗
+[2026-04-07T10:21:16.139Z] [INFO] Success Rate: 100.00%
+[2026-04-07T10:21:16.139Z] [INFO] 
+[2026-04-07T10:21:16.140Z] [INFO] 
+[2026-04-07T10:21:16.140Z] [INFO] ================================================================================
+[2026-04-07T10:21:16.140Z] [SECTION] RETURN FUNCTION BEHAVIOR DOCUMENTATION
+[2026-04-07T10:21:16.140Z] [INFO] ================================================================================
+[2026-04-07T10:21:16.141Z] [INFO] Function: createOfflineOrderReturn(tenantId, orderId, input)
+[2026-04-07T10:21:16.141Z] [INFO] 
+[2026-04-07T10:21:16.141Z] [INFO] Input Parameters:
+[2026-04-07T10:21:16.141Z] [INFO]   - tenantId: string (UUID)
+[2026-04-07T10:21:16.142Z] [INFO]   - orderId: string (UUID)
+[2026-04-07T10:21:16.142Z] [INFO]   - input: CreateOfflineReturnInput
+[2026-04-07T10:21:16.143Z] [INFO]     {
+[2026-04-07T10:21:16.143Z] [INFO]       items: OfflineReturnItemInput[]
+[2026-04-07T10:21:16.143Z] [INFO]         - orderItemId: string
+[2026-04-07T10:21:16.144Z] [INFO]         - returnedQuantity: number
+[2026-04-07T10:21:16.144Z] [INFO]         - restockQuantity?: number
+[2026-04-07T10:21:16.144Z] [INFO]         - reason?: string
+[2026-04-07T10:21:16.144Z] [INFO]       reason?: string
+[2026-04-07T10:21:16.145Z] [INFO]       notes?: string
+[2026-04-07T10:21:16.145Z] [INFO]       walletRefundCents?: number
+[2026-04-07T10:21:16.145Z] [INFO]       cashRefundCents?: number
+[2026-04-07T10:21:16.145Z] [INFO]       createdBy?: string
+[2026-04-07T10:21:16.146Z] [INFO]       clientRequestId?: string
+[2026-04-07T10:21:16.146Z] [INFO]     }
+[2026-04-07T10:21:16.146Z] [INFO] 
+[2026-04-07T10:21:16.146Z] [INFO] Processing Steps:
+[2026-04-07T10:21:16.147Z] [INFO]   1. Validate effect tracking schema is ready (hardened columns)
+[2026-04-07T10:21:16.147Z] [INFO]   2. Validate input items are not empty
+[2026-04-07T10:21:16.147Z] [INFO]   3. Load and validate order exists and belongs to tenant
+[2026-04-07T10:21:16.147Z] [INFO]   4. Verify order is offline_admin source
+[2026-04-07T10:21:16.148Z] [INFO]   5. Check order status is paid/fulfilled/partially_returned
+[2026-04-07T10:21:16.148Z] [INFO]   6. Check order is not already fully returned
+[2026-04-07T10:21:16.148Z] [INFO]   7. Check idempotency with clientRequestId (if provided)
+[2026-04-07T10:21:16.148Z] [INFO]   8. Load order items and validate all requested items exist
+[2026-04-07T10:21:16.148Z] [INFO]   9. Validate return quantities do not exceed sold quantities
+[2026-04-07T10:21:16.149Z] [INFO]   10. Calculate financial allocations (wallet vs cash refunds)
+[2026-04-07T10:21:16.149Z] [INFO]   11. Validate refund amounts do not exceed available funds
+[2026-04-07T10:21:16.149Z] [INFO]   12. Calculate proportional cashback reversal
+[2026-04-07T10:21:16.149Z] [INFO]   13. Create return header in draft status
+[2026-04-07T10:21:16.149Z] [INFO]   14. Insert return line items
+[2026-04-07T10:21:16.149Z] [INFO]   15. Apply side effects in order:
+[2026-04-07T10:21:16.150Z] [INFO]       - Credit wallet refund (if amount > 0)
+[2026-04-07T10:21:16.150Z] [INFO]       - Record cash refund (for accounting)
+[2026-04-07T10:21:16.150Z] [INFO]       - Restock inventory (if applicable)
+[2026-04-07T10:21:16.151Z] [INFO]       - Reverse cashback (if applicable)
+[2026-04-07T10:21:16.151Z] [INFO]   16. Finalize return header to processed status
+[2026-04-07T10:21:16.151Z] [INFO]   17. Sync order status (returned/partially_returned)
+[2026-04-07T10:21:16.151Z] [INFO]   18. Return payload with created return and items
+[2026-04-07T10:21:16.152Z] [INFO] 
+[2026-04-07T10:21:16.152Z] [INFO] Returns: { return: ReturnHeader, items: ReturnItem[] }
+[2026-04-07T10:21:16.152Z] [INFO] 
+[2026-04-07T10:21:16.152Z] [INFO] Error Scenarios:
+[2026-04-07T10:21:16.153Z] [INFO]   - Schema not hardened: Immediate fail
+[2026-04-07T10:21:16.154Z] [INFO]   - Order not found: 400 error
+[2026-04-07T10:21:16.154Z] [INFO]   - Wrong order source: 400 error
+[2026-04-07T10:21:16.154Z] [INFO]   - Invalid order status: 400 error
+[2026-04-07T10:21:16.154Z] [INFO]   - Return quantities exceed sold: 400 error
+[2026-04-07T10:21:16.154Z] [INFO]   - Refund amounts exceed available: 400 error
+[2026-04-07T10:21:16.154Z] [INFO]   - Effect application failed: Exception with error tracking
+[2026-04-07T10:21:16.155Z] [INFO] 
+[2026-04-07T10:21:16.155Z] [INFO] Idempotency Guarantee:
+[2026-04-07T10:21:16.155Z] [INFO]   - If clientRequestId matches existing processed return: Returns cached result
+[2026-04-07T10:21:16.155Z] [INFO]   - If clientRequestId matches existing draft return: Resumes processing
+[2026-04-07T10:21:16.155Z] [INFO]   - Side effects use unique constraints to prevent double-application
+[2026-04-07T10:21:16.155Z] [INFO]   - Each effect tracked with applied_at and last_error fields
+[2026-04-07T10:21:16.155Z] [INFO] 
+[2026-04-07T10:21:16.155Z] [INFO] ================================================================================
+[2026-04-07T10:21:16.156Z] [SECTION] LOG FILE CREATED
+[2026-04-07T10:21:16.156Z] [INFO] ================================================================================
+[2026-04-07T10:21:16.156Z] [INFO] Comprehensive test log saved to: F:\ComemrceNest\Commercenest\web\scripts\returns-test-log-2026-04-07T10-21-16-071Z.txt
+[2026-04-07T10:21:16.156Z] [INFO] 

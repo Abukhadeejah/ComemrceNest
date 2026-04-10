@@ -52,6 +52,7 @@ interface OrderItemSnapshot {
   order_id: string
   tenant_id: string
   product_id: string
+  variant_id: string | null
   quantity: number
   unit_price_cents: number
   subtotal_cents: number
@@ -62,12 +63,19 @@ interface OrderItemSnapshot {
     has_variants: boolean | null
     name: string | null
   } | null
+  product_variants?: {
+    id: string
+    name: string | null
+    stock: number | null
+    track_inventory: boolean | null
+  } | null
 }
 
 interface ReturnLineRow {
   id: string
   order_item_id: string
   product_id: string
+  variant_id: string | null
   returned_quantity: number
   restock_quantity: number
   unit_price_cents: number
@@ -85,6 +93,8 @@ interface ReturnItemEffectInput {
   trackInventory: boolean
   hasVariant: boolean
   productName: string
+  variantId?: string | null
+  variantName?: string | null
 }
 
 async function syncOfflineOrderStatusFromProcessedReturns(tenantId: string, orderId: string) {
@@ -391,10 +401,12 @@ async function restockInventoryForReturn(params: {
   returnItems: Array<{
     orderReturnItemId?: string
     productId: string
+    variantId?: string | null
     restockQuantity: number
     trackInventory: boolean
     hasVariant: boolean
     productName: string
+    variantName?: string | null
   }>
 }) {
   const { tenantId, orderReturnId, orderId, returnItems } = params
@@ -406,8 +418,8 @@ async function restockInventoryForReturn(params: {
       throw new Error(`Missing return item id for restock on product ${item.productName}`)
     }
 
-    if (item.hasVariant) {
-      throw new Error(`Variant-based item restock is blocked for product ${item.productName}; use variant inventory workflow`)
+    if (item.hasVariant && !item.variantId) {
+      throw new Error(`Variant-based item restock requires a recorded variant for product ${item.productName}`)
     }
 
     const effect = await claimReturnEffectWork({
@@ -415,9 +427,10 @@ async function restockInventoryForReturn(params: {
       orderReturnId,
       orderReturnItemId: item.orderReturnItemId,
       effectType: 'stock_restock',
-      referenceId: item.productId,
+      referenceId: item.variantId || item.productId,
       metadata: {
         product_id: item.productId,
+        variant_id: item.variantId || null,
         restock_quantity: item.restockQuantity,
         order_id: orderId,
       },
@@ -426,11 +439,20 @@ async function restockInventoryForReturn(params: {
     if (effect.alreadyApplied) continue
 
     try {
-      const { error: restockError } = await supabaseAdmin.rpc('increment_product_stock_atomic', {
-        p_tenant_id: tenantId,
-        p_product_id: item.productId,
-        p_increment_by: item.restockQuantity,
-      })
+      const restockRpcName = item.variantId ? 'increment_product_variant_stock_atomic' : 'increment_product_stock_atomic'
+      const restockArgs = item.variantId
+        ? {
+            p_tenant_id: tenantId,
+            p_variant_id: item.variantId,
+            p_increment_by: item.restockQuantity,
+          }
+        : {
+            p_tenant_id: tenantId,
+            p_product_id: item.productId,
+            p_increment_by: item.restockQuantity,
+          }
+
+      const { error: restockError } = await supabaseAdmin.rpc(restockRpcName, restockArgs)
 
       if (restockError) {
         throw new Error(`Failed to restock product ${item.productName}: ${restockError.message}`)
@@ -544,7 +566,7 @@ async function fetchReturnPayload(tenantId: string, returnId: string) {
 
   const { data: lines, error: linesError } = await adminDb
     .from('order_return_items')
-    .select('id, order_item_id, product_id, returned_quantity, restock_quantity, unit_price_cents, return_subtotal_cents')
+    .select('id, order_item_id, product_id, variant_id, returned_quantity, restock_quantity, unit_price_cents, return_subtotal_cents')
     .eq('tenant_id', tenantId)
     .eq('order_return_id', returnId)
     .order('created_at', { ascending: true })
@@ -569,6 +591,7 @@ async function fetchReturnPayload(tenantId: string, returnId: string) {
       id: row.id,
       orderItemId: row.order_item_id,
       productId: row.product_id,
+      variantId: row.variant_id,
       returnedQuantity: row.returned_quantity,
       restockQuantity: row.restock_quantity,
       unitPriceCents: row.unit_price_cents,
@@ -577,11 +600,11 @@ async function fetchReturnPayload(tenantId: string, returnId: string) {
   }
 }
 
-function assertNoVariantRestockRequested(items: ReturnItemEffectInput[]) {
+function assertVariantRestockCanBeResolved(items: ReturnItemEffectInput[]) {
   for (const item of items) {
-    if (item.restockQuantity > 0 && item.hasVariant) {
+    if (item.restockQuantity > 0 && item.hasVariant && !item.variantId) {
       throw new Error(
-        `Variant-based item restock is blocked for product ${item.productName}; use variant inventory workflow`
+        `Variant-based item restock requires a recorded variant for product ${item.productName}`
       )
     }
   }
@@ -602,7 +625,7 @@ async function applyReturnEffectsAndFinalize(params: {
 }) {
   const { tenantId, orderId, orderSnapshot, returnHeader, returnItems } = params
 
-  assertNoVariantRestockRequested(returnItems)
+  assertVariantRestockCanBeResolved(returnItems)
 
   if (returnHeader.walletRefundCents > 0 && !orderSnapshot.customer_id) {
     throw new Error('Cannot issue wallet refund because original order has no customer id')
@@ -672,7 +695,7 @@ async function resumeDraftReturnProcessing(params: {
 
   const { data: existingLines, error: linesError } = await adminDb
     .from('order_return_items')
-    .select('id, order_item_id, product_id, returned_quantity, restock_quantity, unit_price_cents, return_subtotal_cents')
+    .select('id, order_item_id, product_id, variant_id, returned_quantity, restock_quantity, unit_price_cents, return_subtotal_cents')
     .eq('tenant_id', tenantId)
     .eq('order_return_id', returnHeader.id)
     .order('created_at', { ascending: true })
@@ -689,7 +712,7 @@ async function resumeDraftReturnProcessing(params: {
   const orderItemIds = Array.from(new Set(lineRows.map((row) => row.order_item_id)))
   const { data: orderItems, error: orderItemsError } = await supabaseAdmin
     .from('order_items')
-    .select('id, tenant_id, order_id, product_id, products(id, track_inventory, has_variants, name)')
+    .select('id, tenant_id, order_id, product_id, variant_id, products(id, track_inventory, has_variants, name), product_variants(id, name, track_inventory)')
     .eq('tenant_id', tenantId)
     .eq('order_id', orderId)
     .in('id', orderItemIds)
@@ -709,6 +732,7 @@ async function resumeDraftReturnProcessing(params: {
       orderReturnItemId: row.id,
       orderItemId: row.order_item_id,
       productId: row.product_id,
+      variantId: row.variant_id || source.variant_id || null,
       returnedQuantity: row.returned_quantity,
       restockQuantity: row.restock_quantity,
       unitPriceCents: row.unit_price_cents,
@@ -716,6 +740,7 @@ async function resumeDraftReturnProcessing(params: {
       trackInventory: !!source.products?.track_inventory,
       hasVariant: !!source.products?.has_variants,
       productName: source.products?.name || row.product_id,
+      variantName: source.product_variants?.name || null,
     }
   })
 
@@ -848,7 +873,7 @@ export async function createOfflineOrderReturn(
 
   const { data: orderItems, error: orderItemsError } = await supabaseAdmin
     .from('order_items')
-    .select('id, order_id, tenant_id, product_id, quantity, unit_price_cents, subtotal_cents, products(id, stock, track_inventory, has_variants, name)')
+    .select('id, order_id, tenant_id, product_id, variant_id, quantity, unit_price_cents, subtotal_cents, products(id, stock, track_inventory, has_variants, name), product_variants(id, name, stock, track_inventory)')
     .eq('tenant_id', tenantId)
     .eq('order_id', orderId)
     .in('id', orderItemIds)
@@ -876,11 +901,13 @@ export async function createOfflineOrderReturn(
     return {
       ...item,
       productId: source.product_id,
+      variantId: source.variant_id || null,
       unitPriceCents: unitPrice,
       returnSubtotalCents: unitPrice * item.returnedQuantity,
       trackInventory: !!source.products?.track_inventory,
       hasVariant: !!source.products?.has_variants,
       productName: source.products?.name || source.product_id,
+      variantName: source.product_variants?.name || null,
     }
   })
 
@@ -889,7 +916,7 @@ export async function createOfflineOrderReturn(
     throw new Error('Total return amount must be greater than zero')
   }
 
-  assertNoVariantRestockRequested(pricedReturnItems)
+  assertVariantRestockCanBeResolved(pricedReturnItems)
 
   const maxWalletRefund = Math.min(orderSnapshot.wallet_used_cents || 0, totalReturnCents)
   const fallbackWalletRefund = maxWalletRefund
@@ -1027,6 +1054,8 @@ export async function createOfflineOrderReturn(
         order_return_id: returnHeader.id,
         order_item_id: item.orderItemId,
         product_id: item.productId,
+        variant_id: item.variantId || null,
+        variant_name: item.variantName || null,
         returned_quantity: item.returnedQuantity,
         restock_quantity: item.restockQuantity,
         unit_price_cents: item.unitPriceCents,
@@ -1034,7 +1063,7 @@ export async function createOfflineOrderReturn(
         reason: item.reason,
       }))
     )
-    .select('id, order_item_id, product_id, returned_quantity, restock_quantity, unit_price_cents, return_subtotal_cents')
+    .select('id, order_item_id, product_id, variant_id, returned_quantity, restock_quantity, unit_price_cents, return_subtotal_cents')
 
   if (returnLinesError || !returnLineRows) {
     throw new Error(`Failed to create return line items: ${returnLinesError?.message || 'Unknown error'}`)
@@ -1057,6 +1086,7 @@ export async function createOfflineOrderReturn(
       orderReturnItemId: byOrderItem.get(item.orderItemId)?.id,
       orderItemId: item.orderItemId,
       productId: item.productId,
+      variantId: item.variantId || null,
       returnedQuantity: item.returnedQuantity,
       restockQuantity: item.restockQuantity,
       unitPriceCents: item.unitPriceCents,
@@ -1064,6 +1094,7 @@ export async function createOfflineOrderReturn(
       trackInventory: item.trackInventory,
       hasVariant: item.hasVariant,
       productName: item.productName,
+      variantName: item.variantName,
     })),
   })
 
