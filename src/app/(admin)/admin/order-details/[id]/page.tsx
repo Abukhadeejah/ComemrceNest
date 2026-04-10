@@ -33,6 +33,7 @@ const ORDER_DETAILS_SELECT = `
   coupon_code,
   order_items (
     id,
+    variant_name,
     quantity,
     unit_price_cents,
     subtotal_cents,
@@ -170,6 +171,15 @@ export default async function OrderDetailsPage({ params }: OrderDetailsPageProps
 
   const shippingAddress = addresses?.[0] || null
   const billingAddress = addresses?.[1] || addresses?.[0] || null
+  const returnedQtyByOrderItemId = (returnHeaders || []).reduce((acc: Record<string, number>, ret: any) => {
+    for (const line of ret.order_return_items || []) {
+      const previous = acc[line.order_item_id] || 0
+      acc[line.order_item_id] = previous + Math.max(0, Number(line.returned_quantity || 0))
+    }
+
+    return acc
+  }, {})
+
   const subtotalCents = (order.order_items || []).reduce(
     (sum: number, item: any) => sum + (item.subtotal_cents || 0),
     0
@@ -379,16 +389,33 @@ export default async function OrderDetailsPage({ params }: OrderDetailsPageProps
                           ) : (
                             <div className="w-10 h-10 rounded-md bg-gray-100" />
                           )}
-                          {item.products?.id ? (
-                            <Link
-                              href={productEditPath(item.products.id)}
-                              className="text-blue-600 hover:text-blue-800 hover:underline"
-                            >
-                              {item.products?.name || 'Product'}
-                            </Link>
-                          ) : (
-                            <span>{item.products?.name || 'Product'}</span>
-                          )}
+                          <div className="flex flex-col gap-1">
+                            {(() => {
+                              const returnedQty = returnedQtyByOrderItemId[item.id] || 0
+                              const orderedQty = Number(item.quantity || 0)
+                              const isReturned = returnedQty > 0
+                              const isFullyReturned = orderedQty > 0 && returnedQty >= orderedQty
+
+                              return isReturned ? (
+                                <span className={`inline-flex w-fit items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${isFullyReturned ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                                  {isFullyReturned ? 'Returned' : 'Partially Returned'}
+                                </span>
+                              ) : null
+                            })()}
+                            {item.products?.id ? (
+                              <Link
+                                href={productEditPath(item.products.id)}
+                                className="text-blue-600 hover:text-blue-800 hover:underline"
+                              >
+                                {item.products?.name || 'Product'}
+                              </Link>
+                            ) : (
+                              <span>{item.products?.name || 'Product'}</span>
+                            )}
+                            <div className="text-xs text-gray-500">
+                              Variant: {item.variant_name || item.variant?.name || item.variant || 'Default'}
+                            </div>
+                          </div>
                         </div>
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-700">
