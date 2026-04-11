@@ -28,6 +28,7 @@ export async function GET(request: NextRequest) {
       order_source,
       status,
       currency,
+      created_at,
       order_items (
         id,
         product_id,
@@ -74,7 +75,55 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Order not found in tenant scope' }, { status: 404 })
     }
 
-    return NextResponse.json({ success: true, order: scoped.data })
+    const orderItemIds = (scoped.data.order_items || []).map((item: any) => item.id)
+    const returnedQtyByOrderItem = new Map<string, number>()
+
+    if (orderItemIds.length > 0) {
+      const { data: processedReturns, error: processedReturnsError } = await supabaseAdmin
+        .from('order_returns')
+        .select('id')
+        .eq('tenant_id', tenantId)
+        .eq('order_id', scoped.data.id)
+        .eq('status', 'processed')
+
+      if (processedReturnsError) {
+        return NextResponse.json({ error: 'Order lookup failed', message: processedReturnsError.message }, { status: 500 })
+      }
+
+      const processedReturnIds = (processedReturns || []).map((row) => row.id)
+      if (processedReturnIds.length > 0) {
+        const { data: returnItems, error: returnItemsError } = await supabaseAdmin
+          .from('order_return_items')
+          .select('order_item_id, returned_quantity')
+          .eq('tenant_id', tenantId)
+          .in('order_return_id', processedReturnIds)
+          .in('order_item_id', orderItemIds)
+
+        if (returnItemsError) {
+          return NextResponse.json({ error: 'Order lookup failed', message: returnItemsError.message }, { status: 500 })
+        }
+
+        for (const row of returnItems || []) {
+          const prev = returnedQtyByOrderItem.get(row.order_item_id) || 0
+          returnedQtyByOrderItem.set(row.order_item_id, prev + Math.max(0, row.returned_quantity || 0))
+        }
+      }
+    }
+
+    const orderWithRemaining = {
+      ...scoped.data,
+      order_items: (scoped.data.order_items || []).map((item: any) => {
+        const soldQty = Math.max(0, item.quantity || 0)
+        const alreadyReturnedQty = Math.min(soldQty, returnedQtyByOrderItem.get(item.id) || 0)
+        return {
+          ...item,
+          already_returned_quantity: alreadyReturnedQty,
+          remaining_returnable_quantity: Math.max(0, soldQty - alreadyReturnedQty),
+        }
+      }),
+    }
+
+    return NextResponse.json({ success: true, order: orderWithRemaining })
   } catch (error) {
     return NextResponse.json(
       {

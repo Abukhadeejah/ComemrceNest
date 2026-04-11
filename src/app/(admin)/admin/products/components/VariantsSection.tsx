@@ -63,7 +63,10 @@ export function VariantsSection({
   const combinationsValid =
     variantCombinations.length > 0 &&
     variantCombinations.every(c => (c.priceCents ?? 0) >= 0 && (c.stock ?? 0) >= 0 && Object.keys(c.options || {}).length > 0)
-  const canUpdateVariants = hasVariants ? variantOptions.length > 0 && allOptionsValid && combinationsValid : true
+  const hasAnyVariantInput = variantOptions.length > 0 || variantCombinations.length > 0
+  const canUpdateVariants = hasVariants
+    ? (!hasAnyVariantInput || (allOptionsValid && combinationsValid))
+    : true
 
   // Toggle expansion state for options or combinations
   const toggleSection = (section: string) => {
@@ -303,9 +306,9 @@ export function VariantsSection({
                 onClick={() => toggleSection('options')}
                 className="flex items-center space-x-2 flex-1"
               >
-                <span className="font-medium text-gray-900">
-                  Variant Options<span className="text-red-600"> *</span>
-                </span>
+                  <span className="font-medium text-gray-900">
+                    Variant Options <span className="text-gray-500 text-xs">(Optional)</span>
+                  </span>
                 <span className="text-sm text-gray-500">({variantOptions.length})</span>
               </button>
               <button
@@ -374,7 +377,7 @@ export function VariantsSection({
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-medium text-gray-700">
-                            Values<span className="text-red-600"> *</span>
+                            Values <span className="text-gray-500">(Optional)</span>
                           </span>
                           <AddValueButton
                             option={option}
@@ -416,7 +419,7 @@ export function VariantsSection({
                   className="flex items-center space-x-2 flex-1"
                 >
                   <span className="font-medium text-gray-900">
-                    Variant Combinations<span className="text-red-600"> *</span>
+                    Variant Combinations <span className="text-gray-500 text-xs">(Optional)</span>
                   </span>
                   <span className="text-sm text-gray-500">{(variantCombinations || []).length}</span>
                 </button>
@@ -456,7 +459,7 @@ export function VariantsSection({
                 <div className="p-4">
                   {hasVariants && !canUpdateVariants && (
                     <div className="mb-3 text-xs text-red-700 bg-red-50 border border-red-200 rounded p-2">
-                      Complete requirements before saving: at least one option with values, at least one combination, non‑negative price and stock.
+                      Entered variant data has validation errors. Fix names/values or numeric fields to continue.
                     </div>
                   )}
                   {(variantCombinations || []).length === 0 ? (

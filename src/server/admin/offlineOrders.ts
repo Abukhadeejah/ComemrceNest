@@ -5,6 +5,7 @@ import {
   getWalletBalance,
   processCashbackForOrder,
 } from '@/lib/cashback/cashbackService'
+import { assertWalletUsageWithinCap } from './orderSafetyRules'
 import { fetchProductVariants, fetchProductVariantOptions } from '@/server/modules/products/service'
 
 export type OfflineOrderStatus = 'pending' | 'paid'
@@ -649,6 +650,8 @@ export async function createOfflineOrder(tenantId: string, input: CreateOfflineO
       if (walletBalanceCents <= 0) {
         throw new Error('Wallet balance is zero and cannot be used for this order')
       }
+
+      assertWalletUsageWithinCap(walletUsedCents, totalCents, walletBalanceCents)
 
       if (walletUsedCents > walletBalanceCents) {
         throw new Error(`Insufficient wallet balance. Available: ${walletBalanceCents}`)

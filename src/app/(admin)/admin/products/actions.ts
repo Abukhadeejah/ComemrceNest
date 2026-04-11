@@ -6,6 +6,7 @@ import { assertTenantAdmin, getAuthenticatedUserId, hasAuthCookie } from '@/serv
 import { revalidateTag, unstable_cache } from 'next/cache'
 import { tenantProductsTag } from '@/server/cacheTags'
 import { forceInvalidateProductCaches } from '@/server/cacheUtils'
+import { assertValidBulkDeleteProductIds } from '@/server/admin/orderSafetyRules'
 import { adaptProductStatus, adaptToSupabaseJson, undefinedToNull } from '@/utils/typeAdapters'
 // GUARDRAIL: Import comprehensive guardrail system
 import {
@@ -1269,14 +1270,18 @@ export async function bulkDeleteProducts(productIds: string[]) {
   // GUARDRAIL: Validate module access
   await validateModuleAccess(tenantId, 'products', 'delete')
 
-  const { error } = await supabaseAdmin
-    .from('products')
-    .delete()
-    .in('id', productIds)
-    .eq('tenant_id', tenantId)
+  assertValidBulkDeleteProductIds(productIds)
 
-  if (error) {
-    throw new Error(`Failed to delete products: ${error.message}`)
+  for (const productId of productIds) {
+    const { error } = await supabaseAdmin
+      .rpc('delete_product_safely', {
+        product_id_param: productId,
+        tenant_id_param: tenantId,
+      })
+
+    if (error) {
+      throw new Error(`Failed to delete product ${productId}: ${error.message}`)
+    }
   }
 
   // GUARDRAIL: Success logging and cache invalidation
@@ -1758,47 +1763,48 @@ export async function updateProductVariants(
       throw new Error('Tenant not found')
     }
 
-    // Strict validation when variants are enabled
+    // Variants are optional: allow hasVariants=true with no options/combinations yet.
+    // Only validate options/combinations that are actually provided.
     if (variantData.hasVariants) {
       const problems: string[] = []
-      if (!Array.isArray(variantData.variantOptions) || variantData.variantOptions.length === 0) {
-        problems.push('At least one variant option is required when variants are enabled.')
-      }
-      if (!Array.isArray(variantData.variantCombinations) || variantData.variantCombinations.length === 0) {
-        problems.push('At least one variant combination is required when variants are enabled.')
-      }
+      const hasOptionData = Array.isArray(variantData.variantOptions) && variantData.variantOptions.length > 0
+      const hasCombinationData = Array.isArray(variantData.variantCombinations) && variantData.variantCombinations.length > 0
 
       // Validate options/values
-      for (const opt of variantData.variantOptions || []) {
-        if (!opt || typeof opt.name !== 'string' || !opt.name.trim()) {
-          problems.push('Each variant option must have a non-empty name.')
-        }
-        if (!Array.isArray(opt.values) || opt.values.length === 0) {
-          problems.push(`Option "${opt?.displayName || opt?.name || 'unknown'}" must include at least one value.`)
-        }
-        for (const val of opt.values || []) {
-          if (!val || typeof val.value !== 'string' || !val.value.trim()) {
-            problems.push(`Option value is required for "${opt?.displayName || opt?.name || 'unknown'}".`)
+      if (hasOptionData) {
+        for (const opt of variantData.variantOptions || []) {
+          if (!opt || typeof opt.name !== 'string' || !opt.name.trim()) {
+            problems.push('Each variant option must have a non-empty name.')
           }
-          if (val.priceAdjustmentCents != null && Number(val.priceAdjustmentCents) < 0) {
-            problems.push('Value priceAdjustmentCents cannot be negative.')
+          if (!Array.isArray(opt.values) || opt.values.length === 0) {
+            problems.push(`Option "${opt?.displayName || opt?.name || 'unknown'}" must include at least one value.`)
           }
-          if (val.costAdjustmentCents != null && Number(val.costAdjustmentCents) < 0) {
-            problems.push('Value costAdjustmentCents cannot be negative.')
+          for (const val of opt.values || []) {
+            if (!val || typeof val.value !== 'string' || !val.value.trim()) {
+              problems.push(`Option value is required for "${opt?.displayName || opt?.name || 'unknown'}".`)
+            }
+            if (val.priceAdjustmentCents != null && Number(val.priceAdjustmentCents) < 0) {
+              problems.push('Value priceAdjustmentCents cannot be negative.')
+            }
+            if (val.costAdjustmentCents != null && Number(val.costAdjustmentCents) < 0) {
+              problems.push('Value costAdjustmentCents cannot be negative.')
+            }
           }
         }
       }
 
       // Validate combinations
-      for (const combo of variantData.variantCombinations || []) {
-        if (combo.priceCents == null || Number.isNaN(Number(combo.priceCents)) || Number(combo.priceCents) < 0) {
-          problems.push('Each combination requires priceCents ≥ 0.')
-        }
-        if (combo.stock == null || Number.isNaN(Number(combo.stock)) || Number(combo.stock) < 0) {
-          problems.push('Each combination requires stock ≥ 0.')
-        }
-        if (!combo.options || typeof combo.options !== 'object' || Object.keys(combo.options).length === 0) {
-          problems.push('Each combination must specify option selections.')
+      if (hasCombinationData) {
+        for (const combo of variantData.variantCombinations || []) {
+          if (combo.priceCents == null || Number.isNaN(Number(combo.priceCents)) || Number(combo.priceCents) < 0) {
+            problems.push('Each combination requires priceCents ≥ 0.')
+          }
+          if (combo.stock == null || Number.isNaN(Number(combo.stock)) || Number(combo.stock) < 0) {
+            problems.push('Each combination requires stock ≥ 0.')
+          }
+          if (!combo.options || typeof combo.options !== 'object' || Object.keys(combo.options).length === 0) {
+            problems.push('Each combination must specify option selections.')
+          }
         }
       }
 

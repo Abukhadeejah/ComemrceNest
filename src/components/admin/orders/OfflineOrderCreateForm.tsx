@@ -125,8 +125,8 @@ export default function OfflineOrderCreateForm({
 
   const walletUsedCents = useMemo(() => {
     const raw = toCents(walletUsedRupees)
-    return Math.min(raw, totalCents)
-  }, [walletUsedRupees, totalCents])
+    return Math.min(raw, totalCents, walletBalanceCents)
+  }, [walletUsedRupees, totalCents, walletBalanceCents])
 
   useEffect(() => {
     setSelectedVariantByProduct((prev) => {
@@ -152,6 +152,14 @@ export default function OfflineOrderCreateForm({
       setWalletUsedRupees('0')
     }
   }, [walletBalanceCents, walletUsedRupees])
+
+  useEffect(() => {
+    const raw = toCents(walletUsedRupees)
+    const maxWalletAllowedCents = Math.min(totalCents, walletBalanceCents)
+    if (raw > maxWalletAllowedCents) {
+      setWalletUsedRupees(toRupeesString(maxWalletAllowedCents))
+    }
+  }, [walletUsedRupees, totalCents, walletBalanceCents])
 
   const cashPaidCents = useMemo(() => {
     if (orderStatus === 'pending') return 0
@@ -298,10 +306,23 @@ export default function OfflineOrderCreateForm({
       return
     }
 
+    const effectiveTrackInventory = !!(selectedVariant ? (selectedVariant.track_inventory ?? product.track_inventory) : product.track_inventory)
+    const availableStock = selectedVariant ? Number(selectedVariant.stock || 0) : Number(product.stock || 0)
+
+    if (effectiveTrackInventory && availableStock <= 0) {
+      setValidationMessage(`Cannot add ${product.name}. Stock is zero.`)
+      return
+    }
+
     const lineKey = `${product.id}:${selectedVariant?.id || 'base'}`
     setLineItems((prev) => {
       const existing = prev.find((line) => line.lineKey === lineKey)
       if (existing) {
+        if (existing.trackInventory && existing.quantity >= existing.stock) {
+          setValidationMessage(`Cannot add more. Max stock reached for ${existing.name}.`)
+          return prev
+        }
+
         return prev.map((line) =>
           line.lineKey === lineKey ? { ...line, quantity: line.quantity + 1 } : line
         )
@@ -316,8 +337,8 @@ export default function OfflineOrderCreateForm({
           sku: product.sku,
           unitPriceCents: selectedVariant ? selectedVariant.price_cents : product.price_cents,
           quantity: 1,
-          stock: selectedVariant ? (selectedVariant.stock || 0) : product.stock,
-          trackInventory: product.track_inventory,
+          stock: availableStock,
+          trackInventory: effectiveTrackInventory,
           variantId: selectedVariant?.id || null,
           variantName: selectedVariant?.name || null,
           heroImageUrl: product.hero_image_url || null,
@@ -330,7 +351,10 @@ export default function OfflineOrderCreateForm({
     setLineItems((prev) =>
       prev.map((item) => {
         if (item.lineKey !== lineKey) return item
-        const nextQty = Math.max(1, Math.floor(quantity || 1))
+        let nextQty = Math.max(1, Math.floor(quantity || 1))
+        if (item.trackInventory) {
+          nextQty = Math.min(nextQty, Math.max(1, Number(item.stock || 0)))
+        }
         return { ...item, quantity: nextQty }
       })
     )
@@ -356,6 +380,19 @@ export default function OfflineOrderCreateForm({
 
     if (discountCents > subtotalCents) {
       setValidationMessage('Discount cannot exceed subtotal.')
+      return
+    }
+
+    const rawWalletInputCents = toCents(walletUsedRupees)
+    const maxWalletAllowedCents = Math.min(totalCents, walletBalanceCents)
+    if (rawWalletInputCents > maxWalletAllowedCents) {
+      setValidationMessage(`Wallet used cannot exceed available wallet balance (${formatCurrency(walletBalanceCents)}) or order total.`)
+      return
+    }
+
+    const invalidStockLine = lineItems.find((item) => item.trackInventory && item.quantity > Number(item.stock || 0))
+    if (invalidStockLine) {
+      setValidationMessage(`Quantity exceeds stock for ${invalidStockLine.name}. Please adjust quantity before generating order.`)
       return
     }
 
@@ -699,6 +736,7 @@ export default function OfflineOrderCreateForm({
               type="number"
               min={0}
               step="0.01"
+              max={toRupeesString(Math.min(totalCents, walletBalanceCents))}
               value={walletUsedRupees}
               onChange={(e) => setWalletUsedRupees(e.target.value)}
               disabled={orderStatus === 'pending' || walletBalanceCents <= 0}
@@ -706,6 +744,11 @@ export default function OfflineOrderCreateForm({
             />
             {walletBalanceCents <= 0 && orderStatus === 'paid' && (
               <p className="mt-1 text-xs text-amber-700">Wallet balance is zero, so wallet payment is disabled.</p>
+            )}
+            {walletBalanceCents > 0 && orderStatus === 'paid' && (
+              <p className="mt-1 text-xs text-gray-600">
+                Max usable now: {formatCurrency(Math.min(totalCents, walletBalanceCents))}
+              </p>
             )}
           </div>
 

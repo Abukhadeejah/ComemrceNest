@@ -10,7 +10,7 @@ import {
 } from '@heroicons/react/24/outline'
 import { ADMIN_URLS } from '@/utils/admin-urls'
 import { useAdminTenantKey } from '@/components/admin/AdminBrandingWrapper'
-import { deleteProduct, cloneProduct } from '@/app/(admin)/admin/products/actions'
+import { deleteProduct, cloneProduct, bulkDeleteProducts } from '@/app/(admin)/admin/products/actions'
 import { forcePageRefresh } from '@/utils/cacheBusting'
 
 interface Product {
@@ -135,6 +135,39 @@ export function ProductTable({ products }: ProductTableProps) {
     }
   }
 
+  const handleBulkDelete = async () => {
+    if (selectedProducts.length === 0) {
+      return
+    }
+
+    if (isDeleting || deletingProductId !== null) {
+      return
+    }
+
+    const confirmed = confirm(
+      `Delete ${selectedProducts.length} selected product(s)? This action cannot be undone.`
+    )
+
+    if (!confirmed) {
+      return
+    }
+
+    try {
+      setIsDeleting(true)
+      await bulkDeleteProducts(selectedProducts)
+      alert(`${selectedProducts.length} product(s) deleted successfully.`)
+      setSelectedProducts([])
+      setTimeout(() => {
+        forcePageRefresh()
+      }, 100)
+    } catch (error) {
+      console.error('Failed to bulk delete products:', error)
+      alert(`Failed to delete selected products: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
   const formatPrice = (priceCents: number) => {
     return `₹${(priceCents / 100).toFixed(2)}`
   }
@@ -174,8 +207,13 @@ export function ProductTable({ products }: ProductTableProps) {
 
         {selectedProducts.length > 0 && (
           <div className="flex space-x-2">
-            <button className="px-3 py-1 text-sm text-red-600 border border-red-300 rounded hover:bg-red-50">
-              Delete Selected
+            <button
+              type="button"
+              onClick={handleBulkDelete}
+              disabled={isDeleting}
+              className="px-3 py-1 text-sm text-red-600 border border-red-300 rounded hover:bg-red-50 disabled:opacity-50"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete Selected'}
             </button>
             <button className="px-3 py-1 text-sm text-green-600 border border-green-300 rounded hover:bg-green-50">
               Publish Selected

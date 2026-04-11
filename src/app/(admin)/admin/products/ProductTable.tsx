@@ -11,7 +11,7 @@ import {
 } from '@heroicons/react/24/outline'
 import { ADMIN_URLS } from '@/utils/admin-urls'
 import { useAdminTenantKey } from '@/components/admin/AdminBrandingWrapper'
-import { deleteProduct, cloneProduct } from './actions'
+import { deleteProduct, cloneProduct, bulkDeleteProducts } from './actions'
 
 interface Product {
   id: string
@@ -99,6 +99,26 @@ export function ProductTable({ products }: ProductTableProps) {
     }
   }
 
+  const handleBulkDelete = async () => {
+    if (selectedProducts.length === 0) return
+
+    if (!confirm(`Delete ${selectedProducts.length} selected product(s)? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      setDeletingProductId('__bulk__')
+      await bulkDeleteProducts(selectedProducts)
+      setSelectedProducts([])
+      router.refresh()
+    } catch (error) {
+      console.error('Failed to bulk delete products:', error)
+      alert(`Failed to delete selected products: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setDeletingProductId(null)
+    }
+  }
+
   const formatPrice = (priceCents: number) => {
     return `₹${(priceCents / 100).toFixed(2)}`
   }
@@ -138,8 +158,13 @@ export function ProductTable({ products }: ProductTableProps) {
         
         {selectedProducts.length > 0 && (
           <div className="flex space-x-2">
-            <button className="px-3 py-1 text-sm text-red-600 border border-red-300 rounded hover:bg-red-50">
-              Delete Selected
+            <button
+              type="button"
+              onClick={handleBulkDelete}
+              disabled={deletingProductId === '__bulk__'}
+              className="px-3 py-1 text-sm text-red-600 border border-red-300 rounded hover:bg-red-50 disabled:opacity-50"
+            >
+              {deletingProductId === '__bulk__' ? 'Deleting...' : 'Delete Selected'}
             </button>
             <button className="px-3 py-1 text-sm text-green-600 border border-green-300 rounded hover:bg-green-50">
               Publish Selected

@@ -10,6 +10,8 @@ type LookupOrderItem = {
   variant_id: string | null
   variant_name: string | null
   quantity: number
+  remaining_returnable_quantity?: number
+  already_returned_quantity?: number
   unit_price_cents: number
   products?: {
     id: string
@@ -33,6 +35,7 @@ type LookupOrder = {
   order_source: string | null
   status: string
   currency: string | null
+  created_at: string
   order_items: LookupOrderItem[]
 }
 
@@ -160,6 +163,7 @@ export default function OfflineReturnCreateForm({
           orderId={order.id}
           orderStatus={order.status}
           orderSource={order.order_source}
+          orderCreatedAt={order.created_at}
           currency={order.currency || 'INR'}
           items={(order.order_items || []).map((item) => ({
             orderItemId: item.id,
@@ -167,6 +171,7 @@ export default function OfflineReturnCreateForm({
             name: item.products?.name || 'Product',
             sku: item.products?.sku || null,
             quantity: item.quantity || 0,
+            remainingQuantity: item.remaining_returnable_quantity ?? item.quantity ?? 0,
             unitPriceCents: item.unit_price_cents || 0,
             trackInventory: !!item.products?.track_inventory,
             hasVariants: !!item.products?.has_variants,
