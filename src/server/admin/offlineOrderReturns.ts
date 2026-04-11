@@ -1,5 +1,12 @@
 import { supabaseAdmin } from '@/server/supabaseAdmin'
 import { getWalletAccountId } from '@/lib/cashback/cashbackService'
+import {
+  assertRequestedReturnQuantityWithinRemaining,
+  computeOfflineWalletRefundSplit,
+  computeRemainingOrderRefundableCents,
+  computeRemainingReturnableQuantity,
+  isWithinReturnEditWindow,
+} from './orderSafetyRules'
 
 const adminDb = supabaseAdmin as any
 
@@ -27,6 +34,7 @@ interface OrderSnapshot {
   tenant_id: string
   customer_id: string | null
   order_number: string
+  created_at: string
   order_source: string | null
   status: string
   total_cents: number
@@ -774,7 +782,7 @@ export async function createOfflineOrderReturn(
 
   const { data: order, error: orderError } = await supabaseAdmin
     .from('orders')
-    .select('id, tenant_id, customer_id, order_number, order_source, status, total_cents, wallet_used_cents, cash_paid_cents, cashback_amount_cents')
+    .select('id, tenant_id, customer_id, order_number, created_at, order_source, status, total_cents, wallet_used_cents, cash_paid_cents, cashback_amount_cents')
     .eq('tenant_id', tenantId)
     .eq('id', orderId)
     .single()
@@ -795,6 +803,15 @@ export async function createOfflineOrderReturn(
 
   if (!['paid', 'fulfilled', 'partially_returned'].includes(orderSnapshot.status)) {
     throw new Error('Only paid, fulfilled, or partially returned offline orders can be returned')
+  }
+
+  const createdAtMs = new Date(orderSnapshot.created_at).getTime()
+  if (!Number.isFinite(createdAtMs)) {
+    throw new Error('Order has an invalid creation timestamp and cannot be edited for return')
+  }
+
+  if (!isWithinReturnEditWindow(orderSnapshot.created_at, Date.now(), 5)) {
+    throw new Error('Return edit window closed. Additional returns are allowed only within 5 days of order creation')
   }
 
   const normalizedClientRequestId = input.clientRequestId?.trim() || null
@@ -832,23 +849,6 @@ export async function createOfflineOrderReturn(
 
       return await fetchReturnPayload(tenantId, existing.id)
     }
-  }
-
-  const { data: existingProcessedReturn, error: existingProcessedReturnError } = await adminDb
-    .from('order_returns')
-    .select('id, return_number')
-    .eq('tenant_id', tenantId)
-    .eq('order_id', orderId)
-    .eq('status', 'processed')
-    .limit(1)
-    .maybeSingle()
-
-  if (existingProcessedReturnError) {
-    throw new Error(`Failed to verify existing processed returns: ${existingProcessedReturnError.message}`)
-  }
-
-  if (existingProcessedReturn?.id) {
-    throw new Error(`Return already exists for this order (${existingProcessedReturn.return_number})`)
   }
 
   const normalizedItems = input.items.map((item, index) => ({
@@ -891,13 +891,49 @@ export async function createOfflineOrderReturn(
     }
   }
 
+  const { data: processedReturnHeaders, error: processedReturnHeadersError } = await adminDb
+    .from('order_returns')
+    .select('id')
+    .eq('tenant_id', tenantId)
+    .eq('order_id', orderId)
+    .eq('status', 'processed')
+
+  if (processedReturnHeadersError) {
+    throw new Error(`Failed to load processed returns for quantity validation: ${processedReturnHeadersError.message}`)
+  }
+
+  const processedReturnIds = (processedReturnHeaders || []).map((row: { id: string }) => row.id)
+  const alreadyReturnedQtyByOrderItem = new Map<string, number>()
+
+  if (processedReturnIds.length > 0) {
+    const { data: processedReturnItems, error: processedReturnItemsError } = await adminDb
+      .from('order_return_items')
+      .select('order_item_id, returned_quantity')
+      .eq('tenant_id', tenantId)
+      .in('order_return_id', processedReturnIds)
+      .in('order_item_id', orderItemIds)
+
+    if (processedReturnItemsError) {
+      throw new Error(`Failed to load prior returned quantities: ${processedReturnItemsError.message}`)
+    }
+
+    for (const row of processedReturnItems || []) {
+      const prev = alreadyReturnedQtyByOrderItem.get(row.order_item_id) || 0
+      alreadyReturnedQtyByOrderItem.set(row.order_item_id, prev + Math.max(0, row.returned_quantity || 0))
+    }
+  }
+
   const pricedReturnItems = normalizedItems.map((item) => {
     const source = orderItemMap.get(item.orderItemId) as OrderItemSnapshot
     const soldQty = source.quantity || 0
+    const alreadyReturnedQty = Math.min(soldQty, alreadyReturnedQtyByOrderItem.get(item.orderItemId) || 0)
+    const remainingQty = computeRemainingReturnableQuantity(soldQty, alreadyReturnedQty)
 
-    if (item.returnedQuantity > soldQty) {
-      throw new Error(`Return quantity exceeds sold quantity for order item ${item.orderItemId}`)
+    if (remainingQty <= 0) {
+      throw new Error(`Order item ${item.orderItemId} is already fully returned`)
     }
+
+    assertRequestedReturnQuantityWithinRemaining(item.returnedQuantity, soldQty, alreadyReturnedQty)
 
     const unitPrice = source.unit_price_cents || 0
     return {
@@ -920,57 +956,33 @@ export async function createOfflineOrderReturn(
 
   assertVariantRestockCanBeResolved(pricedReturnItems)
 
-  const maxWalletRefund = Math.min(orderSnapshot.wallet_used_cents || 0, totalReturnCents)
-  const fallbackWalletRefund = maxWalletRefund
-  const requestedWalletRefund = input.walletRefundCents
-  const requestedCashRefund = input.cashRefundCents
-
-  let walletRefundCents =
-    typeof requestedWalletRefund === 'number' ? Math.max(0, Math.floor(requestedWalletRefund)) : fallbackWalletRefund
-
-  let cashRefundCents =
-    typeof requestedCashRefund === 'number'
-      ? Math.max(0, Math.floor(requestedCashRefund))
-      : Math.max(0, totalReturnCents - walletRefundCents)
-
-  if (walletRefundCents + cashRefundCents !== totalReturnCents) {
-    throw new Error('walletRefundCents + cashRefundCents must equal total return amount')
-  }
-
-  if (walletRefundCents > maxWalletRefund) {
-    throw new Error('walletRefundCents cannot exceed wallet amount used in original order')
-  }
+  // Offline refund rule: full refundable return amount goes to wallet immediately.
+  const { walletRefundCents, cashRefundCents } = computeOfflineWalletRefundSplit(totalReturnCents)
 
   const { data: previousReturns, error: prevReturnError } = await adminDb
     .from('order_returns')
-    .select('wallet_refund_cents, cash_refund_cents, cashback_reversal_cents')
+    .select('wallet_refund_cents, cash_refund_cents, cashback_reversal_cents, total_return_cents')
     .eq('tenant_id', tenantId)
     .eq('order_id', orderId)
-    .neq('status', 'cancelled')
+    .eq('status', 'processed')
 
   if (prevReturnError) {
     throw new Error(`Failed to compute previous cashback reversals: ${prevReturnError.message}`)
   }
 
-  const alreadyRefundedWalletCents = (previousReturns || []).reduce(
-    (sum: number, row: { wallet_refund_cents?: number }) => sum + (row.wallet_refund_cents || 0),
+  const alreadyRefundedTotalCents = (previousReturns || []).reduce(
+    (sum: number, row: { total_return_cents?: number }) => sum + (row.total_return_cents || 0),
     0
   )
 
-  const alreadyRefundedCashCents = (previousReturns || []).reduce(
-    (sum: number, row: { cash_refund_cents?: number }) => sum + (row.cash_refund_cents || 0),
+  const remainingTotalRefundableCents = computeRemainingOrderRefundableCents(
+    orderSnapshot.total_cents || 0,
+    alreadyRefundedTotalCents,
     0
   )
 
-  const remainingWalletRefundableCents = Math.max(0, (orderSnapshot.wallet_used_cents || 0) - alreadyRefundedWalletCents)
-  const remainingCashRefundableCents = Math.max(0, (orderSnapshot.cash_paid_cents || 0) - alreadyRefundedCashCents)
-
-  if (walletRefundCents > remainingWalletRefundableCents) {
-    throw new Error('walletRefundCents exceeds remaining refundable wallet amount for this order')
-  }
-
-  if (cashRefundCents > remainingCashRefundableCents) {
-    throw new Error('cashRefundCents exceeds remaining refundable cash amount for this order')
+  if (totalReturnCents > remainingTotalRefundableCents) {
+    throw new Error('Return total exceeds remaining refundable amount for this order')
   }
 
   const alreadyReversedCashbackCents = (previousReturns || []).reduce(

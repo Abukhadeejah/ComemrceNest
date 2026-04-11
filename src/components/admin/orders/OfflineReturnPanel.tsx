@@ -9,6 +9,7 @@ type ReturnableItem = {
   name: string
   sku: string | null
   quantity: number
+  remainingQuantity?: number
   unitPriceCents: number
   trackInventory: boolean
   hasVariants?: boolean
@@ -20,6 +21,7 @@ interface OfflineReturnPanelProps {
   orderId: string
   orderStatus: string
   orderSource?: string | null
+  orderCreatedAt?: string
   currency: string
   items: ReturnableItem[]
 }
@@ -37,6 +39,7 @@ export function OfflineReturnPanel({
   orderId,
   orderStatus,
   orderSource,
+  orderCreatedAt,
   currency,
   items,
 }: OfflineReturnPanelProps) {
@@ -51,7 +54,18 @@ export function OfflineReturnPanel({
   const [error, setError] = useState('')
   const [clientRequestId, setClientRequestId] = useState('')
 
-  const isEligible = orderSource === 'offline_admin' && ['paid', 'fulfilled'].includes(orderStatus)
+  const withinEditableWindow = useMemo(() => {
+    if (!orderCreatedAt) return true
+    const createdAtMs = new Date(orderCreatedAt).getTime()
+    if (!Number.isFinite(createdAtMs)) return true
+    const fiveDaysMs = 5 * 24 * 60 * 60 * 1000
+    return Date.now() - createdAtMs <= fiveDaysMs
+  }, [orderCreatedAt])
+
+  const isEligible =
+    orderSource === 'offline_admin' &&
+    ['paid', 'fulfilled', 'partially_returned'].includes(orderStatus) &&
+    withinEditableWindow
 
   const lineDraft = useMemo(() => {
     return items
@@ -59,7 +73,8 @@ export function OfflineReturnPanel({
         const qty = Math.max(0, Math.floor(Number(quantities[item.orderItemId] || 0)))
         if (qty <= 0) return null
 
-        const clampedQty = Math.min(qty, item.quantity)
+        const maxReturnableQty = Math.max(0, item.remainingQuantity ?? item.quantity)
+        const clampedQty = Math.min(qty, maxReturnableQty)
         const canRestock = item.trackInventory && restockAll && (!item.hasVariants || !!item.variantId)
         return {
           orderItemId: item.orderItemId,
@@ -149,13 +164,13 @@ export function OfflineReturnPanel({
       <div>
         <h2 className="text-lg font-semibold text-gray-900">Create Offline Return</h2>
         <p className="text-sm text-gray-600 mt-1">
-          Item-level returns for offline-admin paid/fulfilled orders.
+          Item-level returns for offline-admin paid/fulfilled/partially-returned orders (within 5 days of order creation). Refund is credited to wallet immediately.
         </p>
       </div>
 
       {!isEligible && (
         <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-          Returns can be created only for offline-admin orders with status paid or fulfilled.
+          Returns are allowed only for offline-admin orders in paid/fulfilled/partially_returned state and only within 5 days of order creation.
         </div>
       )}
 
@@ -167,6 +182,7 @@ export function OfflineReturnPanel({
                 <tr>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sold Qty</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remaining Qty</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit Price</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Return Qty</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Line Return</th>
@@ -175,7 +191,8 @@ export function OfflineReturnPanel({
               <tbody className="bg-white divide-y divide-gray-200">
                 {items.map((item) => {
                   const qty = Math.max(0, Math.floor(Number(quantities[item.orderItemId] || 0)))
-                  const cappedQty = Math.min(qty, item.quantity)
+                  const remainingQty = Math.max(0, item.remainingQuantity ?? item.quantity)
+                  const cappedQty = Math.min(qty, remainingQty)
                   return (
                     <tr key={item.orderItemId}>
                       <td className="px-3 py-2 text-sm text-gray-900">
@@ -187,12 +204,13 @@ export function OfflineReturnPanel({
                         )}
                       </td>
                       <td className="px-3 py-2 text-sm text-gray-700">{item.quantity}</td>
+                      <td className="px-3 py-2 text-sm text-gray-700">{remainingQty}</td>
                       <td className="px-3 py-2 text-sm text-gray-700">{formatCurrency(item.unitPriceCents, currency)}</td>
                       <td className="px-3 py-2 text-sm text-gray-700">
                         <input
                           type="number"
                           min={0}
-                          max={item.quantity}
+                          max={remainingQty}
                           value={quantities[item.orderItemId] ?? 0}
                           onChange={(e) =>
                             setQuantities((prev) => ({
@@ -223,6 +241,9 @@ export function OfflineReturnPanel({
           </label>
           <p className="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-md px-3 py-2">
             Variant returns restock the recorded variant when the order item includes a variant ID.
+          </p>
+          <p className="text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded-md px-3 py-2">
+            Offline refund policy: full approved return amount is credited to the customer wallet (no cash split).
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

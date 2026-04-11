@@ -108,7 +108,12 @@ export function OrderTable({
 
     const currentLabel = statusLabels[newStatus as keyof typeof statusLabels] || newStatus
     
-    if (!confirm(`Update order "${orderNumber}" status to "${currentLabel}"?`)) {
+    const offlineCancelMessage =
+      newStatus === 'cancelled' && orderNumber
+        ? `\n\nFor offline orders, cancellation refund will be credited to customer wallet immediately.`
+        : ''
+
+    if (!confirm(`Update order "${orderNumber}" status to "${currentLabel}"?${offlineCancelMessage}`)) {
       return
     }
 
@@ -391,7 +396,7 @@ export function OrderTable({
                   >
                     View Details
                   </Link>
-                  {order.order_source === 'offline_admin' && !order.has_processed_return && ['paid', 'fulfilled'].includes(order.status) && (
+                  {order.order_source === 'offline_admin' && ['paid', 'fulfilled', 'partially_returned'].includes(order.status) && (
                     <Link
                       href={`${orderBasePath}/returns?order=${encodeURIComponent(order.order_number)}`}
                       className="text-red-600 hover:text-red-800 text-sm"

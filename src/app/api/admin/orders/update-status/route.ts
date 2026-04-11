@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/server/supabaseAdmin'
 import { revalidateTag } from 'next/cache'
 import { tenantOrdersTag } from '@/server/cacheTags'
 import { processPaidOrderPostPaymentOnce } from '@/server/admin/offlineOrders'
+import { processOfflineCancellationWalletRefund } from '@/server/admin/offlineOrderCancellation'
 
 export async function PATCH(request: NextRequest) {
   try {
@@ -38,20 +39,38 @@ export async function PATCH(request: NextRequest) {
 
     console.log(`[Admin Orders Status API] Updating order ${orderId} to status ${status} for tenant ${tenantId}`)
 
-    // Get current order status before update
-    const { data: currentOrder } = await supabaseAdmin
+    // Get current order details before update
+    const { data: currentOrder, error: currentOrderError } = await supabaseAdmin
       .from('orders')
-      .select('status')
+      .select('status, order_source')
       .eq('id', orderId)
       .eq('tenant_id', tenantId)
       .single()
 
+    if (currentOrderError) {
+      return NextResponse.json({ error: 'Order not found or access denied' }, { status: 404 })
+    }
+
+    if (status === 'cancelled' && currentOrder?.status === 'cancelled') {
+      return NextResponse.json({
+        success: true,
+        order: { id: orderId, status: 'cancelled' },
+        message: 'Order already cancelled. No additional refund applied.',
+      })
+    }
+
     // Update order status
-    const { data, error } = await supabaseAdmin
+    let updateQuery = supabaseAdmin
       .from('orders')
       .update({ status })
       .eq('id', orderId)
       .eq('tenant_id', tenantId)
+
+    if (status === 'cancelled') {
+      updateQuery = updateQuery.neq('status', 'cancelled')
+    }
+
+    const { data, error } = await updateQuery
       .select('id, order_number, status')
       .single()
 
@@ -59,6 +78,13 @@ export async function PATCH(request: NextRequest) {
       console.error('Order status update error:', error)
       
       if (error.code === 'PGRST116') {
+        if (status === 'cancelled') {
+          return NextResponse.json({
+            success: true,
+            order: { id: orderId, status: 'cancelled' },
+            message: 'Order already cancelled. No additional refund applied.',
+          })
+        }
         return NextResponse.json({ error: 'Order not found or access denied' }, { status: 404 })
       }
 
@@ -79,6 +105,22 @@ export async function PATCH(request: NextRequest) {
         console.error('[Admin Orders Status API] Post-payment processing failed:', processingError)
         // Don't fail the status update if processing fails
       }
+    }
+
+    // Offline-only cancellation refund rule:
+    // Credit full remaining refundable amount to wallet immediately.
+    if (
+      status === 'cancelled' &&
+      currentOrder?.status !== 'cancelled' &&
+      currentOrder?.order_source === 'offline_admin'
+    ) {
+      console.log(`[Admin Orders Status API] Processing offline cancellation wallet refund for order ${orderId}`)
+      const cancellationRefundResult = await processOfflineCancellationWalletRefund({
+        tenantId,
+        orderId,
+        reason: 'Order cancelled via admin status update',
+      })
+      console.log('[Admin Orders Status API] Offline cancellation wallet refund result:', cancellationRefundResult)
     }
 
     // Invalidate cache
