@@ -8,6 +8,7 @@ import { tenantProductsTag } from '@/server/cacheTags'
 import { forceInvalidateProductCaches } from '@/server/cacheUtils'
 import { assertValidBulkDeleteProductIds } from '@/server/admin/orderSafetyRules'
 import { adaptProductStatus, adaptToSupabaseJson, undefinedToNull } from '@/utils/typeAdapters'
+import { validateImageFile } from '@/lib/image-upload'
 // GUARDRAIL: Import comprehensive guardrail system
 import {
   validateModuleAccess,
@@ -1487,6 +1488,11 @@ export async function uploadProductImage(file: File, productId: string) {
   const tenantId = await resolveTenantIdFromRequest()
   if (!tenantId) { throw new Error('Tenant not found') }
   await assertTenantAdmin(tenantId)
+
+  const validation = validateImageFile(file, 5 * 1024 * 1024)
+  if (!validation.valid) {
+    throw new Error(validation.error || 'Unsupported image file')
+  }
 
   const fileName = `${productId}/${Date.now()}-${file.name}`
   

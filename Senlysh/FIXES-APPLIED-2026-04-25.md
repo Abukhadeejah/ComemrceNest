@@ -30,6 +30,13 @@ These were distinct from prior work. Earlier fixes verified as correctly impleme
 - `src/app/api/admin/customers/route.ts`
 - `src/app/(admin)/admin/products/ProductPagination.tsx`
 - `src/server/admin/offlineOrders.ts`
+- `src/lib/image-upload.ts`
+- `src/app/(admin)/admin/products/components/MediaSection.tsx`
+- `src/app/(admin)/admin/products/components/SizeGuideSection.tsx`
+- `src/app/api/admin/upload/route.ts`
+- `src/app/api/admin/categories/upload/route.ts`
+- `src/app/(admin)/admin/products/actions.ts`
+- `src/lib/storage.ts`
 
 ---
 
@@ -159,6 +166,28 @@ Changed from assertTenantAdmin (redirects) to assertTenantAdminApi (throws typed
 Reasoning: API routes must return JSON with appropriate status codes. Next.js redirect() is semantically wrong in API context. assertTenantAdminApi throws TenantAdminAuthError with status already set, allowing clean JSON response handling.
 
 Risk: Low. The helper already exists and is designed for this use case. Error types match existing patterns elsewhere in codebase.
+
+---
+
+### Image uploads: widen accepted formats and enforce server-side validation
+
+**Files**: `src/lib/image-upload.ts`, `src/app/(admin)/admin/products/components/MediaSection.tsx`, `src/app/(admin)/admin/products/components/SizeGuideSection.tsx`, `src/app/api/admin/upload/route.ts`, `src/app/api/admin/categories/upload/route.ts`, `src/app/(admin)/admin/products/actions.ts`, `src/lib/storage.ts`  
+**Problem**: Product media and related admin image uploads were inconsistent. The product media UI used a short hardcoded allowlist, while some admin upload routes accepted files without a shared validation rule. The size guide uploader and storage helper also carried their own type checks.
+
+**Change**:
+- Added a shared image validation helper in `src/lib/image-upload.ts`
+- Switched product media to use `image/*` in the file picker and the shared validator for accepted formats
+- Reused the same validator in the size guide upload flow
+- Added server-side image validation to `/api/admin/upload` and `/api/admin/categories/upload`
+- Added server-side validation to `uploadProductImage()` before storage write
+- Reused the shared validator from `StorageService.validateFile()`
+
+**Result**:
+- Product image uploads now accept a broader set of image formats consistently
+- Validation is no longer only a browser-side restriction
+- The same rule set now applies across product media, size guide images, and admin upload routes
+
+This is a format-support change, not a guarantee that every downstream consumer renders every image type equally well. It only means the admin upload path now accepts and validates a wider set of image files deliberately instead of relying on one narrow allowlist.
 
 ---
 

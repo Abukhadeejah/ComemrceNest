@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
 import { assertTenantAdminApi, TenantAdminAuthError } from '@/server/auth'
+import { validateImageFile } from '@/lib/image-upload'
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,6 +17,11 @@ export async function POST(request: NextRequest) {
     const categoryId = (formData.get('categoryId') as string | null) || null
     if (!file) {
       return NextResponse.json({ error: 'file is required' }, { status: 400 })
+    }
+
+    const validation = validateImageFile(file as File, 2 * 1024 * 1024)
+    if (!validation.valid) {
+      return NextResponse.json({ error: validation.error || 'Unsupported image file' }, { status: 400 })
     }
 
     const anyFile = file as unknown as { name?: string; type?: string }

@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '@/server/supabaseAdmin'
+import { validateImageFile } from '@/lib/image-upload'
 
 export interface UploadProgress {
   loaded: number
@@ -131,25 +132,7 @@ export class StorageService {
    * Validate file before upload
    */
   static validateFile(file: File): { valid: boolean; error?: string } {
-    // Check file type
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
-    if (!allowedTypes.includes(file.type)) {
-      return { 
-        valid: false, 
-        error: 'Invalid file type. Only JPEG, PNG, WebP, and GIF are allowed.' 
-      }
-    }
-
-    // Check file size (10MB limit)
-    const maxSize = 10 * 1024 * 1024 // 10MB
-    if (file.size > maxSize) {
-      return { 
-        valid: false, 
-        error: 'File too large. Maximum size is 10MB.' 
-      }
-    }
-
-    return { valid: true }
+    return validateImageFile(file, 10 * 1024 * 1024)
   }
 
   /**

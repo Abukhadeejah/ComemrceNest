@@ -3,6 +3,7 @@
 import { useRef, useId, useEffect, useState } from 'react'
 import Image from 'next/image'
 import { PhotoIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import { IMAGE_UPLOAD_LABEL, validateImageFile } from '@/lib/image-upload'
 
 interface MediaSectionProps {
   images: (File | string)[]
@@ -12,7 +13,6 @@ interface MediaSectionProps {
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB in bytes
 const MAX_IMAGE_COUNT = 10
-const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif']
 
 export function MediaSection({ images, onImagesChange }: MediaSectionProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -47,15 +47,9 @@ export function MediaSection({ images, onImagesChange }: MediaSectionProps) {
       const errors: string[] = []
 
       filesToValidate.forEach(file => {
-        // Check file type
-        if (!ALLOWED_TYPES.includes(file.type)) {
-          errors.push(`${file.name}: Invalid file type. Only PNG, JPG, WebP, GIF allowed.`)
-          return
-        }
-        
-        // Check file size
-        if (file.size > MAX_FILE_SIZE) {
-          errors.push(`${file.name}: File too large. Max size is 5MB.`)
+        const validation = validateImageFile(file, MAX_FILE_SIZE)
+        if (!validation.valid) {
+          errors.push(`${file.name}: ${validation.error}`)
           return
         }
         
@@ -124,14 +118,14 @@ export function MediaSection({ images, onImagesChange }: MediaSectionProps) {
             <p className="mb-2 text-sm text-gray-500">
               <span className="font-semibold">Click to upload</span> or drag and drop
             </p>
-            <p className="text-xs text-gray-500">PNG, JPG, WebP, GIF up to 5MB each, max 10 images</p>
+            <p className="text-xs text-gray-500">{IMAGE_UPLOAD_LABEL} up to 5MB each, max 10 images</p>
           </div>
           <input
             id={inputId}
             ref={fileInputRef}
             type="file"
             className="hidden"
-            accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
+            accept="image/*"
             multiple
             onChange={handleFileChange}
           />

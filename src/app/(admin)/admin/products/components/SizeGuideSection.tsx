@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react'
 import { ProductFormData } from '@/types/product'
 import { UseFormSetValue, FieldErrors } from 'react-hook-form'
 import { PhotoIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import { IMAGE_UPLOAD_LABEL, validateImageFile } from '@/lib/image-upload'
 
 interface SizeGuideSectionProps {
   formData?: ProductFormData
@@ -25,15 +26,9 @@ export function SizeGuideSection({
     const file = event.target.files?.[0]
     if (!file) return
 
-    // Validate file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      alert('File size must be less than 10MB')
-      return
-    }
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      alert('Please select an image file')
+    const validation = validateImageFile(file, 10 * 1024 * 1024)
+    if (!validation.valid) {
+      alert(validation.error || 'Please select a supported image file')
       return
     }
 
@@ -140,7 +135,7 @@ export function SizeGuideSection({
               {isUploading ? 'Uploading...' : 'Drop image here or click to upload'}
             </p>
             <p className="text-xs text-gray-500 mt-1">
-              PNG, JPG, GIF up to 5MB
+              {IMAGE_UPLOAD_LABEL} up to 10MB
             </p>
           </div>
         </label>
