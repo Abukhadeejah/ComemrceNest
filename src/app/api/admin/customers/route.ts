@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
+import { assertTenantAdminApi, TenantAdminAuthError } from '@/server/auth'
 import { createInlineCustomer } from '@/server/admin/offlineOrders'
 
 interface CreateAdminCustomerRequest {
@@ -7,17 +8,29 @@ interface CreateAdminCustomerRequest {
   email?: string
   firstName?: string
   lastName?: string
+  createOnlineAccess?: boolean
+  password?: string
 }
 
 export async function POST(request: NextRequest) {
   try {
-    let tenantId = await resolveTenantIdFromRequest()
+    const tenantId = await resolveTenantIdFromRequest()
     if (!tenantId) {
-      tenantId = '1e4c9aa7-e7af-4fe7-999b-c9c46219fa3c'
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    if (!tenantId) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 400 })
+    // GUARDRAIL: Verify admin access before creating customers (using API-safe helper)
+    // This returns errors instead of redirecting, appropriate for API routes
+    try {
+      await assertTenantAdminApi(tenantId)
+    } catch (authError) {
+      if (authError instanceof TenantAdminAuthError) {
+        return NextResponse.json(
+          { error: authError.message },
+          { status: authError.status }
+        )
+      }
+      throw authError
     }
 
     const body = (await request.json()) as CreateAdminCustomerRequest
@@ -31,6 +44,7 @@ export async function POST(request: NextRequest) {
         phone: customer.phone,
         first_name: customer.first_name,
         last_name: customer.last_name,
+        has_online_access: !!customer.user_id,
       },
     })
   } catch (error) {

@@ -44,6 +44,12 @@ type CustomerInfo = {
   phone: string | null
   first_name: string | null
   last_name: string | null
+  has_online_access?: boolean
+}
+
+// GUARDRAIL: Client-side email validation (must match server validation)
+function isValidEmailFormat(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 }
 
 type RecentOrder = {
@@ -92,6 +98,9 @@ export default function OfflineOrderCreateForm({
 
   const [createCustomerName, setCreateCustomerName] = useState('')
   const [createCustomerEmail, setCreateCustomerEmail] = useState('')
+  const [createOnlineAccess, setCreateOnlineAccess] = useState(false)
+  const [createCustomerPassword, setCreateCustomerPassword] = useState('')
+  const [createCustomerConfirmPassword, setCreateCustomerConfirmPassword] = useState('')
 
   const [productSearch, setProductSearch] = useState('')
   const [productResults, setProductResults] = useState<ProductResult[]>([])
@@ -228,6 +237,30 @@ export default function OfflineOrderCreateForm({
       return
     }
 
+    const normalizedCreateEmail = createCustomerEmail.trim().toLowerCase()
+    if (createOnlineAccess) {
+      if (!normalizedCreateEmail) {
+        setValidationMessage('Email is required to create online login access.')
+        return
+      }
+
+      // GUARDRAIL: Validate email format on client before sending
+      if (!isValidEmailFormat(normalizedCreateEmail)) {
+        setValidationMessage('Enter a valid email address.')
+        return
+      }
+
+      if (createCustomerPassword.length < 8) {
+        setValidationMessage('Password must be at least 8 characters.')
+        return
+      }
+
+      if (createCustomerPassword !== createCustomerConfirmPassword) {
+        setValidationMessage('Password and confirm password do not match.')
+        return
+      }
+    }
+
     setIsCreatingCustomer(true)
     try {
       const name = createCustomerName.trim()
@@ -239,9 +272,11 @@ export default function OfflineOrderCreateForm({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           phone: normalizedCreatePhone,
-          email: createCustomerEmail.trim() || undefined,
+          email: normalizedCreateEmail || undefined,
           firstName: firstName || undefined,
           lastName: lastName || undefined,
+          createOnlineAccess,
+          password: createOnlineAccess ? createCustomerPassword : undefined,
         }),
       })
 
@@ -257,6 +292,9 @@ export default function OfflineOrderCreateForm({
       setCreateCustomerPhone(normalizedCreatePhone)
       setCreateCustomerName('')
       setCreateCustomerEmail('')
+      setCreateOnlineAccess(false)
+      setCreateCustomerPassword('')
+      setCreateCustomerConfirmPassword('')
       setDuplicateCustomers([])
 
       await lookupCustomerByPhone()
@@ -575,6 +613,48 @@ export default function OfflineOrderCreateForm({
                   className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
                 />
               </div>
+            </div>
+
+            <div className="rounded-md border border-indigo-200 bg-indigo-50 p-3 space-y-3">
+              <label className="flex items-start gap-2 text-sm text-indigo-900">
+                <input
+                  type="checkbox"
+                  checked={createOnlineAccess}
+                  onChange={(e) => setCreateOnlineAccess(e.target.checked)}
+                  className="mt-0.5"
+                />
+                <span>
+                  Create online login for this customer now
+                  <span className="block text-xs text-indigo-700 mt-1">
+                    This links offline orders, wallet, and cashback to the same online customer profile.
+                  </span>
+                </span>
+              </label>
+
+              {createOnlineAccess && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm text-indigo-900 mb-1">Password</label>
+                    <input
+                      type="password"
+                      value={createCustomerPassword}
+                      onChange={(e) => setCreateCustomerPassword(e.target.value)}
+                      placeholder="At least 8 characters"
+                      className="w-full rounded-md border border-indigo-300 px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-indigo-900 mb-1">Confirm Password</label>
+                    <input
+                      type="password"
+                      value={createCustomerConfirmPassword}
+                      onChange={(e) => setCreateCustomerConfirmPassword(e.target.value)}
+                      placeholder="Re-enter password"
+                      className="w-full rounded-md border border-indigo-300 px-3 py-2 text-sm"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             <button

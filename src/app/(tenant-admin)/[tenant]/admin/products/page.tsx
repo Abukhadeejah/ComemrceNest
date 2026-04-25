@@ -4,6 +4,7 @@ import { ProductTable } from './ProductTable'
 import { ProductSearch } from '@/app/(admin)/admin/products/ProductSearch'
 import { ProductFilters } from '@/app/(admin)/admin/products/ProductFilters'
 import { CreateProductButton } from '@/app/(admin)/admin/products/CreateProductButton'
+import { ProductPagination } from '@/app/(admin)/admin/products/ProductPagination'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
 import { redirect } from 'next/navigation'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
@@ -17,6 +18,7 @@ interface TenantAdminProductsProps {
     status?: string
     category?: string
     page?: string
+    pageSize?: string
     sort?: string
   }>
 }
@@ -72,6 +74,13 @@ export default async function TenantAdminProducts({ params, searchParams }: Tena
             products={products.data || []}
           />
         </Suspense>
+
+        <ProductPagination
+          page={products.page}
+          totalPages={products.totalPages}
+          count={products.count}
+          pageSize={products.pageSize}
+        />
       </div>
     </div>
   )

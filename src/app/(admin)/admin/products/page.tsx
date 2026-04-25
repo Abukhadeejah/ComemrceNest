@@ -4,6 +4,7 @@ import { ProductTable } from './ProductTable'
 import { ProductSearch } from './ProductSearch'
 import { ProductFilters } from './ProductFilters'
 import { CreateProductButton } from './CreateProductButton'
+import { ProductPagination } from './ProductPagination'
 
 interface AdminProductsProps {
   searchParams: Promise<{
@@ -11,6 +12,7 @@ interface AdminProductsProps {
     status?: string
     category?: string
     page?: string
+    pageSize?: string
     sort?: string
   }>
 }
@@ -48,6 +50,13 @@ export default async function AdminProducts({ searchParams }: AdminProductsProps
               products={products.data || []}
             />
           </Suspense>
+
+          <ProductPagination
+            page={products.page}
+            totalPages={products.totalPages}
+            count={products.count}
+            pageSize={products.pageSize}
+          />
         </div>
       </div>
     )

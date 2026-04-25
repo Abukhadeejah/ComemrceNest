@@ -1550,6 +1550,7 @@ async function _getProductsFromDB(searchParams: {
   status?: string
   category?: string
   page?: string
+  pageSize?: string
   sort?: string
 }, tenantId: string) {
   // Check if Supabase is configured
@@ -1568,7 +1569,7 @@ async function _getProductsFromDB(searchParams: {
       stock,
       created_at,
       updated_at
-    `)
+    `, { count: 'exact' })
     .eq('tenant_id', tenantId)
 
   // Apply search filter
@@ -1592,8 +1593,11 @@ async function _getProductsFromDB(searchParams: {
   query = query.order(sortField, { ascending: sortOrder === 'asc' })
 
   // Apply pagination
-  const page = parseInt(searchParams.page || '1')
-  const pageSize = 20
+  const parsedPage = Number.parseInt(searchParams.page || '1', 10)
+  const page = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1
+  const requestedPageSize = Number.parseInt(searchParams.pageSize || '20', 10)
+  const allowedPageSizes = [20, 50, 100]
+  const pageSize = allowedPageSizes.includes(requestedPageSize) ? requestedPageSize : 20
   const from = (page - 1) * pageSize
   const to = from + pageSize - 1
   query = query.range(from, to)
@@ -1620,6 +1624,7 @@ const getCachedProducts = unstable_cache(
     status?: string
     category?: string
     page?: string
+    pageSize?: string
     sort?: string
   }, tenantId: string) => {
     return await _getProductsFromDB(searchParams, tenantId)
@@ -1636,6 +1641,7 @@ export async function getProducts(searchParams: {
   status?: string
   category?: string
   page?: string
+  pageSize?: string
   sort?: string
 }, tenantIdArg?: string) {
   try {

@@ -22,6 +22,8 @@ export interface OfflineOrderCustomerInput {
   email?: string
   firstName?: string
   lastName?: string
+  createOnlineAccess?: boolean
+  password?: string
 }
 
 export interface CreateOfflineOrderInput {
@@ -40,10 +42,52 @@ export interface CreateOfflineOrderInput {
 type CustomerRow = {
   id: string
   tenant_id: string
+  user_id?: string | null
   email: string
   phone: string | null
   first_name: string | null
   last_name: string | null
+}
+
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+}
+
+function isGeneratedOfflineEmail(email: string): boolean {
+  return email.endsWith('@offline.local')
+}
+
+async function createAuthUserForCustomer(params: {
+  tenantId: string
+  email: string
+  password: string
+}) {
+  const { tenantId, email, password } = params
+
+  // GUARDRAIL: Validate password in function (defense-in-depth)
+  if (!password || password.length < 8) {
+    throw new Error('Password must be at least 8 characters')
+  }
+
+  const { data, error } = await supabaseAdmin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: {
+      tenant_id: tenantId,
+      user_type: 'customer',
+    },
+  })
+
+  if (error || !data.user) {
+    const message = error?.message || 'Unknown error'
+    if (/already\s+registered|already\s+exists|duplicate/i.test(message)) {
+      throw new Error('This email is already registered. Use another email or reset the existing account password.')
+    }
+    throw new Error(`Failed to create login account: ${message}`)
+  }
+
+  return data.user.id
 }
 
 type ProductRow = {
@@ -131,7 +175,7 @@ export async function lookupCustomerByPhone(tenantId: string, phoneRaw: string) 
 
   const { data: rows, error } = await supabaseAdmin
     .from('customers')
-    .select('id, tenant_id, email, phone, first_name, last_name, created_at')
+    .select('id, tenant_id, user_id, email, phone, first_name, last_name, created_at')
     .eq('tenant_id', tenantId)
     .eq('phone', phone)
     .order('created_at', { ascending: false })
@@ -173,7 +217,7 @@ export async function lookupCustomerByPhone(tenantId: string, phoneRaw: string) 
 export async function lookupCustomerById(tenantId: string, customerId: string) {
   const { data: customer, error } = await supabaseAdmin
     .from('customers')
-    .select('id, tenant_id, email, phone, first_name, last_name')
+    .select('id, tenant_id, user_id, email, phone, first_name, last_name')
     .eq('tenant_id', tenantId)
     .eq('id', customerId)
     .maybeSingle()
@@ -221,9 +265,25 @@ export async function createInlineCustomer(
 ): Promise<CustomerRow> {
   const normalizedPhone = input.phone ? normalizePhone(input.phone) : ''
   const email = (input.email || '').trim().toLowerCase()
+  const createOnlineAccess = !!input.createOnlineAccess
+  const password = (input.password || '').trim()
 
   if (!normalizedPhone && !email) {
     throw new Error('Either phone or email is required to create customer')
+  }
+
+  if (createOnlineAccess) {
+    if (!email) {
+      throw new Error('Email is required when creating online login access')
+    }
+
+    if (!isValidEmail(email)) {
+      throw new Error('Enter a valid email address to create online login access')
+    }
+
+    if (!password || password.length < 8) {
+      throw new Error('Password must be at least 8 characters for online login access')
+    }
   }
 
   if (normalizedPhone) {
@@ -232,43 +292,142 @@ export async function createInlineCustomer(
       throw new Error('Duplicate phone detected. Multiple customers already use this phone number')
     }
     if (phoneLookup.found) {
-      return phoneLookup.customer
+      const existingCustomer = phoneLookup.customer
+
+      if (!createOnlineAccess) {
+        return existingCustomer
+      }
+
+      if (existingCustomer.user_id) {
+        throw new Error('Customer already has an online account linked')
+      }
+
+      const authEmail = email || (!isGeneratedOfflineEmail(existingCustomer.email) ? existingCustomer.email : '')
+      if (!authEmail) {
+        throw new Error('Please provide a real email address to create online login access')
+      }
+
+      const authUserId = await createAuthUserForCustomer({ tenantId, email: authEmail, password })
+
+      const { data: linkedCustomer, error: linkError } = await supabaseAdmin
+        .from('customers')
+        .update({
+          user_id: authUserId,
+          email: authEmail,
+          first_name: input.firstName?.trim() || existingCustomer.first_name,
+          last_name: input.lastName?.trim() || existingCustomer.last_name,
+        })
+        .eq('tenant_id', tenantId)
+        .eq('id', existingCustomer.id)
+        .select('id, tenant_id, user_id, email, phone, first_name, last_name')
+        .single()
+
+      if (linkError || !linkedCustomer) {
+        // GUARDRAIL: Handle auth user rollback with explicit error logging
+        const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(authUserId)
+        if (deleteError) {
+          console.error('⚠️ CRITICAL: Failed to rollback auth user on phone linking failure', { authUserId, deleteError, customerId: existingCustomer.id })
+        }
+        throw new Error(`Failed to link online account with customer: ${linkError?.message || 'Unknown error'}`)
+      }
+
+      // GUARDRAIL: Gracefully handle wallet account creation failure
+      try {
+        await ensureWalletAccount(linkedCustomer.id, tenantId)
+      } catch (walletError) {
+        console.error('⚠️ Failed to create wallet account for newly linked customer', { customerId: linkedCustomer.id, walletError })
+        // Continue - wallet might be auto-created on first order
+      }
+      return linkedCustomer as CustomerRow
     }
   }
 
   if (email) {
     const { data: existingEmailCustomer } = await supabaseAdmin
       .from('customers')
-      .select('id, tenant_id, email, phone, first_name, last_name')
+      .select('id, tenant_id, user_id, email, phone, first_name, last_name')
       .eq('tenant_id', tenantId)
       .eq('email', email)
       .maybeSingle()
 
     if (existingEmailCustomer) {
+      if (createOnlineAccess) {
+        if (existingEmailCustomer.user_id) {
+          throw new Error('Customer already has an online account linked')
+        }
+
+        const authUserId = await createAuthUserForCustomer({ tenantId, email, password })
+        const { data: linkedCustomer, error: linkError } = await supabaseAdmin
+          .from('customers')
+          .update({
+            user_id: authUserId,
+            email: email,
+            first_name: input.firstName?.trim() || existingEmailCustomer.first_name,
+            last_name: input.lastName?.trim() || existingEmailCustomer.last_name,
+          })
+          .eq('tenant_id', tenantId)
+          .eq('id', existingEmailCustomer.id)
+          .select('id, tenant_id, user_id, email, phone, first_name, last_name')
+          .single()
+
+        if (linkError || !linkedCustomer) {
+          const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(authUserId)
+          if (deleteError) {
+            console.error('⚠️ CRITICAL: Failed to rollback auth user on linking failure', { authUserId, deleteError, customerId: existingEmailCustomer.id })
+          }
+          throw new Error(`Failed to link online account with customer: ${linkError?.message || 'Unknown error'}`)
+        }
+
+        try {
+          await ensureWalletAccount(linkedCustomer.id, tenantId)
+        } catch (walletError) {
+          console.error('⚠️ Failed to create wallet account for newly linked customer', { customerId: linkedCustomer.id, walletError })
+        }
+        return linkedCustomer as CustomerRow
+      }
+
       return existingEmailCustomer
     }
   }
 
   const generatedEmail = email || `offline-${Date.now()}@offline.local`
+  let authUserId: string | null = null
+
+  if (createOnlineAccess) {
+    authUserId = await createAuthUserForCustomer({ tenantId, email, password })
+  }
 
   const { data: customer, error: createError } = await supabaseAdmin
     .from('customers')
     .insert({
       tenant_id: tenantId,
+      user_id: authUserId,
       email: generatedEmail,
       phone: normalizedPhone || null,
       first_name: input.firstName?.trim() || null,
       last_name: input.lastName?.trim() || null,
       marketing_opt_in: false,
     })
-    .select('id, tenant_id, email, phone, first_name, last_name')
+    .select('id, tenant_id, user_id, email, phone, first_name, last_name')
     .single()
 
   if (createError || !customer) {
+    if (authUserId) {
+      // GUARDRAIL: Handle auth user cleanup explicitly
+      const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(authUserId)
+      if (deleteError) {
+        console.error('⚠️ CRITICAL: Failed to rollback auth user on customer creation failure', { authUserId, deleteError })
+      }
+    }
     throw new Error(`Failed to create customer: ${createError?.message || 'Unknown error'}`)
   }
 
-  await ensureWalletAccount(customer.id, tenantId)
+  try {
+    await ensureWalletAccount(customer.id, tenantId)
+  } catch (walletError) {
+    console.error('⚠️ Failed to create wallet account for new customer', { customerId: customer.id, walletError })
+    // Still return customer - wallet might be auto-created on first order
+  }
   return customer
 }
 
