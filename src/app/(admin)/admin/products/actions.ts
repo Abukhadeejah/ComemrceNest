@@ -1635,7 +1635,17 @@ const getCachedProducts = unstable_cache(
   }, tenantId: string) => {
     return await _getProductsFromDB(searchParams, tenantId)
   },
-  ['products'],
+  // Include search params in cache key so different pages/filters have separate caches
+  (searchParams, tenantId) => [
+    'products',
+    tenantId,
+    searchParams.search || '',
+    searchParams.status || 'all',
+    searchParams.category || 'all',
+    searchParams.page || '1',
+    searchParams.pageSize || '20',
+    searchParams.sort || 'created_at'
+  ],
   {
     tags: ['products'],
     revalidate: 30 // Reduced cache time to 30 seconds for faster updates

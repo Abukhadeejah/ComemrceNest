@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 
 function ChevronLeftIcon() {
   return (
@@ -28,6 +28,7 @@ interface ProductPaginationProps {
 
 export function ProductPagination({ page, totalPages, count, pageSize }: ProductPaginationProps) {
   const router = useRouter()
+  const pathname = usePathname() ?? '/admin/products'
   const searchParams = useSearchParams()
   const [pageInput, setPageInput] = useState(String(page))
 
@@ -52,7 +53,8 @@ export function ProductPagination({ page, totalPages, count, pageSize }: Product
     }
 
     const query = params.toString()
-    router.push(query ? `?${query}` : '?')
+    const url = query ? `${pathname}?${query}` : pathname
+    router.push(url)
   }
 
   const changePageSize = (nextPageSize: number) => {
@@ -65,7 +67,8 @@ export function ProductPagination({ page, totalPages, count, pageSize }: Product
     params.delete('page')
 
     const query = params.toString()
-    router.push(query ? `?${query}` : '?')
+    const url = query ? `${pathname}?${query}` : pathname
+    router.push(url)
   }
 
   const submitPageInput = () => {
