@@ -4,6 +4,9 @@ import { resolveTenantIdFromRequest } from '@/server/tenant'
 import { fetchProductBySlug, fetchProductImages, fetchProductVariantOptions, fetchProductVariants, fetchProductAttributes, fetchRandomProducts } from '@/server/modules/products/service'
 import { ProductDetail } from '@/components/tenant/products/ProductDetail'
 
+type ProductDetailProps = Parameters<typeof ProductDetail>[0]
+type ProductDetailProduct = ProductDetailProps['product']
+
 interface SenlyshProductPageProps {
   params: Promise<{ slug: string }>
 }
@@ -49,30 +52,35 @@ export default async function SenlyshProductPage({ params }: SenlyshProductPageP
     }
   }))
 
-  console.log('[SenlyshProductPage] Product:', product.name, 'ID:', product.id)
-  console.log('[SenlyshProductPage] Images count:', images?.length || 0)
-  console.log('[SenlyshProductPage] Variant options count:', variantOptions?.length || 0)
-  console.log('[SenlyshProductPage] Variant combinations count:', variantCombinations?.length || 0)
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[SenlyshProductPage] Product:', product.name, 'ID:', product.id)
+    console.log('[SenlyshProductPage] Images count:', images?.length || 0)
+    console.log('[SenlyshProductPage] Variant options count:', variantOptions?.length || 0)
+    console.log('[SenlyshProductPage] Variant combinations count:', variantCombinations?.length || 0)
+  }
+
+  const productDetailProduct: ProductDetailProduct = {
+    id: product.id,
+    name: product.name,
+    pricecents: product.price_cents,
+    currency: product.currency,
+    compare_at_price_cents: product.compare_at_price_cents,
+    sku: product.sku ?? '',
+    size_guide_type: product.size_guide_type,
+    productsizeguides: product.product_size_guides?.map(psg => ({
+      sizeguides: {
+        id: psg.size_guides.id,
+        name: psg.size_guides.name,
+        category: psg.size_guides.category,
+        gender: psg.size_guides.gender,
+        measurements: psg.size_guides.measurements
+      }
+    }))
+  }
 
   return (
     <ProductDetail
-      product={{
-        id: product.id,
-        name: product.name,
-        pricecents: product.price_cents,  // Transform price_cents to pricecents
-        currency: product.currency,
-        compare_at_price_cents: product.compare_at_price_cents,
-        size_guide_type: product.size_guide_type,
-        productsizeguides: product.product_size_guides?.map(psg => ({
-          sizeguides: {
-            id: psg.size_guides.id,
-            name: psg.size_guides.name,
-            category: psg.size_guides.category,
-            gender: psg.size_guides.gender,
-            measurements: psg.size_guides.measurements
-          }
-        }))
-      } as Parameters<typeof ProductDetail>[0]['product']}
+      product={productDetailProduct}
       images={images || []}
       variantOptions={variantOptions}
       variantCombinations={variantCombinations?.map(vc => ({
@@ -80,7 +88,7 @@ export default async function SenlyshProductPage({ params }: SenlyshProductPageP
         name: vc.name,
         pricecents: vc.price_cents,  // Changed to 'pricecents'
         stock: vc.stock || 0,
-        sku: vc.sku || '',
+        sku: vc.sku ?? '',
         attributes: vc.attributes as Record<string, string>
       }))}
       attributes={productAttributes}

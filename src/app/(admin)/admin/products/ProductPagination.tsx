@@ -3,6 +3,22 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 
+function ChevronLeftIcon() {
+  return (
+    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+    </svg>
+  )
+}
+
+function ChevronRightIcon() {
+  return (
+    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+    </svg>
+  )
+}
+
 interface ProductPaginationProps {
   page: number
   totalPages: number
@@ -79,76 +95,100 @@ export function ProductPagination({ page, totalPages, count, pageSize }: Product
   }
 
   return (
-    <div className="border-t border-gray-200 px-6 py-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-gray-700">
-          Showing {startItem}-{endItem} of {count} products
-        </p>
+    <div className="border-t border-gray-200 bg-gray-50 px-6 py-4">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        {/* Info Section */}
+        <div className="flex items-center gap-4">
+          <p className="text-sm font-medium text-gray-700">
+            <span className="text-gray-900 font-semibold">{startItem}-{endItem}</span>
+            <span className="text-gray-600"> of </span>
+            <span className="text-gray-900 font-semibold">{count}</span>
+            <span className="text-gray-600"> products</span>
+          </p>
+        </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        {/* Controls Section */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end sm:gap-4">
+          {/* Page Size Selector */}
           <div className="flex items-center gap-2">
-            <label htmlFor="page-size" className="text-sm text-gray-700">
-              Per page
+            <label htmlFor="page-size" className="text-sm font-medium text-gray-700">
+              Show
             </label>
             <select
               id="page-size"
               value={pageSize}
               onChange={(e) => changePageSize(Number.parseInt(e.target.value, 10))}
-              className="rounded-md border border-gray-300 px-2 py-1.5 text-sm text-gray-700"
+              className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm hover:border-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             >
               <option value={20}>20</option>
               <option value={50}>50</option>
               <option value={100}>100</option>
             </select>
+            <span className="text-sm text-gray-600">per page</span>
           </div>
 
+          {/* Pagination Controls */}
           {count > 0 && (
-            <>
-            <button
-              type="button"
-              onClick={() => goToPage(page - 1)}
-              disabled={page <= 1}
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Previous
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Previous Button */}
+              <button
+                type="button"
+                onClick={() => goToPage(page - 1)}
+                disabled={page <= 1}
+                className="inline-flex items-center justify-center gap-1 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
+                title="Go to previous page"
+              >
+                  <ChevronLeftIcon />
+                <span className="hidden sm:inline">Prev</span>
+              </button>
 
-            <div className="flex items-center gap-1">
-              {pageNumbers.map((pageNumber, index) => {
-                const previousPage = pageNumbers[index - 1]
-                const showGap = previousPage && pageNumber - previousPage > 1
+              {/* Page Numbers */}
+              <div className="flex items-center gap-1">
+                {pageNumbers.map((pageNumber, index) => {
+                  const previousPage = pageNumbers[index - 1]
+                  const showGap = previousPage && pageNumber - previousPage > 1
 
-                return (
-                  <div key={pageNumber} className="flex items-center gap-1">
-                    {showGap ? <span className="px-1 text-sm text-gray-500">...</span> : null}
-                    <button
-                      type="button"
-                      onClick={() => goToPage(pageNumber)}
-                      className={`min-w-9 rounded-md border px-2.5 py-1.5 text-sm ${
-                        pageNumber === page
-                          ? 'border-indigo-600 bg-indigo-600 text-white'
-                          : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                      }`}
-                      aria-current={pageNumber === page ? 'page' : undefined}
-                    >
-                      {pageNumber}
-                    </button>
-                  </div>
-                )
-              })}
-            </div>
+                  return (
+                    <div key={pageNumber} className="flex items-center gap-1">
+                      {showGap ? (
+                        <span className="px-1.5 text-sm text-gray-500">…</span>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => goToPage(pageNumber)}
+                        className={`min-w-10 inline-flex items-center justify-center rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                          pageNumber === page
+                            ? 'bg-indigo-600 border border-indigo-600 text-white shadow-sm hover:bg-indigo-700'
+                            : 'border border-gray-300 bg-white text-gray-700 shadow-sm hover:bg-gray-50'
+                        }`}
+                        aria-current={pageNumber === page ? 'page' : undefined}
+                        title={`Go to page ${pageNumber}`}
+                      >
+                        {pageNumber}
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
 
-            <button
-              type="button"
-              onClick={() => goToPage(page + 1)}
-              disabled={page >= totalPages}
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Next
-            </button>
+              {/* Next Button */}
+              <button
+                type="button"
+                onClick={() => goToPage(page + 1)}
+                disabled={page >= totalPages}
+                className="inline-flex items-center justify-center gap-1 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
+                title="Go to next page"
+              >
+                <span className="hidden sm:inline">Next</span>
+                <ChevronRightIcon />
+              </button>
 
+              {/* Divider */}
+              <div className="hidden sm:block w-px h-6 bg-gray-300"></div>
+
+              {/* Go To Page Input */}
               <div className="flex items-center gap-2">
-                <label htmlFor="go-to-page" className="text-sm text-gray-700">
+                <label htmlFor="go-to-page" className="text-sm font-medium text-gray-700">
                   Go to
                 </label>
                 <input
@@ -163,17 +203,19 @@ export function ProductPagination({ page, totalPages, count, pageSize }: Product
                       submitPageInput()
                     }
                   }}
-                  className="w-16 rounded-md border border-gray-300 px-2 py-1.5 text-sm text-gray-700"
+                  className="w-16 rounded-md border border-gray-300 bg-white px-2 py-2 text-sm text-gray-700 shadow-sm hover:border-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  placeholder="Page"
                 />
                 <button
                   type="button"
                   onClick={submitPageInput}
-                  className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+                  className="rounded-md border border-indigo-600 bg-indigo-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 transition-colors"
+                  title="Jump to page"
                 >
                   Go
                 </button>
               </div>
-            </>
+            </div>
           )}
         </div>
       </div>

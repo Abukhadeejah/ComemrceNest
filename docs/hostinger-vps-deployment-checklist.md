@@ -123,7 +123,7 @@ server {
 3. Check process logs:
    - PM2: `pm2 logs commercenest-web --lines 200`
    - systemd: `journalctl -u commercenest-web -n 200 --no-pager`
-4. Confirm Node version matches project expectation (Node 20+ recommended for Next 16).
+4. Confirm Node version matches project expectation (Node 22 LTS required for Next 16).
 
 ## 7) Minimal rollback plan
 

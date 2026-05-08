@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { OfflineReturnPanel } from './OfflineReturnPanel'
 
@@ -55,7 +55,8 @@ export default function OfflineReturnCreateForm({
   const [order, setOrder] = useState<LookupOrder | null>(null)
   const [error, setError] = useState('')
 
-  const orderDetailBasePath = useMemo(() => ordersBasePath.replace(/\/orders$/, '/order-details'), [ordersBasePath])
+  // Use ordersBasePath directly - both /admin/orders and /{tenant}/admin/orders have [id] subfolder
+  const orderDetailPath = (orderId: string) => `${ordersBasePath}/${orderId}`
 
   async function lookupOrder() {
     const q = orderQuery.trim()
@@ -149,7 +150,7 @@ export default function OfflineReturnCreateForm({
               {order.order_source === 'offline_admin' ? 'Offline Admin' : 'Online'}
             </div>
             <Link
-              href={`${orderDetailBasePath}/${order.id}`}
+              href={orderDetailPath(order.id)}
               className="inline-flex text-sm text-blue-600 hover:text-blue-800"
             >
               Open Full Order Details

@@ -27,7 +27,7 @@ export function ProductCard({
   badgeText = 'Premium', 
   accent = 'primary', 
   description,
-  whatsappNumber = '919876543210' // Default number - replace with actual
+  whatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '919029460064'
 }: Props) {
   const accentColor = accent === 'mustard' ? 'var(--color-mustard)' : 'var(--color-primary)'
   const formattedPrice = formatPrice(priceCents)

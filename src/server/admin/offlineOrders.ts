@@ -31,6 +31,8 @@ export interface CreateOfflineOrderInput {
   createCustomerIfMissing?: boolean
   items: OfflineOrderItemInput[]
   discountAmountCents?: number
+  couponCode?: string
+  couponDiscountCents?: number
   walletUsedCents?: number
   cashPaidCents?: number
   status?: OfflineOrderStatus
@@ -525,6 +527,7 @@ export async function processPaidOrderPostPaymentOnce(tenantId: string, orderId:
         total_cents,
         wallet_used_cents,
         cash_paid_cents,
+        coupon_code,
         post_payment_processed,
         order_items (
           quantity,
@@ -559,6 +562,25 @@ export async function processPaidOrderPostPaymentOnce(tenantId: string, orderId:
       .eq('id', orderId)
 
     return { processed: false, reason: 'no_customer' as const }
+  }
+
+  // GUARDRAIL: If coupon was used, skip cashback (coupon OR cashback, not both)
+  if (order.coupon_code) {
+    const { error: couponUpdateError } = await supabaseAdmin
+      .from('orders')
+      .update({ 
+        post_payment_processed: true,
+        cashback_pct: 0,
+        cashback_amount_cents: 0,
+      })
+      .eq('tenant_id', tenantId)
+      .eq('id', orderId)
+
+    if (couponUpdateError) {
+      throw new Error(`Failed to mark coupon order as processed: ${couponUpdateError.message}`)
+    }
+
+    return { processed: false, reason: 'coupon_applied_no_cashback' as const }
   }
 
   const walletUsedCents = order.wallet_used_cents || 0
@@ -766,7 +788,7 @@ export async function createOfflineOrder(tenantId: string, input: CreateOfflineO
     throw new Error('Order subtotal must be greater than zero')
   }
 
-  const discountAmountCents = Math.max(0, Number(input.discountAmountCents || 0))
+  const discountAmountCents = Math.max(0, Number(input.couponDiscountCents || input.discountAmountCents || 0))
   if (discountAmountCents > subtotalCents) {
     throw new Error('Discount cannot exceed subtotal')
   }
@@ -820,6 +842,7 @@ export async function createOfflineOrder(tenantId: string, input: CreateOfflineO
 
   const orderNumber = generateOfflineOrderNumber(tenantId)
   const currency = (input.currency || 'INR').toUpperCase()
+  const couponCode = (input.couponCode || '').trim().toUpperCase() || null
 
   const { data: order, error: orderError } = await supabaseAdmin
     .from('orders')
@@ -834,12 +857,13 @@ export async function createOfflineOrder(tenantId: string, input: CreateOfflineO
       wallet_used_cents: walletUsedCents,
       cash_paid_cents: cashPaidCents,
       discount_amount_cents: discountAmountCents,
+      coupon_code: couponCode,
       payment_provider: 'offline_admin',
       payment_env: 'test',
       post_payment_processed: false,
       order_source: 'offline_admin',
     })
-    .select('id, order_number, status, total_cents, currency, customer_id')
+    .select('id, order_number, status, total_cents, currency, customer_id, coupon_code')
     .single()
 
   if (orderError || !order) {

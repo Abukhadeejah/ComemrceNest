@@ -52,7 +52,7 @@ export const bluebellConfig: TenantConfig = {
       address: '123 Design Street New Delhi, 110001',
       phone: '(+91) 83838-58285',
       email: 'hello@bluebellFabrics.com',
-      whatsapp: '918383858285',
+      whatsapp: '919029460064',
     },
   },
   features: {
@@ -80,7 +80,7 @@ export const bluebellConfig: TenantConfig = {
 }
 
 // Export WhatsApp number with optional chaining and nullish coalescing
-export const WHATSAPP_NUMBER = bluebellConfig.content.contact?.whatsapp ?? '918383858285'
+export const WHATSAPP_NUMBER = bluebellConfig.content.contact?.whatsapp ?? '919029460064'
 
 // Helper function to get WhatsApp link with custom message
 export const getWhatsAppLink = (message?: string) => {

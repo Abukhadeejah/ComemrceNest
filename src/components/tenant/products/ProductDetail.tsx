@@ -2,13 +2,13 @@
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useTenant } from '@/hooks/useTenant'
 import { SITE_URLS } from '@/utils/site-urls'
 import { QuestionMarkCircleIcon } from '@heroicons/react/24/outline'
 import { StarIcon } from '@heroicons/react/24/solid'
 import type { Product } from '@/types/product'
 import { useCart } from '@/lib/cart'
-import { PaymentLogos } from '@/components/PaymentLogos'
 
 // Type for server response which may be partial
 type ProductServerResponse = Partial<Product> & {
@@ -16,7 +16,17 @@ type ProductServerResponse = Partial<Product> & {
   name: string
   pricecents: number
   currency?: string
+  sku?: string
   size_guide_type?: string | null
+  product_size_guides?: Array<{
+    size_guides: {
+      id: string
+      name: string
+      category: string
+      gender: string
+      measurements: Record<string, Record<string, string>>
+    }
+  }>
   productsizeguides?: Array<{
     sizeguides: {
       id: string
@@ -96,6 +106,7 @@ export function ProductDetail({
 }: ProductDetailProps) {
   const { addItem } = useCart()
   const tenant = useTenant()
+  const router = useRouter()
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({})
   const [quantity, setQuantity] = useState(1)
   const [activeImage, setActiveImage] = useState(0)
@@ -301,10 +312,7 @@ export function ProductDetail({
               }
             : undefined,
       })
-      // Redirect to checkout after a small delay to ensure cart state is saved
-      setTimeout(() => {
-        window.location.href = '/checkout'
-      }, 100)
+      router.push('/checkout')
     } catch (e) {
       // Handle error
     }
@@ -408,6 +416,11 @@ export function ProductDetail({
                 <div className="text-sm text-gray-600 mb-2">
                   Inclusive of all taxes
                 </div>
+                {product.sku && (
+                  <div className="text-sm text-gray-600 mb-2">
+                    SKU: {product.sku}
+                  </div>
+                )}
                 {Object.keys(selectedVariants).length > 0 && (
                   <div className="text-sm text-indigo-600 font-medium">
                     {Object.keys(selectedVariants).length === (variantOptions?.length || 0) ? 
@@ -656,9 +669,6 @@ export function ProductDetail({
                   </button>
                 </div>
               </div>
-
-              {/* Guaranteed Safe Checkout */}
-              <PaymentLogos />
             </div>
           </div>
 

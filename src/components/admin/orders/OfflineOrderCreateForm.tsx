@@ -60,6 +60,13 @@ type RecentOrder = {
   created_at: string
 }
 
+type CouponOption = {
+  id: string
+  code: string
+  description?: string | null
+  is_active?: boolean
+}
+
 interface OfflineOrderCreateFormProps {
   tenant?: string
   ordersBasePath: string
@@ -87,7 +94,8 @@ export default function OfflineOrderCreateForm({
   ordersBasePath,
 }: OfflineOrderCreateFormProps) {
   const router = useRouter()
-  const orderDetailBasePath = ordersBasePath.replace(/\/orders$/, '/order-details')
+  // Use ordersBasePath directly - both /admin/orders and /{tenant}/admin/orders have [id] subfolder
+  const orderDetailPath = (orderId: string) => `${ordersBasePath}/${orderId}`
 
   const [customerPhone, setCustomerPhone] = useState('')
   const [createCustomerPhone, setCreateCustomerPhone] = useState('')
@@ -108,6 +116,12 @@ export default function OfflineOrderCreateForm({
   const [selectedVariantByProduct, setSelectedVariantByProduct] = useState<Record<string, string>>({})
 
   const [discountRupees, setDiscountRupees] = useState('0')
+  const [selectedCoupon, setSelectedCoupon] = useState<{ id: string; code: string; discountCents: number; description: string } | null>(null)
+  const [couponCodeInput, setCouponCodeInput] = useState('')
+  const [availableCoupons, setAvailableCoupons] = useState<CouponOption[]>([])
+  const [couponMessage, setCouponMessage] = useState('')
+  const [isLoadingCoupons, setIsLoadingCoupons] = useState(false)
+  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false)
   const [walletUsedRupees, setWalletUsedRupees] = useState('0')
   const [orderStatus, setOrderStatus] = useState<'paid' | 'pending'>('paid')
 
@@ -126,9 +140,13 @@ export default function OfflineOrderCreateForm({
   )
 
   const discountCents = useMemo(() => {
+    // If coupon is selected, use coupon discount; otherwise use manual discount
+    if (selectedCoupon) {
+      return Math.min(selectedCoupon.discountCents, subtotalCents)
+    }
     const raw = toCents(discountRupees)
     return Math.min(raw, subtotalCents)
-  }, [discountRupees, subtotalCents])
+  }, [selectedCoupon, discountRupees, subtotalCents])
 
   const totalCents = useMemo(() => Math.max(0, subtotalCents - discountCents), [subtotalCents, discountCents])
 
@@ -174,6 +192,53 @@ export default function OfflineOrderCreateForm({
     if (orderStatus === 'pending') return 0
     return Math.max(0, totalCents - walletUsedCents)
   }, [orderStatus, totalCents, walletUsedCents])
+
+  const couponSuggestions = useMemo(() => {
+    const query = couponCodeInput.trim().toUpperCase()
+    const activeCoupons = availableCoupons.filter((coupon) => coupon.is_active !== false)
+    if (!query) return activeCoupons.slice(0, 5)
+    return activeCoupons
+      .filter(
+        (coupon) =>
+          coupon.code.toUpperCase().includes(query) ||
+          (coupon.description || '').toLowerCase().includes(query.toLowerCase())
+      )
+      .slice(0, 5)
+  }, [availableCoupons, couponCodeInput])
+
+  useEffect(() => {
+    let isMounted = true
+
+    async function loadCoupons() {
+      setIsLoadingCoupons(true)
+      try {
+        const response = await fetch('/api/admin/coupons')
+        const data = await response.json()
+        if (!response.ok) {
+          if (isMounted) {
+            setCouponMessage(data.error || data.message || 'Unable to load coupons right now.')
+          }
+          return
+        }
+        if (isMounted) {
+          setAvailableCoupons(data.coupons || [])
+        }
+      } catch {
+        if (isMounted) {
+          setCouponMessage('Unable to load coupons right now.')
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingCoupons(false)
+        }
+      }
+    }
+
+    void loadCoupons()
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   async function lookupCustomerByPhone() {
     setLookupMessage('')
@@ -449,7 +514,9 @@ export default function OfflineOrderCreateForm({
           quantity: item.quantity,
           variantId: item.variantId || undefined,
         })),
-        discountAmountCents: discountCents,
+        discountAmountCents: !selectedCoupon ? discountCents : 0,
+        couponCode: selectedCoupon?.code,
+        couponDiscountCents: selectedCoupon?.discountCents || 0,
         walletUsedCents: orderStatus === 'paid' ? walletUsedCents : 0,
         cashPaidCents: orderStatus === 'paid' ? cashPaidCents : 0,
         status: orderStatus,
@@ -475,6 +542,70 @@ export default function OfflineOrderCreateForm({
       setValidationMessage('Network error while creating order.')
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  async function applyCoupon() {
+    setValidationMessage('')
+    setCouponMessage('')
+
+    const normalizedCode = couponCodeInput.trim().toUpperCase()
+    if (!normalizedCode) {
+      setCouponMessage('Enter a coupon code to apply.')
+      return
+    }
+
+    if (!selectedCustomer?.id) {
+      setCouponMessage('Select or create a customer before applying coupon.')
+      return
+    }
+
+    if (subtotalCents <= 0) {
+      setCouponMessage('Add at least one product before applying coupon.')
+      return
+    }
+
+    setIsApplyingCoupon(true)
+    try {
+      const response = await fetch('/api/coupons/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          coupon_code: normalizedCode,
+          order_total_cents: subtotalCents,
+          customer_id: selectedCustomer.id,
+          tenant_key: tenant,
+        }),
+      })
+
+      const data = await response.json()
+      if (!response.ok) {
+        setCouponMessage(data.error || data.message || 'Failed to validate coupon.')
+        return
+      }
+
+      if (!data.valid) {
+        setCouponMessage(data.error || 'Invalid coupon.')
+        return
+      }
+
+      const matchedCoupon = availableCoupons.find(
+        (coupon) => coupon.code.toUpperCase() === normalizedCode
+      )
+
+      setSelectedCoupon({
+        id: data.coupon_id || matchedCoupon?.id || normalizedCode,
+        code: normalizedCode,
+        discountCents: Number(data.discount_amount_cents || 0),
+        description: matchedCoupon?.description || '',
+      })
+      setDiscountRupees('0')
+      setCouponCodeInput(normalizedCode)
+      setCouponMessage(`Coupon ${normalizedCode} applied successfully.`)
+    } catch {
+      setCouponMessage('Network error while validating coupon.')
+    } finally {
+      setIsApplyingCoupon(false)
     }
   }
 
@@ -555,7 +686,7 @@ export default function OfflineOrderCreateForm({
                   {recentOrders.map((order) => (
                     <li key={order.id} className="flex items-center justify-between gap-3">
                       <Link
-                        href={`${orderDetailBasePath}/${order.id}`}
+                        href={orderDetailPath(order.id)}
                         className="text-blue-700 hover:text-blue-900 hover:underline"
                       >
                         {order.order_number}
@@ -795,21 +926,117 @@ export default function OfflineOrderCreateForm({
       </section>
 
       <section className="rounded-lg border border-gray-200 bg-white p-5 space-y-4">
+        <h2 className="text-lg font-semibold text-gray-900">Coupon & Discounts</h2>
+
+        {selectedCoupon && (
+          <div className="rounded-md border border-green-200 bg-green-50 p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="font-medium text-green-900">Coupon Applied</div>
+                <div className="text-sm text-green-800">{selectedCoupon.code}</div>
+                {selectedCoupon.description && (
+                  <div className="text-xs text-green-700 mt-1">{selectedCoupon.description}</div>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedCoupon(null)
+                  setDiscountRupees('0')
+                }}
+                className="text-sm text-green-700 hover:text-green-900 font-medium"
+              >
+                Remove
+              </button>
+            </div>
+            <div className="text-sm font-medium text-green-900">
+              Discount: {formatCurrency(selectedCoupon.discountCents)}
+            </div>
+            <div className="rounded-md bg-green-100 p-2 text-xs text-green-800">
+              ⚠️ Note: When coupon is applied, customer will NOT earn cashback on this order.
+            </div>
+          </div>
+        )}
+
+        {!selectedCoupon && (
+          <div className="space-y-3">
+            <div className="rounded-md border border-blue-200 bg-blue-50 p-3 space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-blue-900 mb-1">Coupon Code</label>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+                  <input
+                    type="text"
+                    value={couponCodeInput}
+                    onChange={(e) => setCouponCodeInput(e.target.value.toUpperCase())}
+                    placeholder="Enter code (e.g. SAVE100)"
+                    className="md:col-span-3 w-full rounded-md border border-blue-300 px-3 py-2 text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={applyCoupon}
+                    disabled={isApplyingCoupon || isLoadingCoupons}
+                    className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+                  >
+                    {isApplyingCoupon ? 'Applying...' : 'Apply'}
+                  </button>
+                </div>
+                <p className="mt-1 text-xs text-blue-800">
+                  Coupon will be validated for the selected customer and current order subtotal.
+                </p>
+              </div>
+
+              {couponSuggestions.length > 0 && (
+                <div>
+                  <div className="mb-1 text-xs font-medium uppercase tracking-wide text-blue-900">Available Coupons</div>
+                  <div className="flex flex-wrap gap-2">
+                    {couponSuggestions.map((coupon) => (
+                      <button
+                        key={coupon.id}
+                        type="button"
+                        onClick={() => setCouponCodeInput(coupon.code)}
+                        className="rounded-full border border-blue-300 bg-white px-3 py-1 text-xs font-medium text-blue-800 hover:bg-blue-100"
+                        title={coupon.description || coupon.code}
+                      >
+                        {coupon.code}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {couponMessage && (
+                <div className="rounded-md border border-blue-200 bg-white px-3 py-2 text-xs text-blue-900">
+                  {couponMessage}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Manual Discount (INR)</label>
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                value={discountRupees}
+                onChange={(e) => setDiscountRupees(e.target.value)}
+                placeholder="0.00"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+              />
+              <p className="mt-1 text-xs text-gray-600">
+                Max available: {formatCurrency(subtotalCents)}
+              </p>
+            </div>
+            <div className="text-sm text-gray-600 p-3 bg-gray-50 rounded-md border border-gray-200">
+              💡 Tip: Use manual discount for admin discounts. For customer coupons, use the coupon system instead.
+            </div>
+          </div>
+        )}
+      </section>
+
+      <section className="rounded-lg border border-gray-200 bg-white p-5 space-y-4">
         <h2 className="text-lg font-semibold text-gray-900">Pricing</h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div>
-            <label className="block text-sm text-gray-700 mb-1">Discount (INR)</label>
-            <input
-              type="number"
-              min={0}
-              step="0.01"
-              value={discountRupees}
-              onChange={(e) => setDiscountRupees(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-            />
-          </div>
-
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
             <label className="block text-sm text-gray-700 mb-1">Wallet Used (INR)</label>
             <input
@@ -850,10 +1077,18 @@ export default function OfflineOrderCreateForm({
             <span className="text-gray-600">Subtotal</span>
             <span className="text-gray-900">{formatCurrency(subtotalCents)}</span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-gray-600">Discount</span>
-            <span className="text-gray-900">-{formatCurrency(discountCents)}</span>
-          </div>
+          {selectedCoupon && (
+            <div className="flex justify-between text-green-700">
+              <span className="font-medium">Coupon ({selectedCoupon.code})</span>
+              <span className="font-medium">-{formatCurrency(discountCents)}</span>
+            </div>
+          )}
+          {!selectedCoupon && discountCents > 0 && (
+            <div className="flex justify-between">
+              <span className="text-gray-600">Discount</span>
+              <span className="text-gray-900">-{formatCurrency(discountCents)}</span>
+            </div>
+          )}
           <div className="flex justify-between">
             <span className="text-gray-600">Final Total</span>
             <span className="font-medium text-gray-900">{formatCurrency(totalCents)}</span>
