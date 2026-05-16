@@ -4,6 +4,7 @@ import { cookies } from 'next/headers'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
 import { validateCustomerFeatureAccess } from '@/server/customerModules'
+import { sendWhatsAppMessage } from '@/server/notifications/whatsapp'
 import type { CustomerRegistrationRequest, CustomerRegistrationResponse } from '@/types/customer'
 
 export async function POST(request: NextRequest) {
@@ -140,6 +141,18 @@ export async function POST(request: NextRequest) {
       console.error('Wallet creation error:', walletError)
       // Don't fail registration for wallet creation error
     }
+
+      // Send welcome WhatsApp message
+      try {
+        const firstName = customer.first_name || 'valued customer';
+        await sendWhatsAppMessage(
+          customer.phone,
+          `Hi ${firstName},\n\nWelcome to CommerceNest! 🎉\n\nYour account has been created successfully. You can now browse products, make purchases, and track your orders.\n\nLet's get started!\n\nCommerceNest Team`
+        );
+      } catch (notificationError) {
+        console.error('⚠️ Failed to send welcome WhatsApp notification:', notificationError);
+        // Don't fail registration - notification is non-critical
+      }
 
     const response: CustomerRegistrationResponse = {
       success: true,

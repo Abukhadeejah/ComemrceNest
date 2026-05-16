@@ -5,9 +5,11 @@ import { revalidateTag } from 'next/cache'
 import { tenantOrdersTag } from '@/server/cacheTags'
 import { processPaidOrderPostPaymentOnce } from '@/server/admin/offlineOrders'
 import { processOfflineCancellationWalletRefund } from '@/server/admin/offlineOrderCancellation'
+import { sendWhatsAppMessage } from '@/server/notifications/whatsapp'
 
 export async function PATCH(request: NextRequest) {
   try {
+    // Requires valid admin session cookie — raw curl calls will return 401 without it
     let tenantId = await resolveTenantIdFromRequest()
 
     // TEMPORARY FIX: If no tenant resolved, default to Senlysh for admin access
@@ -124,6 +126,45 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Invalidate cache
+      // Send WhatsApp notification for status updates
+      try {
+        const { data: order } = await supabaseAdmin
+          .from('orders')
+          .select('customer_id, order_number')
+          .eq('id', orderId)
+          .single();
+      
+        if (order?.customer_id) {
+          const { data: customer } = await supabaseAdmin
+            .from('customers')
+            .select('phone, first_name')
+            .eq('id', order.customer_id)
+            .single();
+        
+          if (customer?.phone) {
+            const firstName = customer.first_name || 'valued customer';
+            let message = '';
+          
+            if (status === 'confirmed') {
+              message = `Hi ${firstName},\n\nYour order #${order.order_number} has been confirmed! 📦\n\nWe're preparing your items for shipment.\n\nCommerceNest Team`;
+            } else if (status === 'fulfilled') {
+              message = `Hi ${firstName},\n\nGreat news! Your order #${order.order_number} has been shipped! 🚚\n\nYou can track your delivery in the app.\n\nCommerceNest Team`;
+            } else if (status === 'returned') {
+              message = `Hi ${firstName},\n\nYour return for order #${order.order_number} has been processed. ✅\n\nRefund will be credited to your wallet within 3-5 business days.\n\nCommerceNest Team`;
+            } else if (status === 'cancelled') {
+              message = `Hi ${firstName},\n\nYour order #${order.order_number} has been cancelled. ✖️\n\nIf you used wallet credits, they will be refunded immediately.\n\nCommerceNest Team`;
+            }
+          
+            if (message) {
+              await sendWhatsAppMessage(customer.phone, message);
+            }
+          }
+        }
+      } catch (notificationError) {
+        console.error('[Admin Orders Status API] ⚠️ Failed to send WhatsApp notification:', notificationError);
+        // Don't fail the status update - notification is non-critical
+      }
+
     revalidateTag(tenantOrdersTag(tenantId), 'default')
 
     console.log(`[Admin Orders Status API] Order ${data.order_number} status updated to ${status}`)

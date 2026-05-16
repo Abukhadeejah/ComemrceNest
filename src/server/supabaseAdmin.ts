@@ -1,9 +1,9 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js'
-import { Database } from '@/types/supabase'
+import { createClient, SupabaseClient } from '../../node_modules/@supabase/supabase-js/dist/index.mjs'
+import { Database } from '../types/supabase'
 
-let cachedSupabaseAdmin: SupabaseClient<Database> | null = null
+let cachedSupabaseAdmin: SupabaseClient | null = null
 
-function createSupabaseAdminClient(): SupabaseClient<Database> {
+function createSupabaseAdminClient(): SupabaseClient {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
@@ -13,12 +13,12 @@ function createSupabaseAdminClient(): SupabaseClient<Database> {
     )
   }
 
-  return createClient<Database>(supabaseUrl, serviceRoleKey, {
+  return createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false },
   })
 }
 
-export function getSupabaseAdminClient(): SupabaseClient<Database> {
+export function getSupabaseAdminClient(): SupabaseClient {
   if (!cachedSupabaseAdmin) {
     cachedSupabaseAdmin = createSupabaseAdminClient()
   }
@@ -26,10 +26,10 @@ export function getSupabaseAdminClient(): SupabaseClient<Database> {
   return cachedSupabaseAdmin
 }
 
-export const supabaseAdmin = new Proxy({} as SupabaseClient<Database>, {
+export const supabaseAdmin = new Proxy({} as SupabaseClient, {
   get(_target, prop, receiver) {
     return Reflect.get(getSupabaseAdminClient() as object, prop, receiver)
   },
-}) as SupabaseClient<Database>
+}) as SupabaseClient
 
 

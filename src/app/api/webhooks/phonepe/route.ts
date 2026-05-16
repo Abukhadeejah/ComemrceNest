@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyPhonePeWebhook } from '@/lib/payments/phonepe';
 import { supabaseAdmin } from '@/server/supabaseAdmin';
 import { processCashbackForOrder } from '@/lib/cashback/cashbackService';
+import { sendWhatsAppMessage } from '@/server/notifications/whatsapp';
 import type { Order } from '@/types/order';
 
 /**
@@ -262,6 +263,34 @@ export async function POST(request: NextRequest) {
         
         // Process wallet deduction and cashback
         await processWalletAndCashbackForCompletedOrder(merchantTransactionId);
+        
+        // Send order confirmation WhatsApp notification
+        try {
+          const { data: order } = await supabaseAdmin
+            .from('orders')
+            .select('id, customer_id')
+            .eq('order_number', merchantTransactionId)
+            .single();
+          
+          if (order?.customer_id) {
+            const { data: customer } = await supabaseAdmin
+              .from('customers')
+              .select('phone, first_name')
+              .eq('id', order.customer_id)
+              .single();
+            
+            if (customer?.phone) {
+              const firstName = customer.first_name || 'valued customer';
+              await sendWhatsAppMessage(
+                customer.phone,
+                `Hi ${firstName},\n\nYour order #${merchantTransactionId} has been confirmed! 🎉\n\nThank you for your purchase. You can track your order status in the app.\n\nCommerceNest Team`
+              );
+            }
+          }
+        } catch (notificationError) {
+          console.error('[PhonePe Webhook] ⚠️ Failed to send WhatsApp notification:', notificationError);
+          // Don't fail the webhook - notification is non-critical
+        }
         
         // 🔥 CRITICAL: Mark as processed (idempotency flag)
         const { error: flagError } = await supabaseAdmin

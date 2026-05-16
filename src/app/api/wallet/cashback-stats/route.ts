@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { resolveTenantIdFromRequest } from '@/server/tenant'
 import { getCashbackStats, getCashbackHistory, creditDueCashbackForCustomer } from '@/lib/cashback/cashbackService'
+import { sendWhatsAppMessage } from '@/server/notifications/whatsapp'
 
 export async function GET(request: NextRequest) {
   try {
@@ -30,7 +31,28 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-      await creditDueCashbackForCustomer(customerId, tenantId)
+      const result = await creditDueCashbackForCustomer(customerId, tenantId)
+
+      if (result.success) {
+        for (const creditedTransaction of result.creditedTransactions) {
+          if (!creditedTransaction.phone) {
+            continue
+          }
+
+          try {
+            const firstName = creditedTransaction.firstName || 'valued customer'
+            const cashbackAmountRupees = (creditedTransaction.cashbackAmountCents / 100).toFixed(2)
+
+            await sendWhatsAppMessage(
+              creditedTransaction.phone,
+              `Hi ${firstName},\n\nYour wallet has been credited with ₹${cashbackAmountRupees} cashback for order #${creditedTransaction.orderId}. 💰\n\nThe amount is now available in your wallet balance.\n\nCommerceNest Team`,
+              `cashback-${tenantId}-${creditedTransaction.orderId}`
+            )
+          } catch (notificationError) {
+            console.error('[GET /api/wallet/cashback-stats] Failed to send wallet credit notification:', notificationError)
+          }
+        }
+      }
     } catch (error) {
       console.error('[GET /api/wallet/cashback-stats] Failed to process due cashback credits:', error)
     }

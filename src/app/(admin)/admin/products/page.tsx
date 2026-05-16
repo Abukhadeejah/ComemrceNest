@@ -6,6 +6,10 @@ import { ProductFilters } from './ProductFilters'
 import { CreateProductButton } from './CreateProductButton'
 import { ProductPagination } from './ProductPagination'
 
+// Force this page to always render fresh from the server.
+// Without this, Next.js may serve a cached RSC payload and skip re-fetching.
+export const dynamic = 'force-dynamic'
+
 interface AdminProductsProps {
   searchParams: Promise<{
     search?: string

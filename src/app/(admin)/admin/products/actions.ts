@@ -1614,43 +1614,16 @@ async function _getProductsFromDB(searchParams: {
     throw new Error(`Failed to fetch products: ${error.message}`)
   }
 
-  return {
+  const result = {
     data: data || [],
     count: count || 0,
     page,
     pageSize,
     totalPages: Math.ceil((count || 0) / pageSize)
   }
-}
 
-// Cached version of getProducts
-const getCachedProducts = unstable_cache(
-  async (searchParams: {
-    search?: string
-    status?: string
-    category?: string
-    page?: string
-    pageSize?: string
-    sort?: string
-  }, tenantId: string) => {
-    return await _getProductsFromDB(searchParams, tenantId)
-  },
-  // Include search params in cache key so different pages/filters have separate caches
-  (searchParams, tenantId) => [
-    'products',
-    tenantId,
-    searchParams.search || '',
-    searchParams.status || 'all',
-    searchParams.category || 'all',
-    searchParams.page || '1',
-    searchParams.pageSize || '20',
-    searchParams.sort || 'created_at'
-  ],
-  {
-    tags: ['products'],
-    revalidate: 30 // Reduced cache time to 30 seconds for faster updates
-  }
-)
+  return result
+}
 
 export async function getProducts(searchParams: {
   search?: string
@@ -1663,7 +1636,7 @@ export async function getProducts(searchParams: {
   try {
     const tenantId = tenantIdArg || await resolveTenantIdFromRequest()
     if (!tenantId) { throw new Error('Tenant not found') }
-    
+
     // During initial server render, the user session may not yet be resolvable in RSC.
     // To avoid crashing the page, return an empty dataset when unauthenticated.
     // All mutations remain strictly server-gated via assertTenantAdmin.
@@ -1679,8 +1652,20 @@ export async function getProducts(searchParams: {
       }
     }
 
-    // Use cached version for better performance and proper cache invalidation
-    return await getCachedProducts(searchParams, tenantId)
+    // PAGINATION FIX: unstable_cache was causing all page/pageSize navigations
+    // to return the same cached result for 30 seconds, making pagination appear broken.
+    // Calling _getProductsFromDB directly guarantees fresh data on every request.
+    // Strip any extra fields callers may have injected to keep params clean.
+    const cleanParams = {
+      search: searchParams.search,
+      status: searchParams.status,
+      category: searchParams.category,
+      page: searchParams.page,
+      pageSize: searchParams.pageSize,
+      sort: searchParams.sort,
+    }
+
+    return await _getProductsFromDB(cleanParams, tenantId)
   } catch (error) {
     console.error('getProducts error:', error)
     throw error

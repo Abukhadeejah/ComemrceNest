@@ -9,6 +9,10 @@ import { resolveTenantIdFromRequest } from '@/server/tenant'
 import { redirect } from 'next/navigation'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
 
+// Force this page to always render fresh from the server on every navigation.
+// Without this, Next.js may serve a stale RSC payload and skip re-fetching.
+export const dynamic = 'force-dynamic'
+
 interface TenantAdminProductsProps {
   params: Promise<{
     tenant: string
@@ -26,7 +30,7 @@ interface TenantAdminProductsProps {
 export default async function TenantAdminProducts({ params, searchParams }: TenantAdminProductsProps) {
   const { tenant } = await params
   const searchParamsData = await searchParams
-  
+
   // Get tenant ID and validate
   const tenantId = await resolveTenantIdFromRequest()
   if (!tenantId) {
@@ -39,14 +43,8 @@ export default async function TenantAdminProducts({ params, searchParams }: Tena
     redirect(`/${tenantKey}/admin/products`)
   }
 
-  // Add tenant ID to search params for filtering
-  const paramsWithTenant = {
-    ...searchParamsData,
-    tenantId
-  }
-  
   const [products, categories] = await Promise.all([
-    getProducts(paramsWithTenant, tenantId),
+    getProducts(searchParamsData, tenantId),
     getCategories(tenantId)
   ])
 

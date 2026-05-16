@@ -155,13 +155,23 @@ async function estimateCashbackGstOnCashPaidCents(
 export async function creditDueCashbackForCustomer(
   customerId: string,
   tenantId: string
-): Promise<{ creditedCount: number; creditedAmountCents: number }> {
+): Promise<{
+  success: boolean
+  creditedCount: number
+  creditedAmountCents: number
+  creditedTransactions: Array<{
+    orderId: string
+    cashbackAmountCents: number
+    phone: string | null
+    firstName: string | null
+  }>
+}> {
   let walletAccountId: string
 
   try {
     walletAccountId = await getWalletAccountId(customerId, tenantId)
   } catch {
-    return { creditedCount: 0, creditedAmountCents: 0 }
+    return { success: false, creditedCount: 0, creditedAmountCents: 0, creditedTransactions: [] }
   }
 
   const creditEligibleBefore = new Date(Date.now() - CASHBACK_CREDIT_DELAY_MS).toISOString()
@@ -180,11 +190,24 @@ export async function creditDueCashbackForCustomer(
   }
 
   if (!dueTransactions || dueTransactions.length === 0) {
-    return { creditedCount: 0, creditedAmountCents: 0 }
+    return { success: false, creditedCount: 0, creditedAmountCents: 0, creditedTransactions: [] }
   }
+
+  const { data: customer } = await supabaseAdmin
+    .from('customers')
+    .select('phone, first_name')
+    .eq('id', customerId)
+    .eq('tenant_id', tenantId)
+    .maybeSingle()
 
   let creditedCount = 0
   let creditedAmountCents = 0
+  const creditedTransactions: Array<{
+    orderId: string
+    cashbackAmountCents: number
+    phone: string | null
+    firstName: string | null
+  }> = []
 
   for (const transaction of dueTransactions) {
     const { data: existingCredit, error: existingCreditError } = await supabaseAdmin
@@ -217,11 +240,23 @@ export async function creditDueCashbackForCustomer(
       .eq('id', transaction.order_id)
       .eq('tenant_id', tenantId)
 
+    creditedTransactions.push({
+      orderId: transaction.order_id,
+      cashbackAmountCents: transaction.cashback_amount_cents,
+      phone: customer?.phone || null,
+      firstName: customer?.first_name || null,
+    })
+
     creditedCount += 1
     creditedAmountCents += transaction.cashback_amount_cents
   }
 
-  return { creditedCount, creditedAmountCents }
+  return {
+    success: creditedCount > 0,
+    creditedCount,
+    creditedAmountCents,
+    creditedTransactions,
+  }
 }
 
 /**

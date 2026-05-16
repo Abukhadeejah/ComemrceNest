@@ -7,6 +7,26 @@
  * primary business operations.
  */
 
+/**
+ * In-memory duplicate-send cooldown to suppress repeated sends for the same
+ * phone/message/idempotency key within a short window.
+ *
+ * Window: 2 minutes.
+ * Storage: process-local Map, so it resets on server restart or redeploy.
+ * Intent: short-term protection now; a DB-backed idempotency table is the
+ * longer-term upgrade path if persistence across restarts becomes necessary.
+ */
+const duplicateSendCooldownMs = 2 * 60 * 1000
+const recentSendAttempts = new Map<string, number>()
+
+function normalizeWhatsAppPhone(phone: string): string {
+  return phone.trim().replace(/\D/g, '')
+}
+
+function makeCooldownKey(phone: string, message: string, idempotencyKey?: string): string {
+  return `${idempotencyKey || 'message'}:${phone}:${message}`
+}
+
 async function sendWhatsAppMessage(
   phone: string,
   message: string,
@@ -17,7 +37,33 @@ async function sendWhatsAppMessage(
     return
   }
 
+  const normalizedPhone = normalizeWhatsAppPhone(phone)
+  if (!normalizedPhone) {
+    console.warn('[WhatsApp] Invalid phone number after normalization')
+    return
+  }
+
   const serviceUrl = process.env.WHATSAPP_SERVICE_URL
+  const internalSecret = process.env.WHATSAPP_INTERNAL_SECRET
+
+  const cooldownKey = makeCooldownKey(normalizedPhone, message, idempotencyKey)
+  const lastAttemptAt = recentSendAttempts.get(cooldownKey)
+  const now = Date.now()
+
+  if (lastAttemptAt && now - lastAttemptAt < duplicateSendCooldownMs) {
+    console.warn(
+      `[WhatsApp] Duplicate notification suppressed within cooldown window (${Math.round(duplicateSendCooldownMs / 1000)}s)`
+    )
+    return
+  }
+
+  recentSendAttempts.set(cooldownKey, now)
+
+  for (const [key, timestamp] of recentSendAttempts.entries()) {
+    if (now - timestamp > duplicateSendCooldownMs) {
+      recentSendAttempts.delete(key)
+    }
+  }
 
   // If service URL is not configured, log warning and exit gracefully
   if (!serviceUrl) {
@@ -34,6 +80,10 @@ async function sendWhatsAppMessage(
       'Content-Type': 'application/json',
     }
 
+    if (internalSecret) {
+      headers['X-Internal-Secret'] = internalSecret
+    }
+
     if (idempotencyKey) {
       headers['X-Idempotency-Key'] = idempotencyKey
       console.log(`[WhatsApp] Sending message (key: ${idempotencyKey})`)
@@ -45,7 +95,7 @@ async function sendWhatsAppMessage(
     const response = await fetch(`${serviceUrl}/send`, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ phone, message }),
+      body: JSON.stringify({ phone: normalizedPhone, message }),
       signal: controller.signal,
     })
 

@@ -37,15 +37,28 @@ export function middleware(request: NextRequest) {
     // If tenant is in the path and user is visiting tenant-prefixed admin, rewrite to global /admin path
     if (tenantFromPath && segments.length >= 2 && segments[1] === 'admin') {
       const targetPath = `/${segments.slice(1).join('/')}`; // drop tenant prefix
-      const response = NextResponse.rewrite(new URL(targetPath, request.url), { request: { headers } });
+      headers.set('x-tenant-admin', tenantFromPath)
+      const rewriteUrl = new URL(targetPath, request.url);
+      rewriteUrl.search = request.nextUrl.search; // preserve query params (page, pageSize, etc.)
+      const response = NextResponse.rewrite(rewriteUrl, { request: { headers } });
       response.headers.set('x-pathname', targetPath);
+      response.headers.set('x-tenant-admin', tenantFromPath);
       response.cookies.set('tenant', tenantFromPath, { path: '/', sameSite: 'lax' });
       return response;
+    }
+
+    if (isAdminRoute) {
+      const cookieTenant = request.cookies.get('tenant')?.value;
+      const inferredTenant = tenantFromPath || (cookieTenant && knownTenants.has(cookieTenant) ? cookieTenant : 'senlysh')
+      headers.set('x-tenant-admin', inferredTenant)
     }
 
     const response = NextResponse.next({ request: { headers } });
     // Set x-pathname header in response for server components
     response.headers.set('x-pathname', pathname);
+    if (headers.get('x-tenant-admin')) {
+      response.headers.set('x-tenant-admin', headers.get('x-tenant-admin') as string);
+    }
     // Still set tenant cookie for localhost
     if (tenantFromPath) {
       response.cookies.set('tenant', tenantFromPath, { path: '/', sameSite: 'lax' });
@@ -93,7 +106,9 @@ export function middleware(request: NextRequest) {
   // Keep /admin routes in the global admin flow to preserve correct admin auth/login behavior.
   if (tenantFromHost && !tenantFromPath && !isGlobalRoute && !isAdminRoute) {
     const targetPath = pathname === '/' ? `/${tenantFromHost}` : `/${tenantFromHost}${pathname}`;
-    const response = NextResponse.rewrite(new URL(targetPath, request.url), { request: { headers } });
+    const rewriteUrl = new URL(targetPath, request.url);
+    rewriteUrl.search = request.nextUrl.search; // preserve query params
+    const response = NextResponse.rewrite(rewriteUrl, { request: { headers } });
     response.headers.set('x-pathname', targetPath);
     response.cookies.set('tenant', tenantFromHost, { path: '/', sameSite: 'lax' });
     response.cookies.set('tenant_mode', 'host', { path: '/', sameSite: 'lax' });
@@ -141,7 +156,9 @@ export function middleware(request: NextRequest) {
     // Rewrite tenant-prefixed admin routes to global /admin path
     if (segments.length >= 2 && segments[1] === 'admin') {
       const globalTarget = `/${segments.slice(1).join('/')}`;
-      const response = NextResponse.rewrite(new URL(globalTarget, request.url), { request: { headers } });
+      const rewriteUrl = new URL(globalTarget, request.url);
+      rewriteUrl.search = request.nextUrl.search; // preserve query params
+      const response = NextResponse.rewrite(rewriteUrl, { request: { headers } });
       response.headers.set('x-pathname', pathname);
       response.cookies.set('tenant', tenantFromPath, { path: '/', sameSite: 'lax' });
       return response;
@@ -154,21 +171,27 @@ export function middleware(request: NextRequest) {
       pathname.startsWith(`/${tenantFromPath}/cart/`)
     ) {
       const globalTarget = `/${segments.slice(1).join('/')}`;
-      const response = NextResponse.rewrite(new URL(globalTarget, request.url), { request: { headers } });
+      const rewriteUrl = new URL(globalTarget, request.url);
+      rewriteUrl.search = request.nextUrl.search; // preserve query params
+      const response = NextResponse.rewrite(rewriteUrl, { request: { headers } });
       response.headers.set('x-pathname', pathname);
       response.cookies.set('tenant', tenantFromPath, { path: '/', sameSite: 'lax' });
       return response;
     }
     if (segments.length >= 3 && segments[1] === 'orders') {
       const globalTarget = `/${segments.slice(1).join('/')}`;
-      const response = NextResponse.rewrite(new URL(globalTarget, request.url), { request: { headers } });
+      const rewriteUrl = new URL(globalTarget, request.url);
+      rewriteUrl.search = request.nextUrl.search; // preserve query params
+      const response = NextResponse.rewrite(rewriteUrl, { request: { headers } });
       response.headers.set('x-pathname', pathname);
       response.cookies.set('tenant', tenantFromPath, { path: '/', sameSite: 'lax' });
       return response;
     }
     if (tenantFromPath === 'senlysh' && segments.length >= 3 && segments[1] === 'products') {
       const globalTarget = `/${segments.slice(1).join('/')}`;
-      const response = NextResponse.rewrite(new URL(globalTarget, request.url), { request: { headers } });
+      const rewriteUrl = new URL(globalTarget, request.url);
+      rewriteUrl.search = request.nextUrl.search; // preserve query params
+      const response = NextResponse.rewrite(rewriteUrl, { request: { headers } });
       response.headers.set('x-pathname', pathname);
       response.cookies.set('tenant', tenantFromPath, { path: '/', sameSite: 'lax' });
       return response;

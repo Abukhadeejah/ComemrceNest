@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/server/supabaseAdmin'
 import crypto from 'crypto'
 import { processCashbackForOrder } from '@/lib/cashback/cashbackService'
+import { sendWhatsAppMessage } from '@/server/notifications/whatsapp'
 import type { Order } from '@/types/order'
 
 /**
@@ -254,13 +255,33 @@ export async function POST(request: NextRequest) {
       try {
         await processCouponUsage(order.id)
         await processCashbackForCompletedOrder(order.id)
-        
+
+        // Send order confirmation WhatsApp notification
+        try {
+          const { data: customer } = await supabaseAdmin
+            .from('customers')
+            .select('phone, first_name')
+            .eq('id', order.customer_id)
+            .single()
+
+          if (customer?.phone) {
+            const firstName = customer.first_name || 'valued customer'
+            await sendWhatsAppMessage(
+              customer.phone,
+              `Hi ${firstName},\n\nYour order #${order.order_number} has been confirmed! 🎉\n\nThank you for your purchase. You can track your order status in the app.\n\nCommerceNest Team`
+            )
+          }
+        } catch (notificationError) {
+          console.error('[Razorpay Webhook] ⚠️ Failed to send WhatsApp notification:', notificationError)
+          // Don't fail the webhook - notification is non-critical
+        }
+
         // 🔥 CRITICAL: Mark as processed (idempotency flag)
         const { error: flagError } = await supabaseAdmin
           .from('orders')
           .update({ post_payment_processed: true })
           .eq('id', order.id)
-        
+
         if (flagError) {
           console.error('[Razorpay Webhook] ❌ Failed to set post_payment_processed flag:', flagError)
         } else {

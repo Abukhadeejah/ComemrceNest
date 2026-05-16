@@ -161,6 +161,20 @@ export async function resolveTenantIdFromRequest(): Promise<string | null> {
 // Helper function to resolve tenant ID from tenant key (name or slug)
 export async function resolveTenantIdFromKey(tenantKey: string): Promise<string | null> {
   console.log('🔑 [TenantKeyResolver] Resolving tenant key:', tenantKey)
+
+  const directKeyMappings: Record<string, string> = {
+    bluebell: '11111111-1111-4111-8111-11111111bb01',
+    senlysh: '1e4c9aa7-e7af-4fe7-999b-c9c46219fa3c',
+  }
+
+  const directTenantId = directKeyMappings[tenantKey.toLowerCase()]
+  if (directTenantId) {
+    console.log('🔑 [TenantKeyResolver] ✅ Using direct key mapping:', {
+      tenantKey: tenantKey.toLowerCase(),
+      tenantId: directTenantId,
+    })
+    return directTenantId
+  }
   
   // Try exact name match first
   const { data: tenantData } = await supabaseAdmin

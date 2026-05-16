@@ -7,6 +7,8 @@ import type { TenantKey } from '@/registry/types'
 import { getEnabledModules } from '@/server/adminModules'
 import { AdminLayout } from '@/components/admin/layout/AdminLayout'
 
+export const dynamic = 'force-dynamic'
+
 export async function generateMetadata(): Promise<Metadata> {
   const hdrs = await headers()
   const xTenant = hdrs.get('x-tenant-admin')?.toLowerCase()
