@@ -231,6 +231,7 @@ function ProductPaginationInner({ page, totalPages, count, pageSize }: ProductPa
             href={buildPageUrl(1)}
             style={page <= 1 ? navLinkDisabled : navLinkBase}
             aria-disabled={page <= 1}
+            tabIndex={page <= 1 ? -1 : undefined}
             title="First page"
           >
             <ChevronsLeftIcon />
@@ -242,6 +243,7 @@ function ProductPaginationInner({ page, totalPages, count, pageSize }: ProductPa
             href={buildPageUrl(page - 1)}
             style={page <= 1 ? navLinkDisabled : navLinkBase}
             aria-disabled={page <= 1}
+            tabIndex={page <= 1 ? -1 : undefined}
             title="Previous page"
           >
             <ChevronLeftIcon />
@@ -297,6 +299,7 @@ function ProductPaginationInner({ page, totalPages, count, pageSize }: ProductPa
             href={buildPageUrl(page + 1)}
             style={page >= totalPages ? navLinkDisabled : navLinkBase}
             aria-disabled={page >= totalPages}
+            tabIndex={page >= totalPages ? -1 : undefined}
             title="Next page"
           >
             <span style={{ fontSize: '13px', fontWeight: 500 }}>Next</span>
@@ -309,6 +312,7 @@ function ProductPaginationInner({ page, totalPages, count, pageSize }: ProductPa
             href={buildPageUrl(totalPages)}
             style={page >= totalPages ? navLinkDisabled : navLinkBase}
             aria-disabled={page >= totalPages}
+            tabIndex={page >= totalPages ? -1 : undefined}
             title="Last page"
           >
             <ChevronsRightIcon />
